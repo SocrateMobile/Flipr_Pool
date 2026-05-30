@@ -1,0 +1,36 @@
+{
+  "config": {
+    "error": {
+      "invalid_auth_detailed": "Flipr-fout: {error_info}",
+      "cannot_connect": "Verbinding mislukt: {error_info}",
+      "invalid_auth": "Ongeldige inloggegevens"
+    },
+    "step": {
+      "user": {
+        "title": "Flipr Pool Configuratie",
+        "description": "Voer je Flipr-gegevens in. Zwembadafmetingen zijn optioneel (laat op 0 indien onbekend) maar vereist voor doseringsberekeningen.",
+        "data": {
+          "email": "E-mail",
+          "password": "Wachtwoord",
+          "flipr_id": "Module-ID (S/N)",
+          "pool_length": "Lengte zwembad (m)",
+          "pool_width": "Breedte zwembad (m)",
+          "pool_depth": "Gemiddelde diepte (m)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Zwembadafmetingen",
+        "description": "Geef je zwembadafmetingen op om de behandelingsdoseringen (pH, chloor) en de aanbevolen filtratietijd te berekenen. Laat op 0 indien niet gewenst.",
+        "data": {
+          "pool_length": "Lengte (m)",
+          "pool_width": "Breedte (m)",
+          "pool_depth": "Gemiddelde diepte (m)"
+        }
+      }
+    }
+  }
+}

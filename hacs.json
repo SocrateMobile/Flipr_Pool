@@ -1,0 +1,6 @@
+{
+  "name": "Flipr Pool Control",
+  "iot_class": "cloud_polling",
+  "render_readme": true,
+  "country": "FR"
+}

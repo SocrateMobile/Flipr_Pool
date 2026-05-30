@@ -1,0 +1,36 @@
+{
+  "config": {
+    "error": {
+      "invalid_auth_detailed": "Erro Flipr: {error_info}",
+      "cannot_connect": "Falha na ligação: {error_info}",
+      "invalid_auth": "Credenciais inválidas"
+    },
+    "step": {
+      "user": {
+        "title": "Configuração do Flipr Pool",
+        "description": "Introduza as suas credenciais Flipr. As dimensões da piscina são opcionais (deixe 0 se desconhecidas), mas necessárias para o cálculo das doses.",
+        "data": {
+          "email": "E-mail",
+          "password": "Palavra-passe",
+          "flipr_id": "ID do módulo (S/N)",
+          "pool_length": "Comprimento da piscina (m)",
+          "pool_width": "Largura da piscina (m)",
+          "pool_depth": "Profundidade média (m)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Dimensões da piscina",
+        "description": "Introduza as dimensões da sua piscina para calcular as doses de tratamento (pH, cloro) e o tempo de filtração recomendado. Deixe em 0 se não desejar.",
+        "data": {
+          "pool_length": "Comprimento (m)",
+          "pool_width": "Largura (m)",
+          "pool_depth": "Profundidade média (m)"
+        }
+      }
+    }
+  }
+}

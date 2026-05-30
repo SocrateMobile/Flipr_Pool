@@ -1,0 +1,36 @@
+{
+  "config": {
+    "error": {
+      "invalid_auth_detailed": "Flipr-Fehler: {error_info}",
+      "cannot_connect": "Verbindung fehlgeschlagen: {error_info}",
+      "invalid_auth": "Ungültige Anmeldedaten"
+    },
+    "step": {
+      "user": {
+        "title": "Flipr Pool Konfiguration",
+        "description": "Geben Sie Ihre Flipr-Anmeldedaten ein. Die Poolabmessungen sind optional (lassen Sie 0, wenn unbekannt), werden aber für die Dosierungsberechnungen benötigt.",
+        "data": {
+          "email": "E-Mail",
+          "password": "Passwort",
+          "flipr_id": "Modul-ID (S/N)",
+          "pool_length": "Poollänge (m)",
+          "pool_width": "Poolbreite (m)",
+          "pool_depth": "Durchschnittliche Tiefe (m)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Poolabmessungen",
+        "description": "Geben Sie Ihre Poolabmessungen an, um die Behandlungsdosierungen (pH, Chlor) und die empfohlene Filtrationszeit zu berechnen. Bei 0 belassen, wenn nicht gewünscht.",
+        "data": {
+          "pool_length": "Länge (m)",
+          "pool_width": "Breite (m)",
+          "pool_depth": "Durchschnittliche Tiefe (m)"
+        }
+      }
+    }
+  }
+}
