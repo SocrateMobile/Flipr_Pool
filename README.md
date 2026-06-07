@@ -12,6 +12,11 @@ Intégration personnalisée pour les analyseurs de piscine Flipr. Cette intégra
 
 ## Installation
 
+Via HACS:
+1. Ajoutez le dépot: https://github.com/SocrateMobile/Flipr_Pool.git
+2. Recherchez et installez Flipr_Pool
+
+Manuellement:
 1. Copiez le dossier `flipr_pool` dans votre répertoire `custom_components/` de Home Assistant.
 2. Redémarrez Home Assistant.
 3. Allez dans **Paramètres > Appareils et Services > Ajouter une intégration**.
