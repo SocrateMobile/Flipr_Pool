@@ -211,8 +211,8 @@ Les calculs utilisent les constantes suivantes (modifiables dans `const.py`) :
 ## 🤝 Remerciements & Crédits
 
 Un grand merci aux créateurs et contributeurs des projets suivants pour leur travail inspirant qui sert de base à cette version **Flipr Pool Control** :
-* **`flipr`** (Intégration Cloud) : Pour la structure initiale et les appels de l'API Cloud officielle GoFlipr.
-* **`flipr_local`** (Intégration BLE) : Pour l'analyse du protocole Bluetooth Low Energy, le décodage binaire des trames GATT et la gestion de la connexion matérielle locale.
+* **`flipr`** (Intégration Cloud) par **@cnico** : Pour la structure initiale et les appels de l'API Cloud officielle GoFlipr.
+* **`flipr_local`** (Intégration BLE) par **@Adrien40** : Pour l'analyse du protocole Bluetooth Low Energy, le décodage binaire des trames GATT et la gestion de la connexion matérielle locale.
 
 ---
 

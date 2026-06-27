@@ -55,45 +55,34 @@ async def _async_authenticate(email: str, password: str) -> dict | None:
 async def _async_list_cloud_devices(token: str) -> list[dict]:
     """Liste tous les appareils (Flipr + Hub) du compte utilisateur.
 
-    Retourne une liste :
-    [
-        {"serial": "ABCD1234", "type": "flipr", "label": "Flipr ABCD1234"},
-        {"serial": "HUB5678",  "type": "hub",   "label": "Hub HUB5678"},
-    ]
+    Récupère d'abord les appareils depuis l'endpoint /place (recommandé)
+    puis utilise /modules en secours.
     """
     headers = {"Authorization": f"Bearer {token}"}
     devices = []
 
     async with aiohttp.ClientSession() as session:
-        # 1. Modules (capteurs Flipr)
-        try:
-            async with session.get(MODULES_URL, headers=headers) as resp:
-                if resp.status == 200:
-                    modules = await resp.json()
-                    if isinstance(modules, list):
-                        for mod in modules:
-                            serial = mod.get("Serial") or mod.get("serial") or mod.get("Id") or ""
-                            model = mod.get("ModuleType_Id") or mod.get("Version") or ""
-                            label = f"Flipr {serial}"
-                            if model:
-                                label += f" ({model})"
-                            devices.append({
-                                "serial": str(serial),
-                                "type": "flipr",
-                                "label": label,
-                                "raw": mod,
-                            })
-        except Exception as e:
-            _LOGGER.warning("Erreur lors de la récupération des modules: %s", e)
-
-        # 2. Places → Hubs
+        # 1. Récupération via les Places (Piscines)
         try:
             async with session.get(PLACES_URL, headers=headers) as resp:
                 if resp.status == 200:
                     places = await resp.json()
                     if isinstance(places, list):
                         for place in places:
-                            # Chercher les hubs associés
+                            # Extraction des modules Flipr dans cette place
+                            modules = place.get("Modules") or place.get("modules") or []
+                            if isinstance(modules, list):
+                                for mod in modules:
+                                    serial = mod.get("Serial") or mod.get("serial") or mod.get("Id") or ""
+                                    if serial:
+                                        devices.append({
+                                            "serial": str(serial),
+                                            "type": "flipr",
+                                            "label": f"Flipr {serial}",
+                                            "raw": mod,
+                                        })
+
+                            # Extraction des Hubs associés
                             hubs = place.get("Hubs") or place.get("hubs") or []
                             if isinstance(hubs, list):
                                 for hub in hubs:
@@ -106,7 +95,26 @@ async def _async_list_cloud_devices(token: str) -> list[dict]:
                                             "raw": hub,
                                         })
         except Exception as e:
-            _LOGGER.warning("Erreur lors de la récupération des places/hubs: %s", e)
+            _LOGGER.warning("Erreur lors de la récupération des places: %s", e)
+
+        # 2. Secours via l'endpoint direct /modules
+        try:
+            async with session.get(MODULES_URL, headers=headers) as resp:
+                if resp.status == 200:
+                    modules = await resp.json()
+                    if isinstance(modules, list):
+                        existing_serials = {d["serial"] for d in devices}
+                        for mod in modules:
+                            serial = mod.get("Serial") or mod.get("serial") or mod.get("Id") or ""
+                            if serial and str(serial) not in existing_serials:
+                                devices.append({
+                                    "serial": str(serial),
+                                    "type": "flipr",
+                                    "label": f"Flipr {serial}",
+                                    "raw": mod,
+                                })
+        except Exception as e:
+            _LOGGER.debug("Erreur ou indisponibilité de l'endpoint /modules: %s", e)
 
     return devices
 
@@ -198,7 +206,10 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
         # Construire la liste déroulante
         device_options = {}
         for dev in self._cloud_devices:
-            device_options[dev["serial"]] = dev["label"]
+            if dev["type"] == "flipr":
+                device_options[dev["serial"]] = f"✅ {dev['label']}"
+            else:
+                device_options[dev["serial"]] = dev["label"]
 
         return self.async_show_form(
             step_id="select_device",
