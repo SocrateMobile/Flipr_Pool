@@ -192,19 +192,8 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                     chosen = dev
                     break
 
-            flipr_id = chosen["serial"] if chosen else selected
-
-            return self.async_create_entry(
-                title=f"Flipr ({self._email} — {flipr_id})",
-                data={
-                    "email": self._email,
-                    "password": self._password,
-                    "flipr_id": flipr_id,
-                    "pool_length": 0.0,
-                    "pool_width": 0.0,
-                    "pool_depth": 0.0,
-                },
-            )
+            self._selected_flipr_id = chosen["serial"] if chosen else selected
+            return await self.async_step_pool_details()
 
         # Construire la liste déroulante
         device_options = {}
@@ -221,6 +210,32 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             },
         )
 
+    async def async_step_pool_details(self, user_input=None):
+        """Étape 3 : Dimensions de la piscine et paramètres de chimie."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title=f"Flipr ({self._email} — {self._selected_flipr_id})",
+                data={
+                    "email": self._email,
+                    "password": self._password,
+                    "flipr_id": self._selected_flipr_id,
+                    **user_input,
+                },
+            )
+
+        return self.async_show_form(
+            step_id="pool_details",
+            data_schema=vol.Schema({
+                vol.Optional("pool_length", default=0.0): vol.Coerce(float),
+                vol.Optional("pool_width",  default=0.0): vol.Coerce(float),
+                vol.Optional("pool_depth",  default=0.0): vol.Coerce(float),
+                vol.Optional(CONF_TAC, default=DEFAULT_TAC): vol.Coerce(float),
+                vol.Optional(CONF_TH,  default=DEFAULT_TH):  vol.Coerce(float),
+                vol.Optional(CONF_CYA, default=DEFAULT_CYA): vol.Coerce(float),
+                vol.Optional(CONF_TDS, default=DEFAULT_TDS): vol.Coerce(float),
+            }),
+        )
+
     async def async_step_manual_device(self, user_input=None):
         """Fallback : saisie manuelle du flipr_id si la découverte échoue."""
         if user_input is not None:
@@ -233,6 +248,10 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                     "pool_length": user_input.get("pool_length", 0.0),
                     "pool_width": user_input.get("pool_width", 0.0),
                     "pool_depth": user_input.get("pool_depth", 0.0),
+                    CONF_TAC: user_input.get(CONF_TAC, DEFAULT_TAC),
+                    CONF_TH: user_input.get(CONF_TH, DEFAULT_TH),
+                    CONF_CYA: user_input.get(CONF_CYA, DEFAULT_CYA),
+                    CONF_TDS: user_input.get(CONF_TDS, DEFAULT_TDS),
                 },
             )
 
@@ -243,6 +262,10 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                 vol.Optional("pool_length", default=0.0): vol.Coerce(float),
                 vol.Optional("pool_width",  default=0.0): vol.Coerce(float),
                 vol.Optional("pool_depth",  default=0.0): vol.Coerce(float),
+                vol.Optional(CONF_TAC, default=DEFAULT_TAC): vol.Coerce(float),
+                vol.Optional(CONF_TH,  default=DEFAULT_TH):  vol.Coerce(float),
+                vol.Optional(CONF_CYA, default=DEFAULT_CYA): vol.Coerce(float),
+                vol.Optional(CONF_TDS, default=DEFAULT_TDS): vol.Coerce(float),
             }),
         )
 

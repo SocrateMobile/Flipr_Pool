@@ -22,14 +22,31 @@
           "device": "Appareil"
         }
       },
+      "pool_details": {
+        "title": "Dimensions & Chimie",
+        "description": "Entrez les dimensions de votre piscine (pour le calcul des volumes/doses) ainsi que ses caractéristiques chimiques.",
+        "data": {
+          "pool_length": "Longueur de la piscine (m)",
+          "pool_width": "Largeur de la piscine (m)",
+          "pool_depth": "Profondeur moyenne (m)",
+          "tac": "TAC — Alcalinité totale (ppm)",
+          "th": "TH — Dureté de l'eau (ppm)",
+          "cya": "CYA — Stabilisant (ppm)",
+          "tds": "TDS — Sels dissous (ppm)"
+        }
+      },
       "manual_device": {
         "title": "Saisie manuelle",
-        "description": "La découverte automatique n'a pas trouvé d'appareils. Entrez manuellement le numéro de série (S/N) de votre Flipr.",
+        "description": "La découverte automatique n'a pas trouvé d'appareils. Entrez manuellement le numéro de série (S/N) de votre Flipr et les caractéristiques de la piscine.",
         "data": {
           "flipr_id": "ID du module (S/N)",
           "pool_length": "Longueur de la piscine (m)",
           "pool_width": "Largeur de la piscine (m)",
-          "pool_depth": "Profondeur moyenne (m)"
+          "pool_depth": "Profondeur moyenne (m)",
+          "tac": "TAC — Alcalinité totale (ppm)",
+          "th": "TH — Dureté de l'eau (ppm)",
+          "cya": "CYA — Stabilisant (ppm)",
+          "tds": "TDS — Sels dissous (ppm)"
         }
       }
     }

@@ -22,14 +22,31 @@
           "device": "Device"
         }
       },
+      "pool_details": {
+        "title": "Dimensions & Chemistry",
+        "description": "Enter pool dimensions (to calculate volume and treatment doses) and chemistry values if known.",
+        "data": {
+          "pool_length": "Pool length (m)",
+          "pool_width": "Pool width (m)",
+          "pool_depth": "Average depth (m)",
+          "tac": "TAC — Total Alkalinity (ppm)",
+          "th": "TH — Water Hardness (ppm)",
+          "cya": "CYA — Stabilizer (ppm)",
+          "tds": "TDS — Total Dissolved Solids (ppm)"
+        }
+      },
       "manual_device": {
         "title": "Manual Entry",
-        "description": "Automatic discovery did not find any devices. Please enter your Flipr serial number (S/N) manually.",
+        "description": "Automatic discovery did not find any devices. Please enter your Flipr serial number (S/N) and pool parameters manually.",
         "data": {
           "flipr_id": "Module ID (S/N)",
           "pool_length": "Pool length (m)",
           "pool_width": "Pool width (m)",
-          "pool_depth": "Average depth (m)"
+          "pool_depth": "Average depth (m)",
+          "tac": "TAC — Total Alkalinity (ppm)",
+          "th": "TH — Water Hardness (ppm)",
+          "cya": "CYA — Stabilizer (ppm)",
+          "tds": "TDS — Total Dissolved Solids (ppm)"
         }
       }
     }
