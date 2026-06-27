@@ -2,17 +2,17 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, Sen
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from .const import (
-    DOMAIN, 
-    PH_TARGET, 
-    PH_MINUS_DOSE, 
-    PH_PLUS_DOSE, 
-    CHLORINE_TARGET, 
+    DOMAIN,
+    PH_TARGET,
+    PH_MINUS_DOSE,
+    PH_PLUS_DOSE,
+    CHLORINE_TARGET,
     CHLORINE_SHOCK_TARGET
 )
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    coordinator = hass.data["flipr_pool"][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id]["merged"]
     flipr_id = entry.data.get("flipr_id", "flipr")
 
     sensors_config = [
@@ -39,6 +39,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ("Durée Pompe",      "pump_hours",      "h",     None,                          "mdi:pump"),
         ("Conseil Filtration", "conseil_filtration", None,  None,                          "mdi:information-outline"),
         ("Dernière Alerte",  "last_alert",      None,    None,                          "mdi:alert-circle-outline"),
+        # ── Chimie avancée (LSI & Chlore Actif) ───────────────
+        ("Indice LSI",        "lsi",             None,    None,                          "mdi:water-percent"),
+        ("Statut Eau (LSI)",  "lsi_status",      None,    None,                          "mdi:water-check"),
+        ("pH Équilibre",      "ph_equilibre",    "pH",    None,                          "mdi:water-opacity"),
+        ("Chlore Libre Est.", "free_chlorine",   "mg/L",  None,                          "mdi:water-check"),
+        ("Chlore Actif HOCl","active_chlorine", "mg/L",  None,                          "mdi:chemical-weapon"),
+        # ── Double Coordinateur ────────────────────────────────
+        ("Source Active",     "data_source",     None,    None,                          "mdi:swap-horizontal"),
+        ("BLE Signal",        "ble_rssi",        "dBm",   None,                          "mdi:bluetooth-connect"),
+        ("BLE Statut",        "ble_status",      None,    None,                          "mdi:bluetooth-settings"),
     ]
 
     entities = [FliprFullSensor(coordinator, flipr_id, *config) for config in sensors_config]
@@ -73,6 +83,8 @@ class FliprFullSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
+        if not self.coordinator.data:
+            return None
         return self.coordinator.data.get(self._data_key)
 
     @property
@@ -91,4 +103,18 @@ class FliprFullSensor(CoordinatorEntity, SensorEntity):
         elif self._data_key == "dose_cl_shock":
             attrs["Cible"] = f"{CHLORINE_SHOCK_TARGET} mg/L"
             attrs["Usage"] = "Rattrapage eau trouble/algues"
+        elif self._data_key == "lsi":
+            attrs["Interprétation"] = (
+                "< -0.3 → eau corrosive | -0.3 à +0.3 → équilibrée | > +0.3 → entartrante"
+            )
+            lsi_stat = self.coordinator.data.get("lsi_status") if self.coordinator.data else None
+            if lsi_stat:
+                attrs["Statut"] = lsi_stat
+        elif self._data_key == "active_chlorine":
+            attrs["Note"] = "HOCl (forme biocide) estimée à partir du chlore libre et du pH"
+        elif self._data_key == "free_chlorine":
+            attrs["Note"] = "Estimé à partir du Redox, pH et stabilisant (CYA)"
+        elif self._data_key == "data_source":
+            attrs["Cloud"] = "API REST GoFlipr (15 min)"
+            attrs["Bluetooth"] = "BLE local (60 min)"
         return attrs

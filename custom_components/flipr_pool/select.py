@@ -4,7 +4,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from .const import DOMAIN, API_BASE_URL
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id]["merged"]
     async_add_entities([FliprModeSelect(coordinator)])
 
 class FliprModeSelect(CoordinatorEntity, SelectEntity):
@@ -33,11 +33,12 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
     async def async_select_option(self, option: str):
         serial = self.coordinator.flipr_id
         headers = {"Authorization": f"Bearer {self.coordinator.token}"}
-        
+
         # Mapping des modes pour l'API
         url = f"{API_BASE_URL}/hub/{serial}/mode/{option}"
         session = self.coordinator.hass.helpers.aiohttp_client.async_get_clientsession(self.coordinator.hass)
         async with session.put(url, headers=headers) as resp:
             if resp.status == 200:
-                self.coordinator.data["hub_mode"] = option
+                if self.coordinator.data:
+                    self.coordinator.data["hub_mode"] = option
                 self.async_write_ha_state()

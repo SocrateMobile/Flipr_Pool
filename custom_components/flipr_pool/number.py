@@ -5,8 +5,8 @@ import aiohttp
 from .const import DOMAIN, API_BASE_URL, THRESHOLDS_URL
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    
+    coordinator = hass.data[DOMAIN][entry.entry_id]["merged"]
+
     # On ajoute 4 entités pour les seuils
     entities = [
         FliprThresholdNumber(coordinator, "pH Min", "ph_min", 6.0, 8.0, 0.1, "mdi:ph"),
@@ -14,14 +14,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
         FliprThresholdNumber(coordinator, "Chlore Min", "cl_min", 0.0, 2.0, 0.1, "mdi:water-minus"),
         FliprThresholdNumber(coordinator, "Chlore Max", "cl_max", 1.0, 5.0, 0.1, "mdi:water-plus"),
     ]
-    
+
     # On ajoute 3 entités pour les dimensions de la piscine
     entities.extend([
         FliprDimensionNumber(coordinator, "Longueur", "pool_length", "mdi:arrow-expand-horizontal"),
         FliprDimensionNumber(coordinator, "Largeur", "pool_width", "mdi:arrow-expand-vertical"),
         FliprDimensionNumber(coordinator, "Profondeur", "pool_depth", "mdi:arrow-down-bold"),
     ])
-    
+
     async_add_entities(entities)
 
 class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
@@ -41,7 +41,7 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
             return None
         t = self.coordinator.data.get("thresholds", {})
         if not t: return None
-        
+
         if self._key == "ph_min": return t.get("PHMin")
         if self._key == "ph_max": return t.get("PHMax")
         if self._key == "cl_min": return t.get("ChlorineMin")
@@ -62,8 +62,8 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
         if not self.coordinator.data:
             return
         # On récupère les seuils actuels pour ne modifier que celui-ci
-        t = dict(self.coordinator.data.get("thresholds", {}))
-        
+        t = dict(self.coordinator.data.get("thresholds", {}) or {})
+
         if self._key == "ph_min": t["PHMin"] = value
         elif self._key == "ph_max": t["PHMax"] = value
         elif self._key == "cl_min": t["ChlorineMin"] = value
@@ -107,9 +107,11 @@ class FliprDimensionNumber(CoordinatorEntity, NumberEntity):
         entry = self.coordinator.config_entry
         new_options = dict(entry.options)
         new_options[self._key] = value
-        
+
         # On met à jour les options de l'entrée de configuration en préservant les données (credentials)
         self.coordinator.hass.config_entries.async_update_entry(entry, data=dict(entry.data), options=new_options)
-        
-        # On force un rafraîchissement des calculs
-        await self.coordinator.async_request_refresh()
+
+        # On force un rafraîchissement des calculs via le coordinateur Cloud
+        cloud_coord = self.coordinator.cloud_coord
+        if cloud_coord:
+            await cloud_coord.async_request_refresh()

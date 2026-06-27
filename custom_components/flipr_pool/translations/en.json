@@ -1,17 +1,31 @@
 {
   "config": {
     "error": {
-      "invalid_auth_detailed": "Flipr Error: {error_info}",
-      "cannot_connect": "Connection failed: {error_info}",
-      "invalid_auth": "Invalid credentials"
+      "invalid_auth_detailed": "Flipr error: {error_info}",
+      "cannot_connect": "Cannot connect: {error_info}",
+      "invalid_auth": "Invalid credentials",
+      "no_devices": "No devices found on this account"
     },
     "step": {
       "user": {
-        "title": "Flipr Pool Configuration",
-        "description": "Enter your Flipr credentials. Pool dimensions are optional (leave 0 if unknown) but required for dosage calculations.",
+        "title": "Flipr Login",
+        "description": "Enter your Flipr credentials. The integration will automatically discover devices linked to your account.",
         "data": {
           "email": "Email",
-          "password": "Password",
+          "password": "Password"
+        }
+      },
+      "select_device": {
+        "title": "Select Device",
+        "description": "{nb_devices} device(s) found on your Flipr account. Select the one to monitor.",
+        "data": {
+          "device": "Device"
+        }
+      },
+      "manual_device": {
+        "title": "Manual Entry",
+        "description": "Automatic discovery did not find any devices. Please enter your Flipr serial number (S/N) manually.",
+        "data": {
           "flipr_id": "Module ID (S/N)",
           "pool_length": "Pool length (m)",
           "pool_width": "Pool width (m)",
@@ -23,12 +37,26 @@
   "options": {
     "step": {
       "init": {
-        "title": "Pool Dimensions",
-        "description": "Provide your pool dimensions to calculate treatment dosages (pH, chlorine) and recommended filtration time. Leave at 0 if not desired.",
+        "title": "Flipr Pool Configuration",
+        "description": "Set pool dimensions, water chemistry and Bluetooth options.",
         "data": {
           "pool_length": "Length (m)",
           "pool_width": "Width (m)",
-          "pool_depth": "Average depth (m)"
+          "pool_depth": "Average depth (m)",
+          "tac": "TAC — Total Alkalinity (ppm)",
+          "th": "TH — Water Hardness (ppm)",
+          "cya": "CYA — Stabilizer (ppm)",
+          "tds": "TDS — Total Dissolved Solids (ppm)",
+          "ble_enabled": "Enable Bluetooth (BLE)",
+          "ble_address": "Flipr BLE MAC address",
+          "scan_ble": "🔍 Scan for nearby BLE devices"
+        }
+      },
+      "ble_scan": {
+        "title": "Bluetooth Scan",
+        "description": "{nb_ble} Flipr(s) detected within Bluetooth range. Select the device to connect.",
+        "data": {
+          "ble_device": "BLE Device"
         }
       }
     }

@@ -3,9 +3,9 @@
   "name": "Flipr Pool Control",
   "codeowners": ["@jflavigne"],
   "config_flow": true,
-  "documentation": "https://github.com/votre_repo",
-  "iot_class": "cloud_polling",
-  "version": "2.0.0",
-  "issue_tracker": "https://github.com/votre_repo/issues",
-  "requirements": ["async_timeout", "aiohttp"]
+  "documentation": "https://github.com/SocrateMobile/flipr_pool",
+  "iot_class": "local_polling",
+  "version": "3.0.0",
+  "issue_tracker": "https://github.com/SocrateMobile/flipr_pool/issues",
+  "requirements": ["async_timeout", "aiohttp", "bleak", "bleak-retry-connector"]
 }

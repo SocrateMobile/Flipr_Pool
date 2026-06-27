@@ -3,15 +3,29 @@
     "error": {
       "invalid_auth_detailed": "Erreur Flipr : {error_info}",
       "cannot_connect": "Impossible de se connecter : {error_info}",
-      "invalid_auth": "Identifiants incorrects"
+      "invalid_auth": "Identifiants incorrects",
+      "no_devices": "Aucun appareil trouvé sur ce compte"
     },
     "step": {
       "user": {
-        "title": "Configuration Flipr Pool",
-        "description": "Entrez vos identifiants Flipr. Les dimensions de la piscine sont optionnelles (laissez 0 si inconnu) mais nécessaires pour les calculs de doses.",
+        "title": "Connexion Flipr",
+        "description": "Entrez vos identifiants Flipr. L'intégration va automatiquement découvrir les appareils liés à votre compte.",
         "data": {
           "email": "Email",
-          "password": "Mot de passe",
+          "password": "Mot de passe"
+        }
+      },
+      "select_device": {
+        "title": "Sélection de l'appareil",
+        "description": "{nb_devices} appareil(s) trouvé(s) sur votre compte Flipr. Sélectionnez celui à surveiller.",
+        "data": {
+          "device": "Appareil"
+        }
+      },
+      "manual_device": {
+        "title": "Saisie manuelle",
+        "description": "La découverte automatique n'a pas trouvé d'appareils. Entrez manuellement le numéro de série (S/N) de votre Flipr.",
+        "data": {
           "flipr_id": "ID du module (S/N)",
           "pool_length": "Longueur de la piscine (m)",
           "pool_width": "Largeur de la piscine (m)",
@@ -23,12 +37,26 @@
   "options": {
     "step": {
       "init": {
-        "title": "Dimensions de la piscine",
-        "description": "Renseignez les dimensions de votre piscine pour calculer les doses de traitement (pH, chlore) et la durée de filtration recommandée. Laissez à 0 si non souhaité.",
+        "title": "Configuration Flipr Pool",
+        "description": "Renseignez les dimensions, la chimie de l'eau et les options Bluetooth.",
         "data": {
           "pool_length": "Longueur (m)",
           "pool_width": "Largeur (m)",
-          "pool_depth": "Profondeur moyenne (m)"
+          "pool_depth": "Profondeur moyenne (m)",
+          "tac": "TAC — Alcalinité totale (ppm)",
+          "th": "TH — Dureté de l'eau (ppm)",
+          "cya": "CYA — Stabilisant (ppm)",
+          "tds": "TDS — Sels dissous (ppm)",
+          "ble_enabled": "Activer le Bluetooth (BLE)",
+          "ble_address": "Adresse MAC du Flipr BLE",
+          "scan_ble": "🔍 Scanner les appareils BLE à portée"
+        }
+      },
+      "ble_scan": {
+        "title": "Scan Bluetooth",
+        "description": "{nb_ble} Flipr détecté(s) à portée Bluetooth. Sélectionnez l'appareil à connecter.",
+        "data": {
+          "ble_device": "Appareil BLE"
         }
       }
     }
