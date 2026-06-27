@@ -1,6 +1,7 @@
 from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import aiohttp
 from .const import DOMAIN, API_BASE_URL, THRESHOLDS_URL
 
@@ -71,7 +72,7 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
 
         url = THRESHOLDS_URL.format(api_base=API_BASE_URL, flipr_id=serial)
         headers = {"Authorization": f"Bearer {token}"}
-        session = self.coordinator.hass.helpers.aiohttp_client.async_get_clientsession(self.coordinator.hass)
+        session = async_get_clientsession(self.coordinator.hass)
         async with session.put(url, headers=headers, json=t) as resp:
             if resp.status == 200:
                 self.coordinator.data["thresholds"] = t

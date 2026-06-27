@@ -1,6 +1,7 @@
 from homeassistant.components.select import SelectEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import DOMAIN, API_BASE_URL
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -36,7 +37,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
 
         # Mapping des modes pour l'API
         url = f"{API_BASE_URL}/hub/{serial}/mode/{option}"
-        session = self.coordinator.hass.helpers.aiohttp_client.async_get_clientsession(self.coordinator.hass)
+        session = async_get_clientsession(self.coordinator.hass)
         async with session.put(url, headers=headers) as resp:
             if resp.status == 200:
                 if self.coordinator.data:
