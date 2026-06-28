@@ -9,7 +9,7 @@
     "step": {
       "user": {
         "title": "Flipr Login",
-        "description": "Enter your Flipr credentials. The integration will automatically discover devices linked to your account.",
+        "description": "Enter your Flipr credentials. The integration will automatically discover devices linked to your account and trigger a Bluetooth scan.",
         "data": {
           "email": "Email",
           "password": "Password"
@@ -47,6 +47,13 @@
           "th": "TH — Water Hardness (ppm)",
           "cya": "CYA — Stabilizer (ppm)",
           "tds": "TDS — Total Dissolved Solids (ppm)"
+        }
+      },
+      "manual_mac": {
+        "title": "Bluetooth Not Detected",
+        "description": "No Flipr was automatically detected in local Bluetooth.\n\nEnter your Flipr BLE MAC address below to force local connection, or leave it blank to continue in Cloud-only mode.",
+        "data": {
+          "ble_address": "Flipr MAC Address (optional)"
         }
       }
     }

@@ -9,7 +9,7 @@
     "step": {
       "user": {
         "title": "Connexion Flipr",
-        "description": "Entrez vos identifiants Flipr. L'intégration va automatiquement découvrir les appareils liés à votre compte.",
+        "description": "Entrez vos identifiants Flipr. L'intégration va automatiquement découvrir les appareils liés à votre compte et lancer un scan Bluetooth.",
         "data": {
           "email": "Email",
           "password": "Mot de passe"
@@ -47,6 +47,13 @@
           "th": "TH — Dureté de l'eau (ppm)",
           "cya": "CYA — Stabilisant (ppm)",
           "tds": "TDS — Sels dissous (ppm)"
+        }
+      },
+      "manual_mac": {
+        "title": "Bluetooth non détecté",
+        "description": "Aucun Flipr n'a été détecté automatiquement en Bluetooth local.\n\nSaisissez l'adresse MAC Bluetooth de votre Flipr ci-dessous pour forcer la connexion locale, ou laissez le champ vide pour continuer en mode Cloud uniquement.",
+        "data": {
+          "ble_address": "Adresse MAC du Flipr (facultatif)"
         }
       }
     }
