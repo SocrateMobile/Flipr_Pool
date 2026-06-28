@@ -155,13 +155,26 @@ async def scan_for_flipr(hass=None, timeout: float = 15.0) -> list[dict]:
         discovered = await BleakScanner.discover(timeout=timeout)
         for d in discovered:
             name = d.name or ""
-            if not any(name.startswith(prefix) for prefix in BLE_NAME_PREFIXES):
-                continue
-
+            
             # Récupérer les UUIDs de service annoncés
             service_uuids = []
             if hasattr(d, "metadata") and isinstance(d.metadata, dict):
-                service_uuids = d.metadata.get("uuids", [])
+                service_uuids = [u.lower() for u in d.metadata.get("uuids", [])]
+
+            # Un appareil est un Flipr s'il a le bon préfixe de nom
+            # OU s'il annonce l'UUID de service Flipr principal (fee8)
+            is_flipr = (
+                any(name.startswith(prefix) for prefix in BLE_NAME_PREFIXES)
+                or "0000fee8-0000-1000-8000-00805f9b34fb" in service_uuids
+                or "fee8" in service_uuids
+            )
+
+            if not is_flipr:
+                continue
+
+            # Si le nom est vide mais que c'est un Flipr (détecté par UUID), on donne un nom par défaut
+            if not name:
+                name = f"Flipr-{d.address.replace(':', '')[-6:].upper()}"
 
             model = _detect_flipr_model(name, service_uuids)
             serial = _extract_serial_from_name(name)

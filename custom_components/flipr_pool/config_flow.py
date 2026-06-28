@@ -177,11 +177,22 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                             try:
                                 from .ble_client import scan_for_flipr
                                 discovered = await scan_for_flipr(timeout=5.0)
+                                
+                                # Appariement par S/N exact
                                 for dev in discovered:
                                     for cloud_dev in self._cloud_devices:
                                         if cloud_dev["type"] == "flipr" and cloud_dev["serial"].upper() == dev["serial"].upper():
                                             self._matched_mac_by_serial[cloud_dev["serial"]] = dev["address"]
-                                            _LOGGER.info("Flipr BLE : Appareil %s détecté à l'adresse %s", cloud_dev["serial"], dev["address"])
+                                            _LOGGER.info("Flipr BLE : Appareil %s détecté par S/N à l'adresse %s", cloud_dev["serial"], dev["address"])
+
+                                # Appariement 1-à-1 si un seul Flipr cloud et un seul Flipr BLE trouvé
+                                cloud_fliprs = [d for d in self._cloud_devices if d["type"] == "flipr"]
+                                if len(cloud_fliprs) == 1 and len(discovered) == 1:
+                                    single_cloud = cloud_fliprs[0]
+                                    single_ble = discovered[0]
+                                    if single_cloud["serial"] not in self._matched_mac_by_serial:
+                                        self._matched_mac_by_serial[single_cloud["serial"]] = single_ble["address"]
+                                        _LOGGER.info("Flipr BLE : Appariement automatique 1-à-1 de %s avec %s", single_cloud["serial"], single_ble["address"])
                             except Exception as e:
                                 _LOGGER.warning("Erreur lors du scan BLE automatique : %s", e)
 
