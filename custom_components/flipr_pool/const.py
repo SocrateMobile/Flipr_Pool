@@ -59,5 +59,5 @@ CONF_BLE_ENABLED   = "ble_enabled"
 CONF_BLE_ADDRESS   = "ble_address"
 
 # Intervalles des coordinateurs
-CLOUD_UPDATE_INTERVAL_MIN = 15
+CLOUD_UPDATE_INTERVAL_MIN = 60
 BLE_UPDATE_INTERVAL_DEFAULT = 60

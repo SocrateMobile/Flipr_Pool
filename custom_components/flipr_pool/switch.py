@@ -140,8 +140,8 @@ class FliprBleSwitch(SwitchEntity):
             "Intervalle": f"{BLE_UPDATE_INTERVAL_DEFAULT} min",
         }
         ble = self._coordinators.get("ble")
-        if ble and ble.last_update_success_time:
-            attrs["Dernier succès BLE"] = ble.last_update_success_time.isoformat()
+        if ble and hasattr(ble, "last_update_success") and ble.last_update_success:
+            attrs["Statut MAJ BLE"] = "Succès"
         return attrs
 
     async def async_turn_on(self, **kwargs):

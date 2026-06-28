@@ -1,0 +1,11 @@
+{
+  "domain": "flipr_pool",
+  "name": "Flipr Pool Control",
+  "codeowners": ["@jflavigne"],
+  "config_flow": true,
+  "documentation": "https://github.com/votre_repo",
+  "iot_class": "cloud_polling",
+  "version": "2.0.0",
+  "issue_tracker": "https://github.com/votre_repo/issues",
+  "requirements": ["async_timeout", "aiohttp"]
+}

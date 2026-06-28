@@ -85,7 +85,14 @@ class FliprFullSensor(CoordinatorEntity, SensorEntity):
     def native_value(self):
         if not self.coordinator.data:
             return None
-        return self.coordinator.data.get(self._data_key)
+        val = self.coordinator.data.get(self._data_key)
+        if self._attr_device_class == SensorDeviceClass.TIMESTAMP and isinstance(val, str):
+            try:
+                from homeassistant.util.dt import parse_datetime
+                return parse_datetime(val)
+            except Exception:
+                pass
+        return val
 
     @property
     def extra_state_attributes(self):

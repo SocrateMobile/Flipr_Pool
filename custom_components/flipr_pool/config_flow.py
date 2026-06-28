@@ -58,6 +58,9 @@ async def _async_authenticate(email: str, password: str) -> dict:
                         return json_data
                     raise FliprAuthError("Réponse d'authentification invalide (token manquant).")
                 
+                if resp.status == 429:
+                    raise FliprAuthError("Trop de requêtes vers le Cloud Flipr (Erreur 429). Votre IP est temporairement bloquée par Flipr. Réessayez plus tard ou utilisez le mode Local.")
+
                 # Tenter d'extraire la description de l'erreur
                 try:
                     err_data = await resp.json()
@@ -343,9 +346,14 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             from .ble_client import scan_for_flipr
             discovered = await scan_for_flipr(self.hass)
             for dev in discovered:
-                if dev["serial"].upper() == self._selected_flipr_id.upper():
+                dev_serial = dev.get("serial", "").upper()
+                dev_name = dev.get("name", "").upper()
+                target = self._selected_flipr_id.upper()
+                
+                # Check if serials match exactly, or if one is contained in the other, or if the name contains the target
+                if (target and dev_serial and (target in dev_serial or dev_serial in target)) or target in dev_name:
                     self._discovered_ble_address = dev["address"]
-                    _LOGGER.info("Flipr BLE : Appareil %s détecté localement à l'adresse %s", self._selected_flipr_id, dev["address"])
+                    _LOGGER.info("Flipr BLE : Appareil %s détecté localement à l'adresse %s (S/N: %s)", target, dev["address"], dev_serial)
                     break
         except Exception as e:
             _LOGGER.warning("Erreur lors du scan BLE en mode mixte : %s", e)

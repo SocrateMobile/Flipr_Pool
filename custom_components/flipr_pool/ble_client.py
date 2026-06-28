@@ -240,9 +240,11 @@ async def read_flipr_ble(
             # Connexion
             if establish_fn and hass:
                 # Utiliser la méthode HA-optimisée (retry automatique)
-                from bleak import BLEDevice
-                # Créer un BLEDevice minimal
-                device = BLEDevice(address, name=None)
+                from homeassistant.components.bluetooth import async_ble_device_from_address
+                device = async_ble_device_from_address(hass, address, connectable=True)
+                if not device:
+                    from bleak.backends.device import BLEDevice
+                    device = BLEDevice(address, name=None, details=None, rssi=0)
                 client = await asyncio.wait_for(
                     establish_fn(BleakClient, device, max_attempts=3),
                     timeout=BLE_CONNECTION_TIMEOUT,
