@@ -8,11 +8,25 @@
     },
     "step": {
       "user": {
-        "title": "Connexion Flipr",
-        "description": "Entrez vos identifiants Flipr. L'intégration va automatiquement découvrir les appareils liés à votre compte et lancer un scan Bluetooth.",
+        "title": "Mode d'installation",
+        "description": "Choisissez le mode de connexion de votre Flipr :",
+        "data": {
+          "installation_type": "Type d'installation"
+        }
+      },
+      "cloud_auth": {
+        "title": "Connexion Cloud Flipr",
+        "description": "Entrez vos identifiants Flipr. L'intégration va automatiquement découvrir les appareils liés à votre compte.",
         "data": {
           "email": "Email",
           "password": "Mot de passe"
+        }
+      },
+      "local_bt": {
+        "title": "Flipr local (Bluetooth)",
+        "description": "Sélectionnez votre appareil Flipr détecté localement en Bluetooth :",
+        "data": {
+          "device": "Appareil"
         }
       },
       "select_device": {
@@ -37,9 +51,10 @@
       },
       "manual_device": {
         "title": "Saisie manuelle",
-        "description": "La découverte automatique n'a pas trouvé d'appareils. Entrez manuellement le numéro de série (S/N) de votre Flipr et les caractéristiques de la piscine.",
+        "description": "Entrez manuellement le numéro de série (S/N) de votre Flipr (et l'adresse MAC si en mode local).",
         "data": {
           "flipr_id": "ID du module (S/N)",
+          "ble_address": "Adresse MAC Bluetooth",
           "pool_length": "Longueur de la piscine (m)",
           "pool_width": "Largeur de la piscine (m)",
           "pool_depth": "Profondeur moyenne (m)",
@@ -91,6 +106,15 @@
         "data": {
           "ble_device": "Appareil BLE"
         }
+      }
+    }
+  },
+  "selector": {
+    "installation_type": {
+      "options": {
+        "mix": "Installation Mixte (Cloud + Bluetooth local)",
+        "local": "Installation Locale en Bluetooth uniquement",
+        "cloud": "Installation Cloud uniquement"
       }
     }
   }

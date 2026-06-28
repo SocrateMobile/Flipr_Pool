@@ -8,11 +8,25 @@
     },
     "step": {
       "user": {
-        "title": "Flipr Login",
-        "description": "Enter your Flipr credentials. The integration will automatically discover devices linked to your account and trigger a Bluetooth scan.",
+        "title": "Installation Mode",
+        "description": "Choose the connection mode for your Flipr:",
+        "data": {
+          "installation_type": "Installation Type"
+        }
+      },
+      "cloud_auth": {
+        "title": "Flipr Cloud Login",
+        "description": "Enter your Flipr credentials. The integration will automatically discover devices linked to your account.",
         "data": {
           "email": "Email",
           "password": "Password"
+        }
+      },
+      "local_bt": {
+        "title": "Flipr Local (Bluetooth)",
+        "description": "Select your Flipr device detected locally via Bluetooth:",
+        "data": {
+          "device": "Device"
         }
       },
       "select_device": {
@@ -37,9 +51,10 @@
       },
       "manual_device": {
         "title": "Manual Entry",
-        "description": "Automatic discovery did not find any devices. Please enter your Flipr serial number (S/N) and pool parameters manually.",
+        "description": "Enter your Flipr serial number (S/N) (and the MAC address if using local mode) manually.",
         "data": {
           "flipr_id": "Module ID (S/N)",
+          "ble_address": "Bluetooth MAC Address",
           "pool_length": "Pool length (m)",
           "pool_width": "Pool width (m)",
           "pool_depth": "Average depth (m)",
@@ -91,6 +106,15 @@
         "data": {
           "ble_device": "BLE Device"
         }
+      }
+    }
+  },
+  "selector": {
+    "installation_type": {
+      "options": {
+        "mix": "Mixed Installation (Cloud + Local Bluetooth)",
+        "local": "Local Installation via Bluetooth only",
+        "cloud": "Cloud Installation only"
       }
     }
   }

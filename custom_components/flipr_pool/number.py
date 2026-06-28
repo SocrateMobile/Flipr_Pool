@@ -1,9 +1,12 @@
+import logging
 from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import aiohttp
 from .const import DOMAIN, API_BASE_URL, THRESHOLDS_URL
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]["merged"]
@@ -60,6 +63,9 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
     async def async_set_native_value(self, value: float):
         serial = self.coordinator.flipr_id
         token = self.coordinator.token
+        if not token:
+            _LOGGER.warning("La modification des seuils n'est pas disponible en mode local uniquement.")
+            return
         if not self.coordinator.data:
             return
         # On récupère les seuils actuels pour ne modifier que celui-ci

@@ -303,7 +303,7 @@ class FliprMergedCoordinator(DataUpdateCoordinator):
     les entités (CoordinatorEntity).
     """
 
-    def __init__(self, hass, logger, name, cloud_coord, ble_coord, store, entry):
+    def __init__(self, hass, logger, name, cloud_coord, ble_coord, store, entry, flipr_id):
         # Pas d'update_method ni d'update_interval — c'est un coordinateur passif
         super().__init__(hass, logger, name=name)
         self.cloud_coord = cloud_coord
@@ -316,12 +316,15 @@ class FliprMergedCoordinator(DataUpdateCoordinator):
         self._ble_data: dict | None = None
 
         # Attributs publics hérités de l'ancien coordinateur
-        self.flipr_id = cloud_coord.flipr_id
-        self.place_id = cloud_coord.place_id
-        self.token = cloud_coord.token
+        self.flipr_id = flipr_id
+        self.place_id = cloud_coord.place_id if cloud_coord else None
+        self.token = cloud_coord.token if cloud_coord else None
 
         # S'abonner aux mises à jour des deux coordinateurs
-        self._unsub_cloud = cloud_coord.async_add_listener(self._on_cloud_update)
+        if cloud_coord is not None:
+            self._unsub_cloud = cloud_coord.async_add_listener(self._on_cloud_update)
+        else:
+            self._unsub_cloud = None
         if ble_coord is not None:
             self._unsub_ble = ble_coord.async_add_listener(self._on_ble_update)
         else:
@@ -518,14 +521,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as err:
             raise UpdateFailed(f"Erreur Flipr Cloud: {err}")
 
-    cloud_coordinator = DataUpdateCoordinator(
-        hass, _LOGGER, name="flipr_pool_cloud",
-        update_method=_async_fetch_cloud,
-        update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN),
-    )
-    cloud_coordinator.flipr_id = flipr_id
-    cloud_coordinator.place_id = None
-    cloud_coordinator.token = None
+    cloud_coordinator = None
+    if email and password:
+        cloud_coordinator = DataUpdateCoordinator(
+            hass, _LOGGER, name="flipr_pool_cloud",
+            update_method=_async_fetch_cloud,
+            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN),
+        )
+        cloud_coordinator.flipr_id = flipr_id
+        cloud_coordinator.place_id = None
+        cloud_coordinator.token = None
 
     # ─────────────────────────────────────────────────────────
     #  2. Coordinateur BLE (60 min, si activé)
@@ -563,6 +568,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ble_coord=ble_coordinator,
         store=store,
         entry=entry,
+        flipr_id=flipr_id,
     )
 
     # ── Restauration locale au démarrage ────────────────────
@@ -581,10 +587,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # ── Premier refresh des coordinateurs ───────────────────
-    try:
-        await cloud_coordinator.async_config_entry_first_refresh()
-    except Exception as err:
-        _LOGGER.warning("Flipr Cloud: premier refresh échoué (%s)", err)
+    if cloud_coordinator is not None:
+        try:
+            await cloud_coordinator.async_config_entry_first_refresh()
+        except Exception as err:
+            _LOGGER.warning("Flipr Cloud: premier refresh échoué (%s)", err)
 
     if ble_coordinator is not None:
         try:

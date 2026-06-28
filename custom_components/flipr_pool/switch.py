@@ -66,6 +66,9 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
     async def _async_set_mode(self, mode):
         serial = self.coordinator.flipr_id
         token = self.coordinator.token
+        if not token:
+            _LOGGER.warning("Le contrôle de la pompe de filtration n'est pas disponible en mode local uniquement.")
+            return
         url = f"{API_BASE_URL}/hub/{serial}/mode/{mode}"
 
         headers = {"Authorization": f"Bearer {token}"}

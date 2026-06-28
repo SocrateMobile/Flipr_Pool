@@ -15,6 +15,7 @@ import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 
 from .const import (
     API_BASE_URL,
@@ -34,8 +35,11 @@ _LOGGER = logging.getLogger(__name__)
 #  Helpers Cloud
 # ═══════════════════════════════════════════════════════════════
 
-async def _async_authenticate(email: str, password: str) -> dict | None:
-    """Authentification Cloud. Retourne le JSON complet (avec access_token) ou None."""
+class FliprAuthError(Exception):
+    """Exception levée en cas d'échec d'authentification."""
+
+async def _async_authenticate(email: str, password: str) -> dict:
+    """Authentification Cloud. Retourne le JSON complet (avec access_token) ou lève FliprAuthError."""
     auth_data = {
         "grant_type": "password",
         "username": email.strip(),
@@ -45,11 +49,25 @@ async def _async_authenticate(email: str, password: str) -> dict | None:
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json",
     }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(AUTH_URL, data=auth_data, headers=headers) as resp:
-            if resp.status == 200:
-                return await resp.json()
-            return None
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(AUTH_URL, data=auth_data, headers=headers) as resp:
+                if resp.status == 200:
+                    json_data = await resp.json()
+                    if json_data and json_data.get("access_token"):
+                        return json_data
+                    raise FliprAuthError("Réponse d'authentification invalide (token manquant).")
+                
+                # Tenter d'extraire la description de l'erreur
+                try:
+                    err_data = await resp.json()
+                    err_msg = err_data.get("error_description") or err_data.get("error") or f"HTTP {resp.status}"
+                except Exception:
+                    err_msg = await resp.text()
+                
+                raise FliprAuthError(f"Serveur Flipr : {err_msg[:150]}")
+    except aiohttp.ClientError as e:
+        raise FliprAuthError(f"Erreur de connexion réseau : {str(e)}")
 
 
 async def _async_list_cloud_devices(token: str) -> list[dict]:
@@ -142,6 +160,7 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
         self._matched_mac_by_serial = {}
         self._manual_user_input = {}
         self._from_manual_device = False
+        self._installation_type = "mix"
 
     @staticmethod
     @callback
@@ -149,7 +168,29 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
         return FliprOptionsFlow()
 
     async def async_step_user(self, user_input=None):
-        """Étape 1 : Email + mot de passe."""
+        """Étape initiale : Choix du type d'installation."""
+        if user_input is not None:
+            self._installation_type = user_input["installation_type"]
+            if self._installation_type == "local":
+                return await self.async_step_local_bt()
+            else:
+                return await self.async_step_cloud_auth()
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({
+                vol.Required("installation_type", default="mix"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["mix", "local", "cloud"],
+                        mode=selector.SelectSelectorMode.LIST,
+                        translation_key="installation_type",
+                    )
+                )
+            })
+        )
+
+    async def async_step_cloud_auth(self, user_input=None):
+        """Authentification Cloud (pour mode Mixte et Cloud)."""
         errors = {}
         description_placeholders = {}
 
@@ -166,64 +207,116 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
 
                     # Découvrir les appareils du compte
                     self._cloud_devices = await _async_list_cloud_devices(self._token)
-                    _LOGGER.info("Flipr: %d appareils trouvés sur le compte", len(self._cloud_devices))
+                    _LOGGER.info("Flipr : %d appareils trouvés sur le compte", len(self._cloud_devices))
 
                     if self._cloud_devices:
-                        # 1. Scan BLE automatique (5 secondes)
-                        has_flipr = any(d["type"] == "flipr" for d in self._cloud_devices)
-                        self._matched_mac_by_serial = {}
-                        if has_flipr:
-                            _LOGGER.info("Flipr : Recherche des appareils BLE dans le cache Bluetooth HA...")
-                            try:
-                                from .ble_client import scan_for_flipr
-                                discovered = await scan_for_flipr(self.hass)
-                                
-                                # Appariement par S/N exact
-                                for dev in discovered:
-                                    for cloud_dev in self._cloud_devices:
-                                        if cloud_dev["type"] == "flipr" and cloud_dev["serial"].upper() == dev["serial"].upper():
-                                            self._matched_mac_by_serial[cloud_dev["serial"]] = dev["address"]
-                                            _LOGGER.info("Flipr BLE : Appareil %s détecté par S/N à l'adresse %s", cloud_dev["serial"], dev["address"])
+                        if self._installation_type == "mix":
+                            # Scan BLE automatique
+                            has_flipr = any(d["type"] == "flipr" for d in self._cloud_devices)
+                            self._matched_mac_by_serial = {}
+                            if has_flipr:
+                                _LOGGER.info("Flipr : Recherche des appareils BLE dans le cache Bluetooth HA...")
+                                try:
+                                    from .ble_client import scan_for_flipr
+                                    discovered = await scan_for_flipr(self.hass)
+                                    
+                                    # Appariement par S/N exact
+                                    for dev in discovered:
+                                        for cloud_dev in self._cloud_devices:
+                                            if cloud_dev["type"] == "flipr" and cloud_dev["serial"].upper() == dev["serial"].upper():
+                                                self._matched_mac_by_serial[cloud_dev["serial"]] = dev["address"]
+                                                _LOGGER.info("Flipr BLE : Appareil %s détecté par S/N à l'adresse %s", cloud_dev["serial"], dev["address"])
 
-                                # Appariement 1-à-1 si un seul Flipr cloud et un seul Flipr BLE trouvé
-                                cloud_fliprs = [d for d in self._cloud_devices if d["type"] == "flipr"]
-                                if len(cloud_fliprs) == 1 and len(discovered) == 1:
-                                    single_cloud = cloud_fliprs[0]
-                                    single_ble = discovered[0]
-                                    if single_cloud["serial"] not in self._matched_mac_by_serial:
-                                        self._matched_mac_by_serial[single_cloud["serial"]] = single_ble["address"]
-                                        _LOGGER.info("Flipr BLE : Appariement automatique 1-à-1 de %s avec %s", single_cloud["serial"], single_ble["address"])
-                            except Exception as e:
-                                _LOGGER.warning("Erreur lors du scan BLE automatique : %s", e)
+                                    # Appariement 1-à-1 si un seul Flipr cloud et un seul Flipr BLE trouvé
+                                    cloud_fliprs = [d for d in self._cloud_devices if d["type"] == "flipr"]
+                                    if len(cloud_fliprs) == 1 and len(discovered) == 1:
+                                        single_cloud = cloud_fliprs[0]
+                                        single_ble = discovered[0]
+                                        if single_cloud["serial"] not in self._matched_mac_by_serial:
+                                            self._matched_mac_by_serial[single_cloud["serial"]] = single_ble["address"]
+                                            _LOGGER.info("Flipr BLE : Appariement automatique 1-à-1 de %s avec %s", single_cloud["serial"], single_ble["address"])
+                                except Exception as e:
+                                    _LOGGER.warning("Erreur lors du scan BLE automatique : %s", e)
 
-                        # Si un Flipr est associé au compte mais non trouvé sur le réseau local,
-                        # on demande l'adresse MAC manuellement.
-                        if has_flipr and not self._matched_mac_by_serial:
-                            return await self.async_step_manual_mac_choice()
+                            # Si un Flipr est associé au compte mais non trouvé sur le réseau local,
+                            # on demande l'adresse MAC manuellement.
+                            if has_flipr and not self._matched_mac_by_serial:
+                                return await self.async_step_manual_mac_choice()
 
                         return await self.async_step_select_device()
                     else:
-                        # Pas de devices trouvés → formulaire manuel
                         errors["base"] = "no_devices"
                         description_placeholders["error_info"] = (
-                            "Aucun appareil Flipr trouvé sur ce compte. "
-                            "Vous pouvez saisir le numéro de série manuellement."
+                            "Aucun appareil Flipr trouvé sur ce compte."
                         )
-                        return await self.async_step_manual_device()
                 else:
                     errors["base"] = "invalid_auth"
+            except FliprAuthError as e:
+                errors["base"] = "invalid_auth_detailed"
+                description_placeholders["error_info"] = str(e)
             except Exception as e:
                 errors["base"] = "cannot_connect"
                 description_placeholders["error_info"] = str(e)
 
         return self.async_show_form(
-            step_id="user",
+            step_id="cloud_auth",
             data_schema=vol.Schema({
                 vol.Required("email"): str,
                 vol.Required("password"): str,
             }),
             errors=errors,
             description_placeholders=description_placeholders,
+        )
+
+    async def async_step_local_bt(self, user_input=None):
+        """Installation locale en Bluetooth uniquement."""
+        errors = {}
+
+        if user_input is not None:
+            selected = user_input["device"]
+            if selected == "manual":
+                self._from_manual_device = True
+                return await self.async_step_manual_device()
+            
+            # Un appareil a été sélectionné dans la liste
+            self._discovered_ble_address = selected
+            
+            # Extraire le serial
+            chosen_serial = "Inconnu"
+            if hasattr(self, "_discovered_bt_devices"):
+                for dev in self._discovered_bt_devices:
+                    if dev["address"] == selected:
+                        chosen_serial = dev["serial"]
+                        break
+            
+            self._selected_flipr_id = chosen_serial
+            return await self.async_step_pool_details()
+
+        # Scanner le cache Bluetooth de HA pour trouver des Flipr
+        discovered_devices = []
+        try:
+            from .ble_client import scan_for_flipr
+            discovered_devices = await scan_for_flipr(self.hass)
+        except Exception as e:
+            _LOGGER.warning("Erreur lors de la recherche des appareils Bluetooth local : %s", e)
+
+        self._discovered_bt_devices = discovered_devices
+
+        # Construire la liste des options
+        device_options = {"manual": "Saisir le numéro de série & MAC manuellement"}
+        for dev in discovered_devices:
+            label = f"✅ {dev['name']} (S/N: {dev['serial']}, MAC: {dev['address']})"
+            device_options[dev["address"]] = label
+
+        return self.async_show_form(
+            step_id="local_bt",
+            data_schema=vol.Schema({
+                vol.Required("device", default="manual" if not discovered_devices else list(device_options.keys())[1]): vol.In(device_options),
+            }),
+            errors=errors,
+            description_placeholders={
+                "nb_devices": str(len(discovered_devices)),
+            }
         )
 
     async def async_step_select_device(self, user_input=None):
@@ -244,6 +337,36 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                 self._discovered_ble_address = self._matched_mac_by_serial[self._selected_flipr_id]
 
             return await self.async_step_pool_details()
+
+        # Construire la liste déroulante
+        device_options = {}
+        for dev in self._cloud_devices:
+            serial_upper = dev["serial"].upper()
+            label = dev["label"]
+            
+            if serial_upper.startswith("F"):
+                prefix = "✅ "  # Carré vert avec check (Flipr)
+            elif serial_upper.startswith("G"):
+                prefix = "🔌 "  # Pompe / Hub
+            elif serial_upper.startswith("C"):
+                prefix = "📡 "  # Passerelle de connexion / Link
+            else:
+                if dev["type"] == "flipr":
+                    prefix = "✅ "
+                else:
+                    prefix = "🔌 "
+                    
+            device_options[dev["serial"]] = f"{prefix}{label}"
+
+        return self.async_show_form(
+            step_id="select_device",
+            data_schema=vol.Schema({
+                vol.Required("device"): vol.In(device_options),
+            }),
+            description_placeholders={
+                "nb_devices": str(len(self._cloud_devices)),
+            },
+        )
 
     async def async_step_manual_mac_choice(self, user_input=None):
         """Menu intermédiaire : Choisir de saisir l'adresse MAC ou d'ignorer."""
@@ -284,46 +407,21 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             }),
         )
 
-        # Construire la liste déroulante
-        device_options = {}
-        for dev in self._cloud_devices:
-            serial_upper = dev["serial"].upper()
-            label = dev["label"]
-            
-            if serial_upper.startswith("F"):
-                prefix = "✅ "  # Carré vert avec check (Flipr)
-            elif serial_upper.startswith("G"):
-                prefix = "🔌 "  # Pompe / Hub
-            elif serial_upper.startswith("C"):
-                prefix = "📡 "  # Passerelle de connexion / Link
-            else:
-                # Fallback selon le type détecté
-                if dev["type"] == "flipr":
-                    prefix = "✅ "
-                else:
-                    prefix = "🔌 "
-                    
-            device_options[dev["serial"]] = f"{prefix}{label}"
-
-        return self.async_show_form(
-            step_id="select_device",
-            data_schema=vol.Schema({
-                vol.Required("device"): vol.In(device_options),
-            }),
-            description_placeholders={
-                "nb_devices": str(len(self._cloud_devices)),
-            },
-        )
-
     async def async_step_pool_details(self, user_input=None):
         """Étape 3 : Dimensions de la piscine et paramètres de chimie."""
         if user_input is not None:
             ble_address = self._discovered_ble_address
-            ble_enabled = bool(ble_address)
+            ble_enabled = bool(ble_address) or (self._installation_type == "local")
+
+            if self._installation_type == "local":
+                title = f"Flipr (Local — {self._selected_flipr_id})"
+            else:
+                title = f"Flipr ({self._email} — {self._selected_flipr_id})"
 
             return self.async_create_entry(
-                title=f"Flipr ({self._email} — {self._selected_flipr_id})",
+                title=title,
                 data={
+                    "installation_type": self._installation_type,
                     "email": self._email,
                     "password": self._password,
                     "flipr_id": self._selected_flipr_id,
@@ -347,13 +445,17 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
         )
 
     async def async_step_manual_device(self, user_input=None):
-        """Fallback : saisie manuelle du flipr_id si la découverte échoue."""
+        """Fallback : Saisie manuelle de l'identifiant (et de la MAC en mode local)."""
         if user_input is not None:
             flipr_id = user_input["flipr_id"]
             self._selected_flipr_id = flipr_id
             self._manual_user_input = user_input
 
-            # Lancement d'un scan BLE rapide de 5s
+            if self._installation_type == "local":
+                self._discovered_ble_address = user_input["ble_address"].strip().upper()
+                return await self.async_step_pool_details()
+
+            # Lancement d'un scan BLE rapide (si Mixte / Cloud)
             self._discovered_ble_address = ""
             try:
                 from .ble_client import scan_for_flipr
@@ -382,18 +484,26 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                 },
             )
 
+        # Affichage du formulaire
+        schema_fields = {
+            vol.Required("flipr_id"): str,
+        }
+        if self._installation_type == "local":
+            schema_fields[vol.Required("ble_address")] = str
+
+        schema_fields.update({
+            vol.Optional("pool_length", default=0.0): vol.Coerce(float),
+            vol.Optional("pool_width",  default=0.0): vol.Coerce(float),
+            vol.Optional("pool_depth",  default=0.0): vol.Coerce(float),
+            vol.Optional(CONF_TAC, default=DEFAULT_TAC): vol.Coerce(float),
+            vol.Optional(CONF_TH,  default=DEFAULT_TH):  vol.Coerce(float),
+            vol.Optional(CONF_CYA, default=DEFAULT_CYA): vol.Coerce(float),
+            vol.Optional(CONF_TDS, default=DEFAULT_TDS): vol.Coerce(float),
+        })
+
         return self.async_show_form(
             step_id="manual_device",
-            data_schema=vol.Schema({
-                vol.Required("flipr_id"): str,
-                vol.Optional("pool_length", default=0.0): vol.Coerce(float),
-                vol.Optional("pool_width",  default=0.0): vol.Coerce(float),
-                vol.Optional("pool_depth",  default=0.0): vol.Coerce(float),
-                vol.Optional(CONF_TAC, default=DEFAULT_TAC): vol.Coerce(float),
-                vol.Optional(CONF_TH,  default=DEFAULT_TH):  vol.Coerce(float),
-                vol.Optional(CONF_CYA, default=DEFAULT_CYA): vol.Coerce(float),
-                vol.Optional(CONF_TDS, default=DEFAULT_TDS): vol.Coerce(float),
-            }),
+            data_schema=vol.Schema(schema_fields),
         )
 
 

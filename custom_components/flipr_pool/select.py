@@ -1,8 +1,11 @@
+import logging
 from homeassistant.components.select import SelectEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import DOMAIN, API_BASE_URL
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]["merged"]
@@ -33,7 +36,11 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
 
     async def async_select_option(self, option: str):
         serial = self.coordinator.flipr_id
-        headers = {"Authorization": f"Bearer {self.coordinator.token}"}
+        token = self.coordinator.token
+        if not token:
+            _LOGGER.warning("Le contrôle du mode de filtration n'est pas disponible en mode local uniquement.")
+            return
+        headers = {"Authorization": f"Bearer {token}"}
 
         # Mapping des modes pour l'API
         url = f"{API_BASE_URL}/hub/{serial}/mode/{option}"
