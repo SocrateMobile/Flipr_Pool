@@ -17,6 +17,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers import device_registry as dr
+from homeassistant.core import ServiceCall
 
 from .const import (
     DOMAIN,
@@ -444,6 +446,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "coordinator": coordinator,  # Le coordinateur unique
     }
+
+    # ── Services Personnalisés ──────────────────────────────
+    async def handle_force_cloud_sync(call: ServiceCall):
+        device_id = call.data.get("device_id")
+        dev_reg = dr.async_get(hass)
+        device = dev_reg.async_get(device_id)
+        if device:
+            for eid in device.config_entries:
+                if eid in hass.data.get(DOMAIN, {}):
+                    c = hass.data[DOMAIN][eid]["coordinator"]
+                    await c.async_request_refresh()
+                    break
+
+    async def handle_update_dimensions(call: ServiceCall):
+        device_id = call.data.get("device_id")
+        dev_reg = dr.async_get(hass)
+        device = dev_reg.async_get(device_id)
+        if device:
+            for eid in device.config_entries:
+                c_entry = hass.config_entries.async_get_entry(eid)
+                if c_entry and c_entry.domain == DOMAIN:
+                    new_options = dict(c_entry.options)
+                    if call.data.get("length") is not None:
+                        new_options["pool_length"] = call.data.get("length")
+                    if call.data.get("width") is not None:
+                        new_options["pool_width"] = call.data.get("width")
+                    if call.data.get("depth") is not None:
+                        new_options["pool_depth"] = call.data.get("depth")
+                    hass.config_entries.async_update_entry(c_entry, options=new_options)
+                    if eid in hass.data.get(DOMAIN, {}):
+                        c = hass.data[DOMAIN][eid]["coordinator"]
+                        await c.async_request_refresh()
+                    break
+
+    if not hass.services.has_service(DOMAIN, "force_cloud_sync"):
+        hass.services.async_register(DOMAIN, "force_cloud_sync", handle_force_cloud_sync)
+    if not hass.services.has_service(DOMAIN, "update_dimensions"):
+        hass.services.async_register(DOMAIN, "update_dimensions", handle_update_dimensions)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
