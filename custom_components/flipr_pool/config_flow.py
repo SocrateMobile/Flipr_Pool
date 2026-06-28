@@ -16,6 +16,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+from typing import Any
 
 from .const import (
     API_BASE_URL,
@@ -35,111 +36,6 @@ _LOGGER = logging.getLogger(__name__)
 #  Helpers Cloud
 # ═══════════════════════════════════════════════════════════════
 
-class FliprAuthError(Exception):
-    """Exception levée en cas d'échec d'authentification."""
-
-async def _async_authenticate(email: str, password: str) -> dict:
-    """Authentification Cloud. Retourne le JSON complet (avec access_token) ou lève FliprAuthError."""
-    auth_data = {
-        "grant_type": "password",
-        "username": email.strip(),
-        "password": password.strip(),
-    }
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
-    }
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(AUTH_URL, data=auth_data, headers=headers) as resp:
-                if resp.status == 200:
-                    json_data = await resp.json()
-                    if json_data and json_data.get("access_token"):
-                        return json_data
-                    raise FliprAuthError("Réponse d'authentification invalide (token manquant).")
-                
-                if resp.status == 429:
-                    raise FliprAuthError("Trop de requêtes vers le Cloud Flipr (Erreur 429). Votre IP est temporairement bloquée par Flipr. Réessayez plus tard ou utilisez le mode Local.")
-
-                # Tenter d'extraire la description de l'erreur
-                try:
-                    err_data = await resp.json()
-                    err_msg = err_data.get("error_description") or err_data.get("error") or f"HTTP {resp.status}"
-                except Exception:
-                    err_msg = await resp.text()
-                
-                raise FliprAuthError(f"Serveur Flipr : {err_msg[:150]}")
-    except aiohttp.ClientError as e:
-        raise FliprAuthError(f"Erreur de connexion réseau : {str(e)}")
-
-
-async def _async_list_cloud_devices(token: str) -> list[dict]:
-    """Liste tous les appareils (Flipr + Hub) du compte utilisateur.
-
-    Récupère d'abord les appareils depuis l'endpoint /place (recommandé)
-    puis utilise /modules en secours.
-    """
-    headers = {"Authorization": f"Bearer {token}"}
-    devices = []
-
-    async with aiohttp.ClientSession() as session:
-        # 1. Récupération via les Places (Piscines)
-        try:
-            async with session.get(PLACES_URL, headers=headers) as resp:
-                if resp.status == 200:
-                    places = await resp.json()
-                    if isinstance(places, list):
-                        for place in places:
-                            # Extraction des modules Flipr dans cette place
-                            modules = place.get("Modules") or place.get("modules") or []
-                            if isinstance(modules, list):
-                                for mod in modules:
-                                    serial = mod.get("Serial") or mod.get("serial") or mod.get("Id") or ""
-                                    if serial:
-                                        devices.append({
-                                            "serial": str(serial),
-                                            "type": "flipr",
-                                            "label": f"Flipr {serial}",
-                                            "raw": mod,
-                                        })
-
-                            # Extraction des Hubs associés
-                            hubs = place.get("Hubs") or place.get("hubs") or []
-                            if isinstance(hubs, list):
-                                for hub in hubs:
-                                    hub_serial = hub.get("Serial") or hub.get("Id") or ""
-                                    if hub_serial:
-                                        devices.append({
-                                            "serial": str(hub_serial),
-                                            "type": "hub",
-                                            "label": f"Hub {hub_serial}",
-                                            "raw": hub,
-                                        })
-        except Exception as e:
-            _LOGGER.warning("Erreur lors de la récupération des places: %s", e)
-
-        # 2. Secours via l'endpoint direct /modules
-        try:
-            async with session.get(MODULES_URL, headers=headers) as resp:
-                if resp.status == 200:
-                    modules = await resp.json()
-                    if isinstance(modules, list):
-                        existing_serials = {d["serial"] for d in devices}
-                        for mod in modules:
-                            serial = mod.get("Serial") or mod.get("serial") or mod.get("Id") or ""
-                            if serial and str(serial) not in existing_serials:
-                                devices.append({
-                                    "serial": str(serial),
-                                    "type": "flipr",
-                                    "label": f"Flipr {serial}",
-                                    "raw": mod,
-                                })
-        except Exception as e:
-            _LOGGER.debug("Erreur ou indisponibilité de l'endpoint /modules: %s", e)
-
-    return devices
-
-
 # ═══════════════════════════════════════════════════════════════
 #  Config Flow (installation)
 # ═══════════════════════════════════════════════════════════════
@@ -153,8 +49,8 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
 
     VERSION = 1
 
-    def __init__(self):
-        self._email = None
+    def __init__(self) -> None:
+        self._email: str | None = None
         self._password = None
         self._token = None
         self._cloud_devices = []
@@ -167,10 +63,10 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
         return FliprOptionsFlow()
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
         """Étape initiale : Choix du type d'installation."""
         if user_input is not None:
             self._installation_type = user_input["installation_type"]
@@ -192,35 +88,37 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             })
         )
 
-    async def async_step_cloud_auth(self, user_input=None):
+    async def async_step_cloud_auth(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
         """Authentification Cloud (pour mode Mixte et Cloud)."""
-        errors = {}
-        description_placeholders = {}
+        errors: dict[str, str] = {}
+        description_placeholders: dict[str, str] = {}
 
         if user_input is not None:
             email = user_input["email"]
             password = user_input["password"]
 
             try:
-                auth_result = await _async_authenticate(email, password)
-                if auth_result and auth_result.get("access_token"):
-                    self._email = email
-                    self._password = password
-                    self._token = auth_result["access_token"]
+                from homeassistant.helpers.aiohttp_client import async_get_clientsession
+                from .api import FliprApiClient, FliprAuthError, FliprApiError
+                session = async_get_clientsession(self.hass)
+                client = FliprApiClient(session, email, password)
+                
+                token = await client.authenticate()
+                self._email = email
+                self._password = password
+                self._token = token
 
-                    # Découvrir les appareils du compte
-                    self._cloud_devices = await _async_list_cloud_devices(self._token)
-                    _LOGGER.info("Flipr : %d appareils trouvés sur le compte", len(self._cloud_devices))
+                # Découvrir les appareils du compte
+                self._cloud_devices = await client.list_devices()
+                _LOGGER.info("Flipr : %d appareils trouvés sur le compte", len(self._cloud_devices))
 
-                    if self._cloud_devices:
-                        return await self.async_step_select_device()
-                    else:
-                        errors["base"] = "no_devices"
-                        description_placeholders["error_info"] = (
-                            "Aucun appareil Flipr trouvé sur ce compte."
-                        )
+                if self._cloud_devices:
+                    return await self.async_step_select_device()
                 else:
-                    errors["base"] = "invalid_auth"
+                    errors["base"] = "no_devices"
+                    description_placeholders["error_info"] = (
+                        "Aucun appareil Flipr trouvé sur ce compte."
+                    )
             except FliprAuthError as e:
                 errors["base"] = "invalid_auth_detailed"
                 description_placeholders["error_info"] = str(e)
@@ -434,6 +332,9 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             else:
                 title = f"Flipr ({self._email} — {self._selected_flipr_id})"
 
+            await self.async_set_unique_id(self._selected_flipr_id)
+            self._abort_if_unique_id_configured()
+
             return self.async_create_entry(
                 title=title,
                 data={
@@ -487,6 +388,9 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                 # Redirection vers manual_mac_choice si non détecté en BLE
                 self._from_manual_device = True
                 return await self.async_step_manual_mac_choice()
+
+            await self.async_set_unique_id(flipr_id)
+            self._abort_if_unique_id_configured()
 
             return self.async_create_entry(
                 title=f"Flipr ({self._email} — {flipr_id})",

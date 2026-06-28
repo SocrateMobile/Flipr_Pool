@@ -1,89 +1,33 @@
 {
   "config": {
-    "error": {
-      "invalid_auth_detailed": "Erreur Flipr : {error_info}",
-      "cannot_connect": "Impossible de se connecter : {error_info}",
-      "invalid_auth": "Identifiants incorrects",
-      "no_devices": "Aucun appareil trouvé sur ce compte"
-    },
     "step": {
       "user": {
-        "title": "Mode d'installation",
-        "description": "Choisissez le mode de connexion de votre Flipr :",
+        "title": "Type d'installation Flipr",
+        "description": "Choisissez le type d'installation.",
         "data": {
-          "installation_type": "Type d'installation"
+          "installation_type": "Mode d'installation"
         }
       },
       "cloud_auth": {
-        "title": "Connexion Cloud Flipr",
-        "description": "Entrez vos identifiants Flipr. L'intégration va automatiquement découvrir les appareils liés à votre compte.",
+        "title": "Authentification Cloud",
+        "description": "Saisissez les identifiants de votre compte Flipr.",
         "data": {
-          "email": "Email",
+          "email": "Adresse E-mail",
           "password": "Mot de passe"
-        }
-      },
-      "local_bt": {
-        "title": "Flipr local (Bluetooth)",
-        "description": "Sélectionnez votre appareil Flipr détecté localement en Bluetooth :",
-        "data": {
-          "device": "Appareil"
         }
       },
       "select_device": {
         "title": "Sélection de l'appareil",
-        "description": "{nb_devices} appareil(s) trouvé(s) sur votre compte Flipr. Sélectionnez celui à surveiller.",
+        "description": "Choisissez l'appareil Flipr à intégrer.",
         "data": {
-          "device": "Appareil"
+          "flipr_id": "Appareil"
         }
       },
-      "mix_ble_confirm": {
-        "title": "Bluetooth détecté !",
-        "description": "Votre Flipr (S/N: {serial}) a été détecté automatiquement en Bluetooth local à l'adresse **{mac}**.\n\nChoisissez comment continuer :",
+      "local_bt": {
+        "title": "Mode Bluetooth Local",
+        "description": "Le mode Bluetooth Local exclusif est fortement déconseillé car il entraîne la perte de l'historique et des alertes avancées. Voulez-vous continuer ?",
         "data": {
-          "choice": "Action"
-        }
-      },
-      "pool_details": {
-        "title": "Dimensions & Chimie",
-        "description": "Entrez les dimensions de votre piscine (pour le calcul des volumes/doses) ainsi que ses caractéristiques chimiques.",
-        "data": {
-          "pool_length": "Longueur de la piscine (m)",
-          "pool_width": "Largeur de la piscine (m)",
-          "pool_depth": "Profondeur moyenne (m)",
-          "tac": "TAC — Alcalinité totale (ppm)",
-          "th": "TH — Dureté de l'eau (ppm)",
-          "cya": "CYA — Stabilisant (ppm)",
-          "tds": "TDS — Sels dissous (ppm)"
-        }
-      },
-      "manual_device": {
-        "title": "Saisie manuelle",
-        "description": "Entrez manuellement le numéro de série (S/N) de votre Flipr (et l'adresse MAC si en mode local).",
-        "data": {
-          "flipr_id": "ID du module (S/N)",
-          "ble_address": "Adresse MAC Bluetooth",
-          "pool_length": "Longueur de la piscine (m)",
-          "pool_width": "Largeur de la piscine (m)",
-          "pool_depth": "Profondeur moyenne (m)",
-          "tac": "TAC — Alcalinité totale (ppm)",
-          "th": "TH — Dureté de l'eau (ppm)",
-          "cya": "CYA — Stabilisant (ppm)",
-          "tds": "TDS — Sels dissous (ppm)"
-        }
-      },
-      "manual_mac_choice": {
-        "title": "Bluetooth non détecté",
-        "description": "Aucun Flipr n'a été détecté automatiquement en Bluetooth local.\n\nChoisissez comment continuer l'installation :",
-        "menu_options": {
-          "manual_mac": "Saisir l'adresse MAC manuellement",
-          "pool_details": "Ignorer (Mode Cloud uniquement)"
-        }
-      },
-      "manual_mac": {
-        "title": "Saisie de l'adresse MAC",
-        "description": "Saisissez l'adresse MAC Bluetooth de votre Flipr ci-dessous pour forcer la connexion locale.",
-        "data": {
-          "ble_address": "Adresse MAC"
+          "confirm": "Oui, configurer le Bluetooth Local uniquement"
         }
       }
     }
@@ -91,43 +35,173 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configuration Flipr Pool",
-        "description": "Renseignez les dimensions, la chimie de l'eau et les options Bluetooth.",
+        "title": "Paramètres",
+        "description": "Configurez les paramètres de votre piscine.",
         "data": {
-          "pool_length": "Longueur (m)",
-          "pool_width": "Largeur (m)",
+          "pool_length": "Longueur du bassin (m)",
+          "pool_width": "Largeur du bassin (m)",
           "pool_depth": "Profondeur moyenne (m)",
-          "tac": "TAC — Alcalinité totale (ppm)",
-          "th": "TH — Dureté de l'eau (ppm)",
-          "cya": "CYA — Stabilisant (ppm)",
-          "tds": "TDS — Sels dissous (ppm)",
-          "ble_enabled": "Activer le Bluetooth (BLE)",
-          "ble_address": "Adresse MAC du Flipr BLE",
-          "scan_ble": "🔍 Scanner les appareils BLE à portée"
+          "tac": "Alcalinité (TAC)",
+          "th": "Dureté (TH)",
+          "cya": "Acide Cyanurique (CYA)",
+          "tds": "Solides Dissous Totaux (TDS)",
+          "enable_ble": "Activer le scanner Bluetooth"
         }
       },
       "ble_scan": {
         "title": "Scan Bluetooth",
-        "description": "{nb_ble} Flipr détecté(s) à portée Bluetooth. Sélectionnez l'appareil à connecter.",
+        "description": "Sélectionnez votre Flipr parmi les appareils détectés à proximité.",
         "data": {
-          "ble_device": "Appareil BLE"
+          "ble_device": "Appareil détecté"
         }
+      },
+      "ble_confirm": {
+        "title": "Configuration Bluetooth",
+        "description": "Confirmez les paramètres de votre Flipr."
       }
     }
   },
-  "selector": {
-    "installation_type": {
-      "options": {
-        "mix": "Installation Mixte (Cloud + Bluetooth local)",
-        "local": "Installation Locale en Bluetooth uniquement",
-        "cloud": "Installation Cloud uniquement"
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Température de l'eau"
+      },
+      "ph": {
+        "name": "pH"
+      },
+      "ph_status": {
+        "name": "Statut pH"
+      },
+      "redox": {
+        "name": "Redox"
+      },
+      "battery": {
+        "name": "Batterie"
+      },
+      "conductivity": {
+        "name": "Conductivité"
+      },
+      "uv_index": {
+        "name": "Indice UV"
+      },
+      "air_temp": {
+        "name": "Température de l'air"
+      },
+      "water_state": {
+        "name": "État de l'eau"
+      },
+      "chlorine": {
+        "name": "Chlore"
+      },
+      "chlorine_status": {
+        "name": "Statut Chlore"
+      },
+      "last_update": {
+        "name": "Dernière mesure"
+      },
+      "pool_volume": {
+        "name": "Volume de la piscine"
+      },
+      "dose_ph_minus": {
+        "name": "Dose pH-"
+      },
+      "dose_ph_plus": {
+        "name": "Dose pH+"
+      },
+      "dose_cl_maint": {
+        "name": "Dose Chlore (Entretien)"
+      },
+      "dose_cl_shock": {
+        "name": "Dose Chlore (Choc)"
+      },
+      "pump_hours": {
+        "name": "Durée Filtration"
+      },
+      "conseil_filtration": {
+        "name": "Conseil Filtration"
+      },
+      "last_alert": {
+        "name": "Dernière Alerte"
+      },
+      "lsi": {
+        "name": "Indice LSI"
+      },
+      "lsi_status": {
+        "name": "Statut de l'eau (LSI)"
+      },
+      "ph_equilibre": {
+        "name": "pH d'Équilibre"
+      },
+      "free_chlorine": {
+        "name": "Chlore Libre Est."
+      },
+      "active_chlorine": {
+        "name": "Chlore Actif (HOCl)"
+      },
+      "data_source": {
+        "name": "Source Active"
+      },
+      "ble_rssi": {
+        "name": "Signal BLE"
+      },
+      "ble_status": {
+        "name": "Statut BLE"
       }
     },
-    "mix_ble_confirm_choice": {
-      "options": {
-        "confirm": "Utiliser cette adresse Bluetooth (Recommandé)",
-        "manual": "Saisir une autre adresse MAC manuellement",
-        "ignore": "Ignorer (Mode Cloud uniquement)"
+    "switch": {
+      "pump_filtration": {
+        "name": "Pompe Filtration"
+      },
+      "ble_scan": {
+        "name": "Scanner BLE"
+      }
+    },
+    "button": {
+      "force_refresh": {
+        "name": "Forcer Actualisation Cloud"
+      }
+    },
+    "select": {
+      "mode_filtration": {
+        "name": "Mode Filtration",
+        "state": {
+          "auto": "Auto",
+          "manual": "Manuel",
+          "off": "Désactivé",
+          "planning": "Planning"
+        }
+      }
+    },
+    "number": {
+      "target_ph": {
+        "name": "Cible pH"
+      },
+      "target_chlorine": {
+        "name": "Cible Chlore"
+      },
+      "pool_length": {
+        "name": "Longueur du bassin"
+      },
+      "pool_width": {
+        "name": "Largeur du bassin"
+      },
+      "pool_depth": {
+        "name": "Profondeur moyenne"
+      },
+      "pool_volume": {
+        "name": "Volume"
+      },
+      "param_tac": {
+        "name": "Alcalinité (TAC)"
+      },
+      "param_th": {
+        "name": "Dureté (TH)"
+      },
+      "param_cya": {
+        "name": "Acide Cyanurique (CYA)"
+      },
+      "param_tds": {
+        "name": "Solides Dissous Totaux (TDS)"
       }
     }
   }

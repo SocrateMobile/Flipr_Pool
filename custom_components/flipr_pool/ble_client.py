@@ -152,7 +152,7 @@ async def scan_for_flipr(hass, timeout: float = 15.0) -> list[dict]:
     try:
         from homeassistant.components.bluetooth import async_discovered_service_info
 
-        for info in async_discovered_service_info(hass, connectable=False):
+        for info in async_discovered_service_info(hass, connectable=True):
             name = info.name or ""
             name_upper = name.upper()
 

@@ -10,6 +10,7 @@ import logging
 from datetime import timedelta, datetime, timezone
 import async_timeout
 import aiohttp
+from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.config_entries import ConfigEntry
@@ -68,7 +69,7 @@ def _get_water_params(entry: ConfigEntry) -> tuple[float, float, float, float]:
     return tac, th, cya, tds
 
 
-def _safe_timestamp(dt_val) -> datetime | None:
+def _safe_timestamp(dt_val: Any) -> datetime | None:
     """Convertit un objet en datetime UTC comparable, ou None."""
     if dt_val is None:
         return None
@@ -88,7 +89,7 @@ def _safe_timestamp(dt_val) -> datetime | None:
 #  Calculs de données piscine (communs Cloud & BLE)
 # ═══════════════════════════════════════════════════════════════
 
-def _compute_pool_data(m, s, entry, data_source="cloud"):
+def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_source: str = "cloud") -> dict[str, Any]:
     """Calcule toutes les valeurs dérivées à partir des mesures brutes.
 
     Fonctionne avec les données Cloud (API JSON) ou BLE (dict décodé).
@@ -261,7 +262,7 @@ def _compute_pool_data(m, s, entry, data_source="cloud"):
     }
 
 
-def _compute_ble_pool_data(ble_raw: dict, entry) -> dict:
+def _compute_ble_pool_data(ble_raw: dict[str, Any], entry: ConfigEntry) -> dict[str, Any]:
     """Convertit les données brutes BLE dans le format attendu par _compute_pool_data.
 
     Le BLE retourne des valeurs simples (pas de dicts imbriqués comme l'API Cloud).
@@ -292,114 +293,79 @@ def _compute_ble_pool_data(ble_raw: dict, entry) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════
-#  FliprMergedCoordinator — Fusion Cloud + BLE
+#  Coordinateur Unique (Cloud + BLE passif)
 # ═══════════════════════════════════════════════════════════════
 
-class FliprMergedCoordinator(DataUpdateCoordinator):
-    """Coordinateur factice qui fusionne les données Cloud et BLE.
+class FliprDataUpdateCoordinator(DataUpdateCoordinator):
+    """Coordinateur principal pour Flipr. Gère le Cloud en actif et le BLE en passif."""
 
-    N'a pas de `update_method` propre — il est alimenté par les listeners
-    des deux coordinateurs enfants. Il sert de source unique pour toutes
-    les entités (CoordinatorEntity).
-    """
-
-    def __init__(self, hass, logger, name, cloud_coord, ble_coord, store, entry, flipr_id):
-        # Pas d'update_method ni d'update_interval — c'est un coordinateur passif
-        super().__init__(hass, logger, name=name)
-        self.cloud_coord = cloud_coord
-        self.ble_coord = ble_coord
-        self._store = store
-        self._entry = entry
-
-        # Données internes par source
-        self._cloud_data: dict | None = None
-        self._ble_data: dict | None = None
-
-        # Attributs publics hérités de l'ancien coordinateur
+    def __init__(self, hass: HomeAssistant, api_client: FliprApiClient, flipr_id: str, entry: ConfigEntry, store):
+        super().__init__(
+            hass, 
+            _LOGGER, 
+            name="flipr_pool",
+            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN)
+        )
+        self.api_client = api_client
         self.flipr_id = flipr_id
-        self.place_id = cloud_coord.place_id if cloud_coord else None
-        self.token = cloud_coord.token if cloud_coord else None
-        self.hub_id = getattr(cloud_coord, "hub_id", None) if cloud_coord else None
+        self.config_entry = entry
+        self._store = store
+        
+        self.place_id = None
+        self.hub_id = flipr_id if flipr_id.upper().startswith("G") else None
+        self.token = None
 
-        # S'abonner aux mises à jour des deux coordinateurs
-        if cloud_coord is not None:
-            self._unsub_cloud = cloud_coord.async_add_listener(self._on_cloud_update)
-        else:
-            self._unsub_cloud = None
-        if ble_coord is not None:
-            self._unsub_ble = ble_coord.async_add_listener(self._on_ble_update)
-        else:
-            self._unsub_ble = None
+    async def _async_update_data(self):
+        """Fetch données du Cloud."""
+        try:
+            async with async_timeout.timeout(60):
+                data_raw = await self.api_client.get_pool_data(self.flipr_id, self.place_id, self.hub_id)
+                
+                if data_raw.get("place_id") and not self.place_id:
+                    self.place_id = data_raw["place_id"]
+                if data_raw.get("hub_id") and not self.hub_id:
+                    self.hub_id = data_raw["hub_id"]
+
+                m = data_raw.get("module_last_measure")
+                s = data_raw.get("module_shortterm")
+                
+                if not m:
+                    raise UpdateFailed("Aucune mesure (last_measure) reçue du Cloud.")
+
+                m["alerts_raw"] = data_raw.get("alerts", [])
+                m["thresholds_raw"] = data_raw.get("thresholds", {})
+
+                data = _compute_pool_data(m, s, self.config_entry, data_source="cloud")
+                hub_state = data_raw.get("hub_state", {})
+                data["hub_mode"] = hub_state.get("Mode")
+                data["hub_state"] = hub_state.get("Status")
+                
+                # Conserver les propriétés BLE existantes s'il y en a
+                if self.data:
+                    data["ble_rssi"] = self.data.get("ble_rssi")
+                    data["ble_status"] = self.data.get("ble_status")
+
+                self.hass.async_create_task(self._async_save(data))
+                return data
+        except (FliprApiError, FliprAuthError) as e:
+            raise UpdateFailed(f"Erreur Flipr Cloud API: {e}")
+        except Exception as err:
+            raise UpdateFailed(f"Erreur inattendue Flipr Cloud: {err}")
 
     @callback
-    def _on_cloud_update(self) -> None:
-        """Appelé chaque fois que le coordinateur Cloud reçoit de nouvelles données."""
-        if self.cloud_coord.data is not None:
-            self._cloud_data = self.cloud_coord.data
-            # Synchroniser token, place_id et hub_id
-            self.token = getattr(self.cloud_coord, "token", self.token)
-            self.place_id = getattr(self.cloud_coord, "place_id", self.place_id)
-            self.hub_id = getattr(self.cloud_coord, "hub_id", self.hub_id)
-        self._merge_and_publish()
-
-    @callback
-    def _on_ble_update(self) -> None:
-        """Appelé chaque fois que le coordinateur BLE reçoit de nouvelles données."""
-        if self.ble_coord is not None and self.ble_coord.data is not None:
-            self._ble_data = self.ble_coord.data
-        self._merge_and_publish()
-
-    def _merge_and_publish(self) -> None:
-        """Fusionne les données Cloud et BLE : le plus récent gagne."""
-        cloud_ts = _safe_timestamp(
-            self._cloud_data.get("last_update") if self._cloud_data else None
-        )
-        ble_ts = _safe_timestamp(
-            self._ble_data.get("last_update") if self._ble_data else None
-        )
-
-        # Choisir la source la plus récente
-        if cloud_ts and ble_ts:
-            if ble_ts > cloud_ts:
-                merged = dict(self._ble_data)
-                merged["data_source"] = "bluetooth"
-            else:
-                merged = dict(self._cloud_data)
-                merged["data_source"] = "cloud"
-        elif self._ble_data and not self._cloud_data:
-            merged = dict(self._ble_data)
-            merged["data_source"] = "bluetooth"
-        elif self._cloud_data:
-            merged = dict(self._cloud_data)
-            merged["data_source"] = "cloud"
-        else:
-            return  # Rien à publier
-
-        # Toujours garder les infos Hub (cloud only)
-        if self._cloud_data:
-            merged.setdefault("hub_mode", self._cloud_data.get("hub_mode"))
-            merged.setdefault("hub_state", self._cloud_data.get("hub_state"))
-            merged.setdefault("thresholds", self._cloud_data.get("thresholds"))
-            merged.setdefault("last_alert", self._cloud_data.get("last_alert"))
-
-        # Toujours garder les infos BLE (ble only)
-        if self._ble_data:
-            merged.setdefault("ble_rssi", self._ble_data.get("ble_rssi"))
-            merged.setdefault("ble_status", self._ble_data.get("ble_status"))
-        else:
-            merged.setdefault("ble_rssi", None)
-            merged.setdefault("ble_status", "disabled")
-
-        # Publier vers toutes les entités (via async_set_updated_data)
+    def async_update_ble_data(self, ble_raw: dict):
+        """Reçoit de nouvelles données du Bluetooth et les fusionne."""
+        ble_data = _compute_ble_pool_data(ble_raw, self.config_entry)
+        
+        merged = dict(self.data) if self.data else {}
+        merged.update(ble_data) # Surcharge le Cloud par le BLE
+        
         self.async_set_updated_data(merged)
-
-        # Sauvegarde locale asynchrone
         self.hass.async_create_task(self._async_save(merged))
 
     async def _async_save(self, data: dict) -> None:
-        """Sauvegarde les données fusionnées sur le disque."""
+        """Sauvegarde les données sur le disque."""
         try:
-            # Convertir les datetime en string pour la sérialisation JSON
             saveable = {}
             for k, v in data.items():
                 if isinstance(v, datetime):
@@ -409,27 +375,6 @@ class FliprMergedCoordinator(DataUpdateCoordinator):
             await self._store.async_save(saveable)
         except Exception as e:
             _LOGGER.debug("Impossible de sauvegarder localement: %s", e)
-
-    def attach_ble_coordinator(self, ble_coord) -> None:
-        """Attache un coordinateur BLE après coup (si activé dynamiquement)."""
-        if self._unsub_ble:
-            self._unsub_ble()
-        self.ble_coord = ble_coord
-        if ble_coord is not None:
-            self._unsub_ble = ble_coord.async_add_listener(self._on_ble_update)
-        else:
-            self._unsub_ble = None
-
-    def detach_ble_coordinator(self) -> None:
-        """Détache le coordinateur BLE (quand le switch BLE est désactivé)."""
-        if self._unsub_ble:
-            self._unsub_ble()
-            self._unsub_ble = None
-        self.ble_coord = None
-        self._ble_data = None
-        # Re-publier avec cloud seulement
-        if self._cloud_data:
-            self._merge_and_publish()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -449,188 +394,64 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # ── Persistance locale ──────────────────────────────────
     store = Store(hass, STORE_VERSION, _store_key(entry.entry_id))
 
-    # ─────────────────────────────────────────────────────────
-    #  1. Coordinateur CLOUD (15 min)
-    # ─────────────────────────────────────────────────────────
-    async def _async_fetch_cloud():
-        try:
-            async with async_timeout.timeout(60):
-                # Authentification
-                auth_data = {
-                    "grant_type": "password",
-                    "username": str(email or "").strip(),
-                    "password": str(password or "").strip()
-                }
-                async with session.post(AUTH_URL, data=auth_data) as resp:
-                    if resp.status != 200:
-                        resp_text = await resp.text()
-                        raise UpdateFailed(f"Erreur d'authentification Flipr ({resp.status}): {resp_text}")
-                    token = (await resp.json()).get("access_token")
-                    cloud_coordinator.token = token
+    # ── Initialisation API & Coordinateur ───────────────────
+    api_client = None
+    coordinator = None
 
-                headers = {"Authorization": f"Bearer {token}"}
-
-                # Mesures réelles
-                measure_url = f"https://apis.goflipr.com/modules/{flipr_id}/survey/last"
-                async with session.get(measure_url, headers=headers) as resp:
-                    if resp.status != 200:
-                        raise UpdateFailed(f"Erreur API lastmeasure ({resp.status})")
-                    m = await resp.json()
-
-                # Prévisions (ShortTerm)
-                short_url = f"https://apis.goflipr.com/modules/{flipr_id}/shortterm"
-                async with session.get(short_url, headers=headers) as resp:
-                    s = await resp.json() if resp.status == 200 else {}
-
-                # Découverte du place_id et de l'id du Hub associé
-                if not cloud_coordinator.place_id or not getattr(cloud_coordinator, "hub_id", None):
-                    async with session.get(PLACES_URL, headers=headers) as resp_p:
-                        if resp_p.status == 200:
-                            places = await resp_p.json()
-                            if isinstance(places, list):
-                                for place in places:
-                                    # Vérifier si notre module est dans cette place
-                                    modules = place.get("Modules") or place.get("modules") or []
-                                    has_module = any(
-                                        str(mod.get("Serial") or mod.get("serial") or mod.get("Id") or "").upper() == flipr_id.upper()
-                                        for mod in modules
-                                    )
-                                    if has_module:
-                                        cloud_coordinator.place_id = place.get("Id")
-                                        hubs = place.get("Hubs") or place.get("hubs") or []
-                                        if hubs and isinstance(hubs, list):
-                                            # Trouver le premier hub serial
-                                            hub_serial = hubs[0].get("Serial") or hubs[0].get("Id") or ""
-                                            if hub_serial:
-                                                cloud_coordinator.hub_id = str(hub_serial)
-                                                _LOGGER.info("Flipr : Hub %s détecté pour la piscine %s", hub_serial, cloud_coordinator.place_id)
-                                        break
-                                # Fallback au cas où le module n'est pas trouvé
-                                if not cloud_coordinator.place_id and places:
-                                    cloud_coordinator.place_id = places[0].get("Id")
-
-                # État du Hub (Filtration)
-                h = {}
-                hub_id = getattr(cloud_coordinator, "hub_id", None)
-                if hub_id:
-                    hub_url = f"https://apis.goflipr.com/hub/{hub_id}/state"
-                    async with session.get(hub_url, headers=headers) as resp:
-                        if resp.status == 200:
-                            hub_data = await resp.json()
-                            h = {
-                                "Mode": hub_data.get("behavior"),
-                                "Status": "on" if hub_data.get("stateEquipment") else "off"
-                            }
-                            _LOGGER.debug("Flipr Hub State (API /state): %s", h)
-                        else:
-                            _LOGGER.warning("Erreur lors de la lecture de l'état du Hub (%s): %s", hub_id, resp.status)
-
-                # Alertes
-                alerts = []
-                if cloud_coordinator.place_id:
-                    alert_url = ALERTS_URL.format(api_base="https://apis.goflipr.com", place_id=cloud_coordinator.place_id)
-                    async with session.get(alert_url, headers=headers) as resp:
-                        if resp.status == 200:
-                            alerts = await resp.json()
-
-                # Seuils
-                thresholds = {}
-                threshold_url = THRESHOLDS_URL.format(api_base="https://apis.goflipr.com", flipr_id=flipr_id)
-                async with session.get(threshold_url, headers=headers) as resp:
-                    if resp.status == 200:
-                        thresholds = await resp.json()
-
-                m["alerts_raw"] = alerts
-                m["thresholds_raw"] = thresholds
-
-                data = _compute_pool_data(m, s, entry, data_source="cloud")
-                data["hub_mode"] = h.get("Mode")
-                data["hub_state"] = h.get("Status")
-                return data
-
-        except UpdateFailed:
-            raise
-        except Exception as err:
-            raise UpdateFailed(f"Erreur Flipr Cloud: {err}")
-
-    cloud_coordinator = None
     if email and password:
-        cloud_coordinator = DataUpdateCoordinator(
-            hass, _LOGGER, name="flipr_pool_cloud",
-            update_method=_async_fetch_cloud,
-            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN),
-        )
-        cloud_coordinator.flipr_id = flipr_id
-        cloud_coordinator.place_id = None
-        cloud_coordinator.token = None
-        cloud_coordinator.hub_id = flipr_id if flipr_id.upper().startswith("G") else None
+        from .api import FliprApiClient
+        api_client = FliprApiClient(session, email, password)
+        coordinator = FliprDataUpdateCoordinator(hass, api_client, flipr_id, entry, store)
 
-    # ─────────────────────────────────────────────────────────
-    #  2. Coordinateur BLE (60 min, si activé)
-    # ─────────────────────────────────────────────────────────
-    ble_coordinator = None
+    if not coordinator:
+        _LOGGER.error("Impossible de configurer l'intégration Flipr (Cloud manquant).")
+        return False
 
+    # ── Initialisation du Polling BLE ────────────────────────
     if ble_enabled and ble_address:
-        async def _async_fetch_ble():
+        from homeassistant.helpers.event import async_track_time_interval
+
+        async def _async_poll_ble(now=None):
             try:
-                from .ble_client import read_flipr_ble, FliprBleError
+                from .ble_client import read_flipr_ble
                 ble_raw = await read_flipr_ble(ble_address, hass=hass)
-                data = _compute_ble_pool_data(ble_raw, entry)
+                coordinator.async_update_ble_data(ble_raw)
                 _LOGGER.info(
                     "Flipr BLE: mesure OK (pH=%.2f, T=%.1f°C, RSSI=%s)",
-                    data.get("ph") or 0, data.get("temperature") or 0, data.get("ble_rssi")
+                    ble_raw.get("ph") or 0, ble_raw.get("temperature") or 0, ble_raw.get("ble_rssi")
                 )
-                return data
             except Exception as err:
                 _LOGGER.warning("Flipr BLE: échec de la lecture (%s)", err)
-                raise UpdateFailed(f"Erreur Flipr BLE: {err}")
-
-        ble_coordinator = DataUpdateCoordinator(
-            hass, _LOGGER, name="flipr_pool_ble",
-            update_method=_async_fetch_ble,
-            update_interval=timedelta(minutes=BLE_UPDATE_INTERVAL_DEFAULT),
+                
+        # Démarrage immédiat en tâche de fond
+        hass.async_create_task(_async_poll_ble())
+        
+        # Programmation périodique
+        entry.async_on_unload(
+            async_track_time_interval(
+                hass, _async_poll_ble, timedelta(minutes=BLE_UPDATE_INTERVAL_DEFAULT)
+            )
         )
-        _LOGGER.info("Flipr: coordinateur BLE activé (adresse: %s, intervalle: %d min)", ble_address, BLE_UPDATE_INTERVAL_DEFAULT)
-
-    # ─────────────────────────────────────────────────────────
-    #  3. Coordinateur Fusionné (passif, alimenté par les listeners)
-    # ─────────────────────────────────────────────────────────
-    merged_coordinator = FliprMergedCoordinator(
-        hass, _LOGGER, name="flipr_pool",
-        cloud_coord=cloud_coordinator,
-        ble_coord=ble_coordinator,
-        store=store,
-        entry=entry,
-        flipr_id=flipr_id,
-    )
+        _LOGGER.info("Flipr: Polling BLE activé (adresse: %s, intervalle: %d min)", ble_address, BLE_UPDATE_INTERVAL_DEFAULT)
 
     # ── Restauration locale au démarrage ────────────────────
     restored = await store.async_load()
     if restored:
         _LOGGER.debug("Flipr: données restaurées depuis le disque local.")
-        merged_coordinator.async_set_updated_data(restored)
+        coordinator.async_set_updated_data(restored)
 
     # ── Enregistrement ──────────────────────────────────────
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
-        "cloud": cloud_coordinator,
-        "ble": ble_coordinator,
-        "merged": merged_coordinator,
+        "coordinator": coordinator,  # Le coordinateur unique
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # ── Premier refresh des coordinateurs ───────────────────
-    if cloud_coordinator is not None:
-        try:
-            await cloud_coordinator.async_config_entry_first_refresh()
-        except Exception as err:
-            _LOGGER.warning("Flipr Cloud: premier refresh échoué (%s)", err)
-
-    if ble_coordinator is not None:
-        try:
-            await ble_coordinator.async_config_entry_first_refresh()
-        except Exception as err:
-            _LOGGER.warning("Flipr BLE: premier refresh échoué (%s)", err)
+    # ── Premier refresh (Cloud) ──────────────────────────────
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception as err:
+        _LOGGER.warning("Flipr: premier refresh Cloud échoué (%s)", err)
 
     return True
 

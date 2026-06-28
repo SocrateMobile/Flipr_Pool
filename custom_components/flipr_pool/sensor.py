@@ -1,6 +1,8 @@
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from typing import Any
 from .const import (
     DOMAIN,
     PH_TARGET,
@@ -11,44 +13,45 @@ from .const import (
 )
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][entry.entry_id]["merged"]
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+    """Configuration des capteurs (sensors) Flipr."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     flipr_id = entry.data.get("flipr_id", "flipr")
 
     sensors_config = [
-        # (Nom, Clé Data, Unité, DeviceClass, Icône)
+        # (translation_key, data_key, unit, device_class, icon, category)
         # ── Mesures capteur ────────────────────────────────────
-        ("Température Eau",  "temperature",     "°C",    SensorDeviceClass.TEMPERATURE, "mdi:thermometer"),
-        ("pH",               "ph",              "pH",    None,                          "mdi:ph"),
-        ("Statut pH",        "ph_status",       None,    None,                          "mdi:ph"),
-        ("Redox",            "redox",           "mV",    None,                          "mdi:flask-outline"),
-        ("Batterie",         "battery",         "%",     SensorDeviceClass.BATTERY,     "mdi:battery"),
-        ("Conductivité",     "conductivity",    "µS/cm", None,                          "mdi:lightning-bolt"),
-        ("Indice UV",        "uv_index",        "UV",    None,                          "mdi:sun-wireless"),
-        ("Température Air",  "air_temp",        "°C",    SensorDeviceClass.TEMPERATURE, "mdi:thermometer-lines"),
-        ("État de l'eau",    "water_state",     None,    None,                          "mdi:pool"),
-        ("Chlore",           "chlorine",        "mg/L",  None,                          "mdi:water-check"),
-        ("Statut Chlore",    "chlorine_status", None,    None,                          "mdi:water-check-outline"),
-        ("Dernière Mesure",  "last_update",     None,    SensorDeviceClass.TIMESTAMP,   "mdi:clock-outline"),
+        ("temperature",     "temperature",     "°C",    SensorDeviceClass.TEMPERATURE, "mdi:thermometer", None),
+        ("ph",              "ph",              "pH",    None,                          "mdi:ph", None),
+        ("ph_status",       "ph_status",       None,    None,                          "mdi:ph", None),
+        ("redox",           "redox",           "mV",    None,                          "mdi:flask-outline", None),
+        ("battery",         "battery",         "%",     SensorDeviceClass.BATTERY,     "mdi:battery", EntityCategory.DIAGNOSTIC),
+        ("conductivity",    "conductivity",    "µS/cm", None,                          "mdi:lightning-bolt", None),
+        ("uv_index",        "uv_index",        "UV",    None,                          "mdi:sun-wireless", None),
+        ("air_temp",        "air_temp",        "°C",    SensorDeviceClass.TEMPERATURE, "mdi:thermometer-lines", None),
+        ("water_state",     "water_state",     None,    None,                          "mdi:pool", None),
+        ("chlorine",        "chlorine",        "mg/L",  None,                          "mdi:water-check", None),
+        ("chlorine_status", "chlorine_status", None,    None,                          "mdi:water-check-outline", None),
+        ("last_update",     "last_update",     None,    SensorDeviceClass.TIMESTAMP,   "mdi:clock-outline", EntityCategory.DIAGNOSTIC),
         # ── Calculés (v2.0) ────────────────────────────────────
-        ("Volume Piscine",   "pool_volume",     "L",     None,                          "mdi:pool"),
-        ("Dose pH−",         "dose_ph_minus",   "g",     None,                          "mdi:minus-circle-outline"),
-        ("Dose pH+",         "dose_ph_plus",    "g",     None,                          "mdi:plus-circle-outline"),
-        ("Dose Chlore (Entretien)", "dose_cl_maint", "g",   None,                          "mdi:water-plus"),
-        ("Dose Chlore (Choc)",      "dose_cl_shock", "g",   None,                          "mdi:flash"),
-        ("Durée Pompe",      "pump_hours",      "h",     None,                          "mdi:pump"),
-        ("Conseil Filtration", "conseil_filtration", None,  None,                          "mdi:information-outline"),
-        ("Dernière Alerte",  "last_alert",      None,    None,                          "mdi:alert-circle-outline"),
+        ("pool_volume",     "pool_volume",     "L",     None,                          "mdi:pool", EntityCategory.DIAGNOSTIC),
+        ("dose_ph_minus",   "dose_ph_minus",   "g",     None,                          "mdi:minus-circle-outline", None),
+        ("dose_ph_plus",    "dose_ph_plus",    "g",     None,                          "mdi:plus-circle-outline", None),
+        ("dose_cl_maint",   "dose_cl_maint",   "g",     None,                          "mdi:water-plus", None),
+        ("dose_cl_shock",   "dose_cl_shock",   "g",     None,                          "mdi:flash", None),
+        ("pump_hours",      "pump_hours",      "h",     None,                          "mdi:pump", None),
+        ("conseil_filtration", "conseil_filtration", None,  None,                          "mdi:information-outline", None),
+        ("last_alert",      "last_alert",      None,    None,                          "mdi:alert-circle-outline", None),
         # ── Chimie avancée (LSI & Chlore Actif) ───────────────
-        ("Indice LSI",        "lsi",             None,    None,                          "mdi:water-percent"),
-        ("Statut Eau (LSI)",  "lsi_status",      None,    None,                          "mdi:water-check"),
-        ("pH Équilibre",      "ph_equilibre",    "pH",    None,                          "mdi:water-opacity"),
-        ("Chlore Libre Est.", "free_chlorine",   "mg/L",  None,                          "mdi:water-check"),
-        ("Chlore Actif HOCl","active_chlorine", "mg/L",  None,                          "mdi:chemical-weapon"),
+        ("lsi",             "lsi",             None,    None,                          "mdi:water-percent", None),
+        ("lsi_status",      "lsi_status",      None,    None,                          "mdi:water-check", None),
+        ("ph_equilibre",    "ph_equilibre",    "pH",    None,                          "mdi:water-opacity", None),
+        ("free_chlorine",   "free_chlorine",   "mg/L",  None,                          "mdi:water-check", None),
+        ("active_chlorine", "active_chlorine", "mg/L",  None,                          "mdi:chemical-weapon", None),
         # ── Double Coordinateur ────────────────────────────────
-        ("Source Active",     "data_source",     None,    None,                          "mdi:swap-horizontal"),
-        ("BLE Signal",        "ble_rssi",        "dBm",   None,                          "mdi:bluetooth-connect"),
-        ("BLE Statut",        "ble_status",      None,    None,                          "mdi:bluetooth-settings"),
+        ("data_source",     "data_source",     None,    None,                          "mdi:swap-horizontal", EntityCategory.DIAGNOSTIC),
+        ("ble_rssi",        "ble_rssi",        "dBm",   None,                          "mdi:bluetooth-connect", EntityCategory.DIAGNOSTIC),
+        ("ble_status",      "ble_status",      None,    None,                          "mdi:bluetooth-settings", EntityCategory.DIAGNOSTIC),
     ]
 
     entities = [FliprFullSensor(coordinator, flipr_id, *config) for config in sensors_config]
@@ -56,14 +59,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class FliprFullSensor(CoordinatorEntity, SensorEntity):
-    def __init__(self, coordinator, flipr_id, name, data_key, unit, device_class, icon):
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator: DataUpdateCoordinator, flipr_id: str, translation_key: str, data_key: str, unit: str | None, device_class: SensorDeviceClass | None, icon: str, category: EntityCategory | None) -> None:
         super().__init__(coordinator)
         self._flipr_id = flipr_id
-        self._attr_name = f"Flipr {name}"
+        self._attr_translation_key = translation_key
         self._data_key = data_key
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_icon = icon
+        self._attr_entity_category = category
         self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_{data_key}"
 
         # MEASUREMENT uniquement pour les capteurs numériques avec unité
@@ -82,7 +88,7 @@ class FliprFullSensor(CoordinatorEntity, SensorEntity):
         )
 
     @property
-    def native_value(self):
+    def native_value(self) -> Any:
         if not self.coordinator.data:
             return None
         val = self.coordinator.data.get(self._data_key)
@@ -95,7 +101,7 @@ class FliprFullSensor(CoordinatorEntity, SensorEntity):
         return val
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any] | None:
         """Attributs additionnels pour donner plus de contexte (ex: cible pH)."""
         attrs = {}
         if self._data_key == "dose_ph_minus":

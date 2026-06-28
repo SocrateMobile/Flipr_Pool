@@ -1,7 +1,7 @@
 {
-  "name": "Flipr Pool Control",
-  "iot_class": "local_polling",
+  "name": "Flipr Pool",
   "render_readme": true,
-  "country": "FR",
+  "file_name": "flipr_pool",
+  "iot_class": "local_polling",
   "homeassistant": "2024.1.0"
 }

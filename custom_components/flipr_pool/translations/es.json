@@ -1,21 +1,33 @@
 {
   "config": {
-    "error": {
-      "invalid_auth_detailed": "Error de Flipr: {error_info}",
-      "cannot_connect": "Error de conexión: {error_info}",
-      "invalid_auth": "Credenciales inválidas"
-    },
     "step": {
       "user": {
-        "title": "Configuración de Flipr Pool",
-        "description": "Introduzca sus credenciales de Flipr. Las dimensiones de la piscina son opcionales (deje 0 si no las conoce) pero necesarias para el cálculo de las dosis.",
+        "title": "Tipo de instalación Flipr",
+        "description": "Elija el tipo de instalación.",
+        "data": {
+          "installation_type": "Modo de instalación"
+        }
+      },
+      "cloud_auth": {
+        "title": "Autenticación en la Nube",
+        "description": "Ingrese las credenciales de su cuenta Flipr.",
         "data": {
           "email": "Correo electrónico",
-          "password": "Contraseña",
-          "flipr_id": "ID del módulo (S/N)",
-          "pool_length": "Longitud de la piscina (m)",
-          "pool_width": "Anchura de la piscina (m)",
-          "pool_depth": "Profundidad media (m)"
+          "password": "Contraseña"
+        }
+      },
+      "select_device": {
+        "title": "Seleccionar Dispositivo",
+        "description": "Elija el dispositivo Flipr a integrar.",
+        "data": {
+          "flipr_id": "Dispositivo"
+        }
+      },
+      "local_bt": {
+        "title": "Modo Bluetooth Local",
+        "description": "El modo local BLE es muy desaconsejado ya que pierde los datos históricos y las alertas avanzadas. ¿Proceder de todos modos?",
+        "data": {
+          "confirm": "Sí, configurar solo BLE Local"
         }
       }
     }
@@ -23,13 +35,173 @@
   "options": {
     "step": {
       "init": {
-        "title": "Dimensiones de la piscina",
-        "description": "Introduzca las dimensiones de su piscina para calcular las dosis de tratamiento (pH, cloro) y el tiempo de filtración recomendado. Deje en 0 si no lo desea.",
+        "title": "Ajustes",
+        "description": "Configure los parámetros de su piscina.",
         "data": {
-          "pool_length": "Longitud (m)",
-          "pool_width": "Anchura (m)",
-          "pool_depth": "Profundidad media (m)"
+          "pool_length": "Largo de la piscina (m)",
+          "pool_width": "Ancho de la piscina (m)",
+          "pool_depth": "Profundidad media (m)",
+          "tac": "Alcalinidad (TAC)",
+          "th": "Dureza (TH)",
+          "cya": "Ácido cianúrico (CYA)",
+          "tds": "Sólidos disueltos totales (TDS)",
+          "enable_ble": "Habilitar escáner Bluetooth"
         }
+      },
+      "ble_scan": {
+        "title": "Escaneo Bluetooth",
+        "description": "Seleccione su Flipr de los dispositivos cercanos.",
+        "data": {
+          "ble_device": "Dispositivo Detectado"
+        }
+      },
+      "ble_confirm": {
+        "title": "Configuración Bluetooth",
+        "description": "Confirme la configuración de su Flipr."
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperatura del agua"
+      },
+      "ph": {
+        "name": "pH"
+      },
+      "ph_status": {
+        "name": "Estado del pH"
+      },
+      "redox": {
+        "name": "Redox"
+      },
+      "battery": {
+        "name": "Batería"
+      },
+      "conductivity": {
+        "name": "Conductividad"
+      },
+      "uv_index": {
+        "name": "Índice UV"
+      },
+      "air_temp": {
+        "name": "Temperatura del aire"
+      },
+      "water_state": {
+        "name": "Estado del agua"
+      },
+      "chlorine": {
+        "name": "Cloro"
+      },
+      "chlorine_status": {
+        "name": "Estado del cloro"
+      },
+      "last_update": {
+        "name": "Última medición"
+      },
+      "pool_volume": {
+        "name": "Volumen de la piscina"
+      },
+      "dose_ph_minus": {
+        "name": "Dosis pH-"
+      },
+      "dose_ph_plus": {
+        "name": "Dosis pH+"
+      },
+      "dose_cl_maint": {
+        "name": "Dosis Cloro (Mantenimiento)"
+      },
+      "dose_cl_shock": {
+        "name": "Dosis Cloro (Choque)"
+      },
+      "pump_hours": {
+        "name": "Duración de Filtración"
+      },
+      "conseil_filtration": {
+        "name": "Consejo de Filtración"
+      },
+      "last_alert": {
+        "name": "Última Alerta"
+      },
+      "lsi": {
+        "name": "Índice LSI"
+      },
+      "lsi_status": {
+        "name": "Estado del Agua (LSI)"
+      },
+      "ph_equilibre": {
+        "name": "pH de Equilibrio"
+      },
+      "free_chlorine": {
+        "name": "Cloro Libre Est."
+      },
+      "active_chlorine": {
+        "name": "Cloro Activo (HOCl)"
+      },
+      "data_source": {
+        "name": "Fuente Activa"
+      },
+      "ble_rssi": {
+        "name": "Señal BLE"
+      },
+      "ble_status": {
+        "name": "Estado BLE"
+      }
+    },
+    "switch": {
+      "pump_filtration": {
+        "name": "Bomba de Filtración"
+      },
+      "ble_scan": {
+        "name": "Escáner BLE"
+      }
+    },
+    "button": {
+      "force_refresh": {
+        "name": "Forzar Actualización Nube"
+      }
+    },
+    "select": {
+      "mode_filtration": {
+        "name": "Modo de Filtración",
+        "state": {
+          "auto": "Auto",
+          "manual": "Manual",
+          "off": "Apagado",
+          "planning": "Planificación"
+        }
+      }
+    },
+    "number": {
+      "target_ph": {
+        "name": "pH Objetivo"
+      },
+      "target_chlorine": {
+        "name": "Cloro Objetivo"
+      },
+      "pool_length": {
+        "name": "Largo de la piscina"
+      },
+      "pool_width": {
+        "name": "Ancho de la piscina"
+      },
+      "pool_depth": {
+        "name": "Profundidad media"
+      },
+      "pool_volume": {
+        "name": "Volumen"
+      },
+      "param_tac": {
+        "name": "Alcalinidad (TAC)"
+      },
+      "param_th": {
+        "name": "Dureza (TH)"
+      },
+      "param_cya": {
+        "name": "Ácido Cianúrico (CYA)"
+      },
+      "param_tds": {
+        "name": "Sólidos Disueltos (TDS)"
       }
     }
   }

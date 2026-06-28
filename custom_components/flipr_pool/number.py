@@ -1,38 +1,39 @@
 import logging
 from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import aiohttp
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from .const import DOMAIN, API_BASE_URL, THRESHOLDS_URL
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][entry.entry_id]["merged"]
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
     # On ajoute 4 entités pour les seuils
     entities = [
-        FliprThresholdNumber(coordinator, "pH Min", "ph_min", 6.0, 8.0, 0.1, "mdi:ph"),
-        FliprThresholdNumber(coordinator, "pH Max", "ph_max", 7.0, 9.0, 0.1, "mdi:ph"),
-        FliprThresholdNumber(coordinator, "Chlore Min", "cl_min", 0.0, 2.0, 0.1, "mdi:water-minus"),
-        FliprThresholdNumber(coordinator, "Chlore Max", "cl_max", 1.0, 5.0, 0.1, "mdi:water-plus"),
+        FliprThresholdNumber(coordinator, "ph_min", "target_ph", 6.0, 8.0, 0.1, "mdi:ph"),
+        FliprThresholdNumber(coordinator, "ph_max", "target_ph", 7.0, 9.0, 0.1, "mdi:ph"), # Note: target_ph doesn't differentiate min/max in strings, but we can reuse it
+        FliprThresholdNumber(coordinator, "cl_min", "target_chlorine", 0.0, 2.0, 0.1, "mdi:water-minus"),
+        FliprThresholdNumber(coordinator, "cl_max", "target_chlorine", 1.0, 5.0, 0.1, "mdi:water-plus"),
     ]
 
     # On ajoute 3 entités pour les dimensions de la piscine
     entities.extend([
-        FliprDimensionNumber(coordinator, "Longueur", "pool_length", "mdi:arrow-expand-horizontal"),
-        FliprDimensionNumber(coordinator, "Largeur", "pool_width", "mdi:arrow-expand-vertical"),
-        FliprDimensionNumber(coordinator, "Profondeur", "pool_depth", "mdi:arrow-down-bold"),
+        FliprDimensionNumber(coordinator, "pool_length", "mdi:arrow-expand-horizontal"),
+        FliprDimensionNumber(coordinator, "pool_width", "mdi:arrow-expand-vertical"),
+        FliprDimensionNumber(coordinator, "pool_depth", "mdi:arrow-down-bold"),
     ])
 
     async_add_entities(entities)
 
 class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
-    def __init__(self, coordinator, name, key, min_val, max_val, step, icon):
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator, key, translation_key, min_val, max_val, step, icon):
         super().__init__(coordinator)
         self._key = key
-        self._attr_name = f"Flipr Seuil {name}"
+        self._attr_translation_key = translation_key
         self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_{key}"
         self._attr_native_min_value = min_val
         self._attr_native_max_value = max_val
@@ -62,12 +63,14 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float):
         serial = self.coordinator.flipr_id
-        token = self.coordinator.token
-        if not token:
+        api_client = getattr(self.coordinator, "api_client", None)
+        
+        if not api_client:
             _LOGGER.warning("La modification des seuils n'est pas disponible en mode local uniquement.")
             return
         if not self.coordinator.data:
             return
+            
         # On récupère les seuils actuels pour ne modifier que celui-ci
         t = dict(self.coordinator.data.get("thresholds", {}) or {})
 
@@ -77,19 +80,23 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
         elif self._key == "cl_max": t["ChlorineMax"] = value
 
         url = THRESHOLDS_URL.format(api_base=API_BASE_URL, flipr_id=serial)
-        headers = {"Authorization": f"Bearer {token}"}
-        session = async_get_clientsession(self.coordinator.hass)
-        async with session.put(url, headers=headers, json=t) as resp:
-            if resp.status == 200:
-                self.coordinator.data["thresholds"] = t
-                self.async_write_ha_state()
+        
+        try:
+            await api_client._request("PUT", url, json=t)
+            self.coordinator.data["thresholds"] = t
+            self.async_write_ha_state()
+        except Exception as err:
+            _LOGGER.error("Erreur lors de la modification des seuils Flipr : %s", err)
 
 class FliprDimensionNumber(CoordinatorEntity, NumberEntity):
-    def __init__(self, coordinator, name, key, icon):
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator, translation_key, icon):
         super().__init__(coordinator)
-        self._key = key
-        self._attr_name = f"Flipr {name} (m)"
-        self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_{key}"
+        self._key = translation_key
+        self._attr_translation_key = translation_key
+        self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_{translation_key}"
         self._attr_native_min_value = 0.0
         self._attr_native_max_value = 50.0
         self._attr_native_step = 0.1
