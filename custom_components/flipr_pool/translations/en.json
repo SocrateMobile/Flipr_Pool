@@ -204,5 +204,39 @@
         "name": "Total Dissolved Solids (TDS)"
       }
     }
+  },
+  "services": {
+    "force_cloud_sync": {
+      "name": "Force Cloud Sync",
+      "description": "Force the integration to immediately fetch the latest data from the Flipr Cloud API.",
+      "fields": {
+        "device_id": {
+          "name": "Flipr Device",
+          "description": "The target Flipr to synchronize."
+        }
+      }
+    },
+    "update_dimensions": {
+      "name": "Update dimensions",
+      "description": "Updates the pool dimensions used for treatment dose calculations.",
+      "fields": {
+        "device_id": {
+          "name": "Flipr Device",
+          "description": "The Flipr associated with the pool."
+        },
+        "length": {
+          "name": "Length (m)",
+          "description": "The length of the pool in meters."
+        },
+        "width": {
+          "name": "Width (m)",
+          "description": "The width of the pool in meters."
+        },
+        "depth": {
+          "name": "Average depth (m)",
+          "description": "The average depth in meters."
+        }
+      }
+    }
   }
 }

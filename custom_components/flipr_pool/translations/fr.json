@@ -204,5 +204,39 @@
         "name": "Solides Dissous Totaux (TDS)"
       }
     }
+  },
+  "services": {
+    "force_cloud_sync": {
+      "name": "Forcer synchronisation Cloud",
+      "description": "Force l'intégration à récupérer immédiatement les dernières données depuis l'API Cloud de Flipr.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil Flipr",
+          "description": "Le Flipr cible à synchroniser."
+        }
+      }
+    },
+    "update_dimensions": {
+      "name": "Mettre à jour les dimensions",
+      "description": "Met à jour les dimensions de la piscine pour le calcul des doses de traitement.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil Flipr",
+          "description": "Le Flipr associé au bassin."
+        },
+        "length": {
+          "name": "Longueur (m)",
+          "description": "La longueur du bassin en mètres."
+        },
+        "width": {
+          "name": "Largeur (m)",
+          "description": "La largeur du bassin en mètres."
+        },
+        "depth": {
+          "name": "Profondeur moyenne (m)",
+          "description": "La profondeur moyenne en mètres."
+        }
+      }
+    }
   }
 }

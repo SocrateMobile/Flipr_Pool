@@ -1,29 +1,19 @@
 force_cloud_sync:
-  name: Force Cloud Sync
-  description: Force l'intégration à récupérer immédiatement les dernières données depuis l'API Cloud de Flipr, indépendamment du délai de mise à jour (15min). Pratique pour rafraîchir après l'ajout d'un produit chimique.
   fields:
     device_id:
-      name: Appareil Flipr
-      description: Le Flipr cible à synchroniser.
       required: true
       selector:
         device:
           integration: flipr_pool
 
 update_dimensions:
-  name: Mettre à jour les dimensions
-  description: Met à jour les dimensions de la piscine pour le calcul des doses de traitement.
   fields:
     device_id:
-      name: Appareil Flipr
-      description: Le Flipr associé au bassin.
       required: true
       selector:
         device:
           integration: flipr_pool
     length:
-      name: Longueur (m)
-      description: La longueur du bassin en mètres.
       required: true
       example: 8.0
       selector:
@@ -33,8 +23,6 @@ update_dimensions:
           step: 0.1
           mode: box
     width:
-      name: Largeur (m)
-      description: La largeur du bassin en mètres.
       required: true
       example: 4.0
       selector:
@@ -44,8 +32,6 @@ update_dimensions:
           step: 0.1
           mode: box
     depth:
-      name: Profondeur moyenne (m)
-      description: La profondeur moyenne en mètres.
       required: true
       example: 1.5
       selector:
