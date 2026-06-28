@@ -19,7 +19,7 @@ Contrairement aux autres intégrations, celle-ci offre une architecture **Hybrid
 C'est la méthode recommandée.
 1. Ouvrez **HACS** dans Home Assistant.
 2. Cliquez sur le menu en haut à droite (3 points) et choisissez **Dépôts personnalisés** (Custom repositories).
-3. Ajoutez l'URL de votre dépôt GitHub (`https://github.com/VOTRE_NOM/VOTRE_DEPOT_FLIPR`).
+3. Ajoutez l'URL de votre dépôt GitHub (`https://github.com/SocrateMobile/Flipr_Pool`).
 4. Catégorie : **Intégration**.
 5. Cliquez sur Ajouter, puis recherchez "Flipr Pool" dans HACS et cliquez sur Télécharger.
 6. Redémarrez Home Assistant.
