@@ -66,5 +66,12 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "version": {
+        "name": "Integration Version"
+      }
+    }
   }
 }

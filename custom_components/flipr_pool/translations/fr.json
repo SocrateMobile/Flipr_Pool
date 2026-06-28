@@ -146,6 +146,9 @@
       },
       "ble_status": {
         "name": "Statut BLE"
+      },
+      "version": {
+        "name": "Version de l'intégration"
       }
     },
     "switch": {
