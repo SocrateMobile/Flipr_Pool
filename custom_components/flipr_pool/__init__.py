@@ -319,6 +319,7 @@ class FliprMergedCoordinator(DataUpdateCoordinator):
         self.flipr_id = flipr_id
         self.place_id = cloud_coord.place_id if cloud_coord else None
         self.token = cloud_coord.token if cloud_coord else None
+        self.hub_id = getattr(cloud_coord, "hub_id", None) if cloud_coord else None
 
         # S'abonner aux mises à jour des deux coordinateurs
         if cloud_coord is not None:
@@ -335,9 +336,10 @@ class FliprMergedCoordinator(DataUpdateCoordinator):
         """Appelé chaque fois que le coordinateur Cloud reçoit de nouvelles données."""
         if self.cloud_coord.data is not None:
             self._cloud_data = self.cloud_coord.data
-            # Synchroniser token et place_id
+            # Synchroniser token, place_id et hub_id
             self.token = getattr(self.cloud_coord, "token", self.token)
             self.place_id = getattr(self.cloud_coord, "place_id", self.place_id)
+            self.hub_id = getattr(self.cloud_coord, "hub_id", self.hub_id)
         self._merge_and_publish()
 
     @callback
@@ -480,18 +482,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 async with session.get(short_url, headers=headers) as resp:
                     s = await resp.json() if resp.status == 200 else {}
 
-                # État du Hub (Filtration)
-                hub_url = f"https://apis.goflipr.com/hub/{flipr_id}"
-                async with session.get(hub_url, headers=headers) as resp:
-                    h = await resp.json() if resp.status == 200 else {}
-
-                # Découverte du place_id
-                if not cloud_coordinator.place_id:
+                # Découverte du place_id et de l'id du Hub associé
+                if not cloud_coordinator.place_id or not getattr(cloud_coordinator, "hub_id", None):
                     async with session.get(PLACES_URL, headers=headers) as resp_p:
                         if resp_p.status == 200:
                             places = await resp_p.json()
-                            if places:
-                                cloud_coordinator.place_id = places[0].get("Id")
+                            if isinstance(places, list):
+                                for place in places:
+                                    # Vérifier si notre module est dans cette place
+                                    modules = place.get("Modules") or place.get("modules") or []
+                                    has_module = any(
+                                        str(mod.get("Serial") or mod.get("serial") or mod.get("Id") or "").upper() == flipr_id.upper()
+                                        for mod in modules
+                                    )
+                                    if has_module:
+                                        cloud_coordinator.place_id = place.get("Id")
+                                        hubs = place.get("Hubs") or place.get("hubs") or []
+                                        if hubs and isinstance(hubs, list):
+                                            # Trouver le premier hub serial
+                                            hub_serial = hubs[0].get("Serial") or hubs[0].get("Id") or ""
+                                            if hub_serial:
+                                                cloud_coordinator.hub_id = str(hub_serial)
+                                                _LOGGER.info("Flipr : Hub %s détecté pour la piscine %s", hub_serial, cloud_coordinator.place_id)
+                                        break
+                                # Fallback au cas où le module n'est pas trouvé
+                                if not cloud_coordinator.place_id and places:
+                                    cloud_coordinator.place_id = places[0].get("Id")
+
+                # État du Hub (Filtration)
+                h = {}
+                hub_id = getattr(cloud_coordinator, "hub_id", None)
+                if hub_id:
+                    hub_url = f"https://apis.goflipr.com/hub/{hub_id}/state"
+                    async with session.get(hub_url, headers=headers) as resp:
+                        if resp.status == 200:
+                            hub_data = await resp.json()
+                            h = {
+                                "Mode": hub_data.get("behavior"),
+                                "Status": "on" if hub_data.get("stateEquipment") else "off"
+                            }
+                            _LOGGER.debug("Flipr Hub State (API /state): %s", h)
+                        else:
+                            _LOGGER.warning("Erreur lors de la lecture de l'état du Hub (%s): %s", hub_id, resp.status)
 
                 # Alertes
                 alerts = []
@@ -531,6 +563,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         cloud_coordinator.flipr_id = flipr_id
         cloud_coordinator.place_id = None
         cloud_coordinator.token = None
+        cloud_coordinator.hub_id = flipr_id if flipr_id.upper().startswith("G") else None
 
     # ─────────────────────────────────────────────────────────
     #  2. Coordinateur BLE (60 min, si activé)

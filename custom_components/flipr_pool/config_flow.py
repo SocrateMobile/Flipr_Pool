@@ -210,39 +210,6 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                     _LOGGER.info("Flipr : %d appareils trouvés sur le compte", len(self._cloud_devices))
 
                     if self._cloud_devices:
-                        if self._installation_type == "mix":
-                            # Scan BLE automatique
-                            has_flipr = any(d["type"] == "flipr" for d in self._cloud_devices)
-                            self._matched_mac_by_serial = {}
-                            if has_flipr:
-                                _LOGGER.info("Flipr : Recherche des appareils BLE dans le cache Bluetooth HA...")
-                                try:
-                                    from .ble_client import scan_for_flipr
-                                    discovered = await scan_for_flipr(self.hass)
-                                    
-                                    # Appariement par S/N exact
-                                    for dev in discovered:
-                                        for cloud_dev in self._cloud_devices:
-                                            if cloud_dev["type"] == "flipr" and cloud_dev["serial"].upper() == dev["serial"].upper():
-                                                self._matched_mac_by_serial[cloud_dev["serial"]] = dev["address"]
-                                                _LOGGER.info("Flipr BLE : Appareil %s détecté par S/N à l'adresse %s", cloud_dev["serial"], dev["address"])
-
-                                    # Appariement 1-à-1 si un seul Flipr cloud et un seul Flipr BLE trouvé
-                                    cloud_fliprs = [d for d in self._cloud_devices if d["type"] == "flipr"]
-                                    if len(cloud_fliprs) == 1 and len(discovered) == 1:
-                                        single_cloud = cloud_fliprs[0]
-                                        single_ble = discovered[0]
-                                        if single_cloud["serial"] not in self._matched_mac_by_serial:
-                                            self._matched_mac_by_serial[single_cloud["serial"]] = single_ble["address"]
-                                            _LOGGER.info("Flipr BLE : Appariement automatique 1-à-1 de %s avec %s", single_cloud["serial"], single_ble["address"])
-                                except Exception as e:
-                                    _LOGGER.warning("Erreur lors du scan BLE automatique : %s", e)
-
-                            # Si un Flipr est associé au compte mais non trouvé sur le réseau local,
-                            # on demande l'adresse MAC manuellement.
-                            if has_flipr and not self._matched_mac_by_serial:
-                                return await self.async_step_manual_mac_choice()
-
                         return await self.async_step_select_device()
                     else:
                         errors["base"] = "no_devices"
@@ -332,9 +299,9 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
 
             self._selected_flipr_id = chosen["serial"] if chosen else selected
             
-            # Associer l'adresse MAC si elle a été trouvée automatiquement
-            if self._selected_flipr_id in self._matched_mac_by_serial:
-                self._discovered_ble_address = self._matched_mac_by_serial[self._selected_flipr_id]
+            # Si c'est Mixte et que l'appareil choisi est un Flipr, on recherche le BLE
+            if self._installation_type == "mix" and chosen and chosen.get("type") == "flipr":
+                return await self.async_step_mix_ble()
 
             return await self.async_step_pool_details()
 
@@ -368,10 +335,62 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             },
         )
 
+    async def async_step_mix_ble(self, user_input=None):
+        """Recherche du Flipr sélectionné dans le cache Bluetooth HA."""
+        _LOGGER.info("Flipr : Recherche du Flipr %s dans le cache Bluetooth HA...", self._selected_flipr_id)
+        self._discovered_ble_address = ""
+        try:
+            from .ble_client import scan_for_flipr
+            discovered = await scan_for_flipr(self.hass)
+            for dev in discovered:
+                if dev["serial"].upper() == self._selected_flipr_id.upper():
+                    self._discovered_ble_address = dev["address"]
+                    _LOGGER.info("Flipr BLE : Appareil %s détecté localement à l'adresse %s", self._selected_flipr_id, dev["address"])
+                    break
+        except Exception as e:
+            _LOGGER.warning("Erreur lors du scan BLE en mode mixte : %s", e)
+
+        if self._discovered_ble_address:
+            # Trouvé ! On demande confirmation à l'utilisateur
+            return await self.async_step_mix_ble_confirm()
+        else:
+            # Non trouvé ! On va sur le choix manuel/ignorer
+            return await self.async_step_manual_mac_choice()
+
+    async def async_step_mix_ble_confirm(self, user_input=None):
+        """Confirmation de l'appareil BLE détecté automatiquement."""
+        if user_input is not None:
+            choice = user_input["choice"]
+            if choice == "confirm":
+                # L'adresse MAC est conservée
+                return await self.async_step_pool_details()
+            elif choice == "manual":
+                return await self.async_step_manual_mac()
+            elif choice == "ignore":
+                self._discovered_ble_address = ""
+                return await self.async_step_pool_details()
+
+        return self.async_show_form(
+            step_id="mix_ble_confirm",
+            data_schema=vol.Schema({
+                vol.Required("choice", default="confirm"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["confirm", "manual", "ignore"],
+                        mode=selector.SelectSelectorMode.LIST,
+                        translation_key="mix_ble_confirm_choice",
+                    )
+                )
+            }),
+            description_placeholders={
+                "mac": self._discovered_ble_address,
+                "serial": self._selected_flipr_id,
+            }
+        )
+
     async def async_step_manual_mac_choice(self, user_input=None):
         """Menu intermédiaire : Choisir de saisir l'adresse MAC ou d'ignorer."""
         self._discovered_ble_address = ""
-        if self._from_manual_device:
+        if self._installation_type == "mix" or self._from_manual_device:
             return self.async_show_menu(
                 step_id="manual_mac_choice",
                 menu_options=["manual_mac", "pool_details"],
@@ -385,19 +404,8 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
         """Saisie manuelle de l'adresse MAC si le Flipr n'est pas détecté."""
         if user_input is not None:
             self._discovered_ble_address = user_input.get("ble_address", "").strip()
-            if self._from_manual_device:
-                return self.async_show_form(
-                    step_id="pool_details",
-                    data_schema=vol.Schema({
-                        vol.Optional("pool_length", default=self._manual_user_input.get("pool_length", 0.0)): vol.Coerce(float),
-                        vol.Optional("pool_width",  default=self._manual_user_input.get("pool_width",  0.0)): vol.Coerce(float),
-                        vol.Optional("pool_depth",  default=self._manual_user_input.get("pool_depth",  0.0)): vol.Coerce(float),
-                        vol.Optional(CONF_TAC, default=self._manual_user_input.get(CONF_TAC, DEFAULT_TAC)): vol.Coerce(float),
-                        vol.Optional(CONF_TH,  default=self._manual_user_input.get(CONF_TH,  DEFAULT_TH)):  vol.Coerce(float),
-                        vol.Optional(CONF_CYA, default=self._manual_user_input.get(CONF_CYA, DEFAULT_CYA)): vol.Coerce(float),
-                        vol.Optional(CONF_TDS, default=self._manual_user_input.get(CONF_TDS, DEFAULT_TDS)): vol.Coerce(float),
-                    }),
-                )
+            if self._installation_type == "mix" or self._from_manual_device:
+                return await self.async_step_pool_details()
             return await self.async_step_select_device()
 
         return self.async_show_form(

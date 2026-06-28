@@ -36,6 +36,13 @@
           "device": "Appareil"
         }
       },
+      "mix_ble_confirm": {
+        "title": "Bluetooth détecté !",
+        "description": "Votre Flipr (S/N: {serial}) a été détecté automatiquement en Bluetooth local à l'adresse **{mac}**.\n\nChoisissez comment continuer :",
+        "data": {
+          "choice": "Action"
+        }
+      },
       "pool_details": {
         "title": "Dimensions & Chimie",
         "description": "Entrez les dimensions de votre piscine (pour le calcul des volumes/doses) ainsi que ses caractéristiques chimiques.",
@@ -69,7 +76,6 @@
         "description": "Aucun Flipr n'a été détecté automatiquement en Bluetooth local.\n\nChoisissez comment continuer l'installation :",
         "menu_options": {
           "manual_mac": "Saisir l'adresse MAC manuellement",
-          "select_device": "Ignorer (Mode Cloud uniquement)",
           "pool_details": "Ignorer (Mode Cloud uniquement)"
         }
       },
@@ -115,6 +121,13 @@
         "mix": "Installation Mixte (Cloud + Bluetooth local)",
         "local": "Installation Locale en Bluetooth uniquement",
         "cloud": "Installation Cloud uniquement"
+      }
+    },
+    "mix_ble_confirm_choice": {
+      "options": {
+        "confirm": "Utiliser cette adresse Bluetooth (Recommandé)",
+        "manual": "Saisir une autre adresse MAC manuellement",
+        "ignore": "Ignorer (Mode Cloud uniquement)"
       }
     }
   }

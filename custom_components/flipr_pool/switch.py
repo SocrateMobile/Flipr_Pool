@@ -56,33 +56,44 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
         return mode == "manual" or state == "on"
 
     async def async_turn_on(self, **kwargs):
-        """Active la marche forcée (mode manual)."""
-        await self._async_set_mode("manual")
+        """Active la marche forcée (mode manual + pompe ON)."""
+        await self._async_set_pump_state(True)
 
     async def async_turn_off(self, **kwargs):
-        """Désactive la filtration (mode off)."""
-        await self._async_set_mode("off")
+        """Désactive la filtration (mode manual + pompe OFF)."""
+        await self._async_set_pump_state(False)
 
-    async def _async_set_mode(self, mode):
+    async def _async_set_pump_state(self, state: bool):
         serial = self.coordinator.flipr_id
+        hub_id = getattr(self.coordinator, "hub_id", None) or serial
         token = self.coordinator.token
         if not token:
             _LOGGER.warning("Le contrôle de la pompe de filtration n'est pas disponible en mode local uniquement.")
             return
-        url = f"{API_BASE_URL}/hub/{serial}/mode/{mode}"
 
         headers = {"Authorization": f"Bearer {token}"}
 
         async with aiohttp.ClientSession() as session:
-            async with session.put(url, headers=headers) as resp:
+            # 1. Mettre le Hub en mode manuel d'abord
+            mode_url = f"{API_BASE_URL}/hub/{hub_id}/mode/manual"
+            async with session.put(mode_url, headers=headers) as resp:
+                if resp.status != 200:
+                    _LOGGER.error("Erreur lors du passage en mode manuel du Hub %s: %s", hub_id, resp.status)
+                    return
+
+            # 2. Envoyer la commande ON/OFF
+            state_str = "True" if state else "False"
+            state_url = f"{API_BASE_URL}/hub/{hub_id}/Manual/{state_str}"
+            async with session.post(state_url, headers=headers) as resp:
                 if resp.status == 200:
                     # On met à jour l'état localement pour une réactivité immédiate
                     if self.coordinator.data:
-                        self.coordinator.data["hub_mode"] = mode
+                        self.coordinator.data["hub_mode"] = "manual"
+                        self.coordinator.data["hub_state"] = "on" if state else "off"
                     self.async_write_ha_state()
-                    _LOGGER.info("Flipr Hub: Mode changé en %s", mode)
+                    _LOGGER.info("Flipr Hub %s: Pompe filtration changée en %s", hub_id, "ON" if state else "OFF")
                 else:
-                    _LOGGER.error("Erreur lors du changement de mode Flipr: %s", resp.status)
+                    _LOGGER.error("Erreur lors du contrôle de la pompe du Hub %s: %s", hub_id, resp.status)
 
 
 class FliprBleSwitch(SwitchEntity):

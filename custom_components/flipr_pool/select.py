@@ -36,6 +36,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
 
     async def async_select_option(self, option: str):
         serial = self.coordinator.flipr_id
+        hub_id = getattr(self.coordinator, "hub_id", None) or serial
         token = self.coordinator.token
         if not token:
             _LOGGER.warning("Le contrôle du mode de filtration n'est pas disponible en mode local uniquement.")
@@ -43,7 +44,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
         headers = {"Authorization": f"Bearer {token}"}
 
         # Mapping des modes pour l'API
-        url = f"{API_BASE_URL}/hub/{serial}/mode/{option}"
+        url = f"{API_BASE_URL}/hub/{hub_id}/mode/{option}"
         session = async_get_clientsession(self.coordinator.hass)
         async with session.put(url, headers=headers) as resp:
             if resp.status == 200:

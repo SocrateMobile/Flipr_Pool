@@ -36,6 +36,13 @@
           "device": "Device"
         }
       },
+      "mix_ble_confirm": {
+        "title": "Bluetooth Detected!",
+        "description": "Your Flipr (S/N: {serial}) was automatically detected in local Bluetooth at address **{mac}**.\n\nChoose how to proceed:",
+        "data": {
+          "choice": "Action"
+        }
+      },
       "pool_details": {
         "title": "Dimensions & Chemistry",
         "description": "Enter pool dimensions (to calculate volume and treatment doses) and chemistry values if known.",
@@ -69,7 +76,6 @@
         "description": "No Flipr was automatically detected in local Bluetooth.\n\nChoose how to continue the setup:",
         "menu_options": {
           "manual_mac": "Enter MAC address manually",
-          "select_device": "Ignore (Cloud mode only)",
           "pool_details": "Ignore (Cloud mode only)"
         }
       },
@@ -115,6 +121,13 @@
         "mix": "Mixed Installation (Cloud + Local Bluetooth)",
         "local": "Local Installation via Bluetooth only",
         "cloud": "Cloud Installation only"
+      }
+    },
+    "mix_ble_confirm_choice": {
+      "options": {
+        "confirm": "Use this Bluetooth address (Recommended)",
+        "manual": "Enter another MAC address manually",
+        "ignore": "Ignore (Cloud mode only)"
       }
     }
   }
