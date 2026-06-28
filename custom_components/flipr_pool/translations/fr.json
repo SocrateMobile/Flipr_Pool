@@ -54,7 +54,8 @@
         "description": "Aucun Flipr n'a été détecté automatiquement en Bluetooth local.\n\nChoisissez comment continuer l'installation :",
         "menu_options": {
           "manual_mac": "Saisir l'adresse MAC manuellement",
-          "ignore_ble": "Ignorer (Mode Cloud uniquement)"
+          "select_device": "Ignorer (Mode Cloud uniquement)",
+          "pool_details": "Ignorer (Mode Cloud uniquement)"
         }
       },
       "manual_mac": {
