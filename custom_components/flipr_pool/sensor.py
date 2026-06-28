@@ -52,6 +52,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         ("data_source",     "data_source",     None,    None,                          "mdi:swap-horizontal", EntityCategory.DIAGNOSTIC),
         ("ble_rssi",        "ble_rssi",        "dBm",   None,                          "mdi:bluetooth-connect", EntityCategory.DIAGNOSTIC),
         ("ble_status",      "ble_status",      None,    None,                          "mdi:bluetooth-settings", EntityCategory.DIAGNOSTIC),
+        ("version",         "version",         None,    None,                          "mdi:information-outline", EntityCategory.DIAGNOSTIC),
     ]
 
     entities = [FliprFullSensor(coordinator, flipr_id, *config) for config in sensors_config]

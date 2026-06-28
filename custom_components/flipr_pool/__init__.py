@@ -40,6 +40,7 @@ from .const import (
     CONF_BLE_ADDRESS,
     CLOUD_UPDATE_INTERVAL_MIN,
     BLE_UPDATE_INTERVAL_DEFAULT,
+    VERSION,
 )
 from .chemistry import (
     compute_isl,
@@ -261,6 +262,7 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         "active_chlorine":     active_cl,
         # ── Métadonnées source ─────────────────────────────
         "data_source":         data_source,
+        "version":             VERSION,
     }
 
 
