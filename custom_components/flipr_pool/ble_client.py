@@ -130,8 +130,12 @@ def _extract_serial_from_name(name: str) -> str:
     return name
 
 
-async def scan_for_flipr(hass=None, timeout: float = 15.0) -> list[dict]:
-    """Scanne les appareils BLE à portée et retourne ceux dont le nom correspond à un Flipr.
+async def scan_for_flipr(hass, timeout: float = 15.0) -> list[dict]:
+    """Interroge le cache Bluetooth natif de Home Assistant pour trouver les Flipr à portée.
+
+    Utilise async_discovered_service_info() de HA au lieu d'un scan brut BleakScanner,
+    car dans HA le contrôleur Bluetooth est géré par le composant bluetooth intégré.
+    Un scan brut BleakScanner.discover() confliquerait avec le contrôleur.
 
     Retourne une liste de dicts :
     [
@@ -144,28 +148,22 @@ async def scan_for_flipr(hass=None, timeout: float = 15.0) -> list[dict]:
         }
     ]
     """
-    try:
-        from bleak import BleakScanner
-    except ImportError:
-        _LOGGER.error("bleak n'est pas installé — impossible de scanner le BLE")
-        return []
-
     devices = []
     try:
-        discovered = await BleakScanner.discover(timeout=timeout)
-        for d in discovered:
-            name = d.name or ""
-            
+        from homeassistant.components.bluetooth import async_discovered_service_info
+
+        for info in async_discovered_service_info(hass, connectable=False):
+            name = info.name or ""
+            name_upper = name.upper()
+
             # Récupérer les UUIDs de service annoncés
-            service_uuids = []
-            if hasattr(d, "metadata") and isinstance(d.metadata, dict):
-                service_uuids = [u.lower() for u in d.metadata.get("uuids", [])]
+            service_uuids = [u.lower() for u in (info.service_uuids or [])]
 
             # Un appareil est un Flipr s'il a le bon préfixe de nom
             # OU s'il annonce l'UUID de service Flipr principal (fee8)
             is_flipr = (
-                any(name.startswith(prefix) for prefix in BLE_NAME_PREFIXES)
-                or "0000fee8-0000-1000-8000-00805f9b34fb" in service_uuids
+                name_upper.startswith(("FLIPR", "F2", "F3"))
+                or BLE_SERVICE_UUID in service_uuids
                 or "fee8" in service_uuids
             )
 
@@ -174,29 +172,29 @@ async def scan_for_flipr(hass=None, timeout: float = 15.0) -> list[dict]:
 
             # Si le nom est vide mais que c'est un Flipr (détecté par UUID), on donne un nom par défaut
             if not name:
-                name = f"Flipr-{d.address.replace(':', '')[-6:].upper()}"
+                name = f"Flipr-{info.address.replace(':', '')[-6:].upper()}"
 
             model = _detect_flipr_model(name, service_uuids)
             serial = _extract_serial_from_name(name)
 
-            rssi = getattr(d, "rssi", None)
-            if rssi is None and hasattr(d, "details") and isinstance(d.details, dict):
-                rssi = d.details.get("props", {}).get("RSSI")
+            rssi = info.rssi
 
             device_info = {
                 "name": name,
-                "address": d.address,
+                "address": info.address.upper(),
                 "rssi": rssi,
                 "model": model,
                 "serial": serial,
             }
             devices.append(device_info)
             _LOGGER.info(
-                "Flipr BLE détecté: %s (%s) Modèle=%s Série=%s RSSI=%s",
-                name, d.address, model, serial, rssi
+                "Flipr BLE détecté (cache HA): %s (%s) Modèle=%s Série=%s RSSI=%s",
+                name, info.address, model, serial, rssi
             )
+    except ImportError:
+        _LOGGER.warning("homeassistant.components.bluetooth non disponible — BLE scan désactivé")
     except Exception as e:
-        _LOGGER.warning("Erreur lors du scan BLE: %s", e)
+        _LOGGER.warning("Erreur lors de la lecture du cache BLE HA: %s", e)
 
     return devices
 

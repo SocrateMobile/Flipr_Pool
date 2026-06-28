@@ -173,10 +173,10 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                         has_flipr = any(d["type"] == "flipr" for d in self._cloud_devices)
                         self._matched_mac_by_serial = {}
                         if has_flipr:
-                            _LOGGER.info("Flipr : Lancement du scan BLE automatique au démarrage (5s)...")
+                            _LOGGER.info("Flipr : Recherche des appareils BLE dans le cache Bluetooth HA...")
                             try:
                                 from .ble_client import scan_for_flipr
-                                discovered = await scan_for_flipr(timeout=5.0)
+                                discovered = await scan_for_flipr(self.hass)
                                 
                                 # Appariement par S/N exact
                                 for dev in discovered:
@@ -357,7 +357,7 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             self._discovered_ble_address = ""
             try:
                 from .ble_client import scan_for_flipr
-                discovered = await scan_for_flipr(timeout=5.0)
+                discovered = await scan_for_flipr(self.hass)
                 for dev in discovered:
                     if dev["serial"].upper() == flipr_id.upper():
                         self._discovered_ble_address = dev["address"]
@@ -478,7 +478,7 @@ class FliprOptionsFlow(config_entries.OptionsFlow):
         _LOGGER.info("Flipr: lancement du scan BLE (15 secondes)...")
         try:
             from .ble_client import scan_for_flipr
-            self._ble_devices = await scan_for_flipr(timeout=15.0)
+            self._ble_devices = await scan_for_flipr(self.hass)
         except Exception as e:
             _LOGGER.error("Erreur lors du scan BLE: %s", e)
             self._ble_devices = []
