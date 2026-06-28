@@ -206,10 +206,23 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
         # Construire la liste déroulante
         device_options = {}
         for dev in self._cloud_devices:
-            if dev["type"] == "flipr":
-                device_options[dev["serial"]] = f"✅ {dev['label']}"
+            serial_upper = dev["serial"].upper()
+            label = dev["label"]
+            
+            if serial_upper.startswith("F"):
+                prefix = "✅ "  # Carré vert avec check (Flipr)
+            elif serial_upper.startswith("G"):
+                prefix = "🔌 "  # Pompe / Hub
+            elif serial_upper.startswith("C"):
+                prefix = "📡 "  # Passerelle de connexion / Link
             else:
-                device_options[dev["serial"]] = dev["label"]
+                # Fallback selon le type détecté
+                if dev["type"] == "flipr":
+                    prefix = "✅ "
+                else:
+                    prefix = "🔌 "
+                    
+            device_options[dev["serial"]] = f"{prefix}{label}"
 
         return self.async_show_form(
             step_id="select_device",
