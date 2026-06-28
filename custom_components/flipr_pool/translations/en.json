@@ -49,11 +49,19 @@
           "tds": "TDS — Total Dissolved Solids (ppm)"
         }
       },
-      "manual_mac": {
+      "manual_mac_choice": {
         "title": "Bluetooth Not Detected",
-        "description": "No Flipr was automatically detected in local Bluetooth.\n\nEnter your Flipr BLE MAC address below to force local connection, or leave it blank to continue in Cloud-only mode.",
+        "description": "No Flipr was automatically detected in local Bluetooth.\n\nChoose how to continue the setup:",
+        "menu_options": {
+          "manual_mac": "Enter MAC address manually",
+          "ignore_ble": "Ignore (Cloud mode only)"
+        }
+      },
+      "manual_mac": {
+        "title": "Enter MAC Address",
+        "description": "Enter your Flipr BLE MAC address below to force local connection.",
         "data": {
-          "ble_address": "Flipr MAC Address (optional)"
+          "ble_address": "MAC Address"
         }
       }
     }

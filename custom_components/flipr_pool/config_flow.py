@@ -199,7 +199,7 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                         # Si un Flipr est associé au compte mais non trouvé sur le réseau local,
                         # on demande l'adresse MAC manuellement.
                         if has_flipr and not self._matched_mac_by_serial:
-                            return await self.async_step_manual_mac()
+                            return await self.async_step_manual_mac_choice()
 
                         return await self.async_step_select_device()
                     else:
@@ -245,6 +245,31 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
 
             return await self.async_step_pool_details()
 
+    async def async_step_manual_mac_choice(self, user_input=None):
+        """Menu intermédiaire : Choisir de saisir l'adresse MAC ou d'ignorer."""
+        return self.async_show_menu(
+            step_id="manual_mac_choice",
+            menu_options=["manual_mac", "ignore_ble"],
+        )
+
+    async def async_step_ignore_ble(self, user_input=None):
+        """Action d'ignorer la configuration Bluetooth (Cloud uniquement)."""
+        self._discovered_ble_address = ""
+        if self._from_manual_device:
+            return self.async_show_form(
+                step_id="pool_details",
+                data_schema=vol.Schema({
+                    vol.Optional("pool_length", default=self._manual_user_input.get("pool_length", 0.0)): vol.Coerce(float),
+                    vol.Optional("pool_width",  default=self._manual_user_input.get("pool_width",  0.0)): vol.Coerce(float),
+                    vol.Optional("pool_depth",  default=self._manual_user_input.get("pool_depth",  0.0)): vol.Coerce(float),
+                    vol.Optional(CONF_TAC, default=self._manual_user_input.get(CONF_TAC, DEFAULT_TAC)): vol.Coerce(float),
+                    vol.Optional(CONF_TH,  default=self._manual_user_input.get(CONF_TH,  DEFAULT_TH)):  vol.Coerce(float),
+                    vol.Optional(CONF_CYA, default=self._manual_user_input.get(CONF_CYA, DEFAULT_CYA)): vol.Coerce(float),
+                    vol.Optional(CONF_TDS, default=self._manual_user_input.get(CONF_TDS, DEFAULT_TDS)): vol.Coerce(float),
+                }),
+            )
+        return await self.async_step_select_device()
+
     async def async_step_manual_mac(self, user_input=None):
         """Saisie manuelle de l'adresse MAC si le Flipr n'est pas détecté."""
         if user_input is not None:
@@ -267,7 +292,7 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
         return self.async_show_form(
             step_id="manual_mac",
             data_schema=vol.Schema({
-                vol.Optional("ble_address", default=""): str,
+                vol.Required("ble_address"): str,
             }),
         )
 
@@ -353,9 +378,9 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
                 pass
 
             if not self._discovered_ble_address:
-                # Redirection vers manual_mac si non détecté en BLE
+                # Redirection vers manual_mac_choice si non détecté en BLE
                 self._from_manual_device = True
-                return await self.async_step_manual_mac()
+                return await self.async_step_manual_mac_choice()
 
             return self.async_create_entry(
                 title=f"Flipr ({self._email} — {flipr_id})",

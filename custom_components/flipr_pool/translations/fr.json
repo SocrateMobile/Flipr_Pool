@@ -49,11 +49,19 @@
           "tds": "TDS — Sels dissous (ppm)"
         }
       },
-      "manual_mac": {
+      "manual_mac_choice": {
         "title": "Bluetooth non détecté",
-        "description": "Aucun Flipr n'a été détecté automatiquement en Bluetooth local.\n\nSaisissez l'adresse MAC Bluetooth de votre Flipr ci-dessous pour forcer la connexion locale, ou laissez le champ vide pour continuer en mode Cloud uniquement.",
+        "description": "Aucun Flipr n'a été détecté automatiquement en Bluetooth local.\n\nChoisissez comment continuer l'installation :",
+        "menu_options": {
+          "manual_mac": "Saisir l'adresse MAC manuellement",
+          "ignore_ble": "Ignorer (Mode Cloud uniquement)"
+        }
+      },
+      "manual_mac": {
+        "title": "Saisie de l'adresse MAC",
+        "description": "Saisissez l'adresse MAC Bluetooth de votre Flipr ci-dessous pour forcer la connexion locale.",
         "data": {
-          "ble_address": "Adresse MAC du Flipr (facultatif)"
+          "ble_address": "Adresse MAC"
         }
       }
     }
