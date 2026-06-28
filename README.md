@@ -45,3 +45,17 @@ Si vous êtes le développeur de ce dépôt, assurez-vous que la structure de vo
         ├── sensor.py
         └── ... (les autres fichiers python et json)
 ```
+
+## 📜 Historique & Évolutions du Projet
+Ce projet a connu plusieurs refontes majeures pour devenir l'intégration la plus complète pour Flipr :
+- **V1 (Cloud Simple)** : Récupération basique des données via l'API Cloud (pH, Température, Redox).
+- **V2 (Traitement & Chimie)** : Ajout des algorithmes de calculs avancés (Doses de traitement pH+/pH-/Chlore, temps de filtration, LSI, Chlore Actif) calculés localement sur base des paramètres de la piscine.
+- **V3 (Architecture Hybride & HACS)** : Refonte asynchrone complète, gestion du Flipr Hub (contrôle de la pompe de filtration, marche forcée), anti-bannissement de l'API (Backoff Exponentiel), récupération des données Bluetooth Locales (BLE) en complément du Cloud, et compatibilité totale avec les standards HACS (Diagnostics, Catégories, Traductions i18n).
+
+## 🙏 Remerciements et Projets Inspirants
+Cette intégration s'appuie sur le formidable travail de la communauté domotique open-source. Un grand merci en particulier à :
+- **Adrien40** et son projet [flipr_local](https://github.com/Adrien40/flipr_local) : Son travail d'ingénierie inverse sur le protocole Bluetooth Low Energy (BLE) du Flipr a été une source d'inspiration majeure pour la composante locale de cette intégration hybride.
+- Tous les contributeurs et testeurs de la communauté Home Assistant Francophone qui ont aidé à affiner les algorithmes de traitement de l'eau.
+
+## 📄 Licence
+MIT License. Voir le fichier LICENSE pour plus de détails.
