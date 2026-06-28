@@ -96,11 +96,11 @@ def _compute_pool_data(m, s, entry, data_source="cloud"):
     """
 
     # ── Mesures brutes ───────────────────────────────────────
-    ph_raw      = m.get("PH")
-    redox_raw   = m.get("OxydoReductionPotentiel")
-    battery_raw = m.get("Battery")
-    cond_raw    = m.get("Conductivity")
-    desinf_raw  = m.get("Desinfectant")
+    ph_raw      = m.get("PH") or m.get("ph")
+    redox_raw   = m.get("OxydoReductionPotentiel") or m.get("oxydoReductionPotentiel") or m.get("redox")
+    battery_raw = m.get("Battery") or m.get("battery")
+    cond_raw    = m.get("Conductivity") or m.get("conductivity")
+    desinf_raw  = m.get("Desinfectant") or m.get("desinfectant") or m.get("chlorine")
 
     ph_val      = ph_raw.get("Value")            if isinstance(ph_raw, dict)      else ph_raw
     redox_val   = redox_raw.get("Value")         if isinstance(redox_raw, dict)   else redox_raw
@@ -111,7 +111,7 @@ def _compute_pool_data(m, s, entry, data_source="cloud"):
     ph_sector   = ph_raw.get("DeviationSector")  if isinstance(ph_raw, dict) else None
     ph_status   = "OK" if ph_sector == "OK" else (ph_raw.get("Message", "Inconnu") if isinstance(ph_raw, dict) else None)
 
-    cl_val      = round(desinf_raw.get("Value"), 3) if isinstance(desinf_raw, dict) and desinf_raw.get("Value") is not None else None
+    cl_val      = round(desinf_raw.get("Value"), 3) if isinstance(desinf_raw, dict) and desinf_raw.get("Value") is not None else desinf_raw
     cl_sector   = desinf_raw.get("DeviationSector") if isinstance(desinf_raw, dict) else None
     cl_status   = "OK" if cl_sector == "OK" else (desinf_raw.get("Message", "Inconnu") if isinstance(desinf_raw, dict) else None)
 
@@ -154,9 +154,19 @@ def _compute_pool_data(m, s, entry, data_source="cloud"):
         dose_cl_maint = dose_cl_shock = None
 
     # ── Température Air ─────────────────────────────────────
-    air_temp = s.get("AirTemperature")
+    air_temp = None
+    water_state = None
+    if isinstance(s, dict):
+        air_temp = s.get("AirTemperature") or s.get("airTemperature")
+        water_state = s.get("WaterState") or s.get("waterState")
+    elif isinstance(s, list) and len(s) > 0:
+        first_s = s[0]
+        if isinstance(first_s, dict):
+            air_temp = first_s.get("AirTemperature") or first_s.get("airTemperature")
+            water_state = first_s.get("WaterState") or first_s.get("waterState")
+
     if air_temp is None:
-        air_temp = m.get("AirTemperature")
+        air_temp = m.get("AirTemperature") or m.get("airTemperature")
 
     # ── Durée de pompage & Conseil ──────────────────────────
     water_temp = m.get("Temperature")
@@ -204,6 +214,20 @@ def _compute_pool_data(m, s, entry, data_source="cloud"):
     thresholds = m.get("thresholds_raw")
     alerts = m.get("alerts_raw")
 
+    # ── Extraction Alerte ──────────────────────────────────
+    last_alert = None
+    if alerts and isinstance(alerts, list) and len(alerts) > 0:
+        first_alert = alerts[0]
+        if isinstance(first_alert, dict):
+            last_alert = (
+                first_alert.get("Title")
+                or first_alert.get("title")
+                or first_alert.get("Description")
+                or first_alert.get("description")
+                or first_alert.get("Message")
+                or first_alert.get("message")
+            )
+
     return {
         "temperature":         water_temp,
         "ph":                  ph_val,
@@ -213,7 +237,7 @@ def _compute_pool_data(m, s, entry, data_source="cloud"):
         "conductivity":        cond_val,
         "uv_index":            m.get("UvIndex"),
         "air_temp":            air_temp,
-        "water_state":         s.get("WaterState"),
+        "water_state":         water_state,
         "chlorine":            cl_val,
         "chlorine_status":     cl_status,
         "last_update":         last_update,
@@ -225,7 +249,7 @@ def _compute_pool_data(m, s, entry, data_source="cloud"):
         "pump_hours":          pump_hours,
         "conseil_filtration":  conseil_filtration,
         "thresholds":          thresholds,
-        "last_alert":          alerts[0].get("Title") if alerts and isinstance(alerts, list) else None,
+        "last_alert":          last_alert,
         # ── Chimie avancée ─────────────────────────────────
         "lsi":                 lsi,
         "lsi_status":          lsi_status,
