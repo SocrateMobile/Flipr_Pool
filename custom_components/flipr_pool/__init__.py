@@ -352,8 +352,14 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 self.hass.async_create_task(self._async_save(data))
                 return data
         except (FliprApiError, FliprAuthError) as e:
+            if self.data:
+                _LOGGER.warning("Erreur Flipr Cloud API (%s). Conservation des dernières données.", e)
+                return self.data
             raise UpdateFailed(f"Erreur Flipr Cloud API: {e}")
         except Exception as err:
+            if self.data:
+                _LOGGER.warning("Erreur inattendue Flipr Cloud (%s). Conservation des dernières données.", err)
+                return self.data
             raise UpdateFailed(f"Erreur inattendue Flipr Cloud: {err}")
 
     @callback

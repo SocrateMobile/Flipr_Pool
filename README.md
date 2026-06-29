@@ -1,4 +1,4 @@
-# Flipr Pool Control pour Home Assistant (v3.3.3)
+# Flipr Pool Control pour Home Assistant (v3.3.4)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
