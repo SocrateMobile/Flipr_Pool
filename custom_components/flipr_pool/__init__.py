@@ -1,4 +1,4 @@
-"""Flipr Pool — Double Coordinateur Cloud + BLE avec fusion automatique.
+"""Flipr Pool Control — Double Coordinateur Cloud + BLE avec fusion automatique.
 
 Architecture :
 - cloud_coordinator  : API REST GoFlipr, toutes les 15 minutes

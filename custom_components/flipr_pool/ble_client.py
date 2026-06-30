@@ -1,4 +1,4 @@
-"""Client Bluetooth Low Energy (BLE) pour Flipr Pool.
+"""Client Bluetooth Low Energy (BLE) pour Flipr Pool Control.
 
 Gère la connexion, la lecture et le décodage des trames binaires
 envoyées par le capteur Flipr via Bluetooth.

@@ -8,7 +8,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
-    """Gestion du formulaire de configuration pour Flipr Pool."""
+    """Gestion du formulaire de configuration pour Flipr Pool Control."""
 
     VERSION = 1
 

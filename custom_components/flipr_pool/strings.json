@@ -29,6 +29,11 @@
         "data": {
           "confirm": "Yes, configure Local BLE only"
         }
+      },
+      "mix_ble_confirm": {
+        "data": {
+          "choice": "Bluetooth Mode"
+        }
       }
     }
   },
@@ -38,13 +43,13 @@
         "title": "Settings",
         "description": "Configure your pool parameters.",
         "data": {
-          "pool_length": "Pool Length (m)",
-          "pool_width": "Pool Width (m)",
-          "pool_depth": "Average Depth (m)",
-          "tac": "Alkalinity (TAC)",
-          "th": "Hardness (TH)",
-          "cya": "Cyanuric Acid (CYA)",
-          "tds": "Total Dissolved Solids (TDS)",
+          "pool_length": "Pool Length",
+          "pool_width": "Pool Width",
+          "pool_depth": "Pool Depth",
+          "tac": "Manual test value for TAC",
+          "th": "Manual test value for TH",
+          "cya": "Manual test value for CYA",
+          "tds": "Manual test value for TDS",
           "enable_ble": "Enable Bluetooth Scanner"
         }
       },
@@ -239,6 +244,22 @@
           "name": "Average depth (m)",
           "description": "The average depth in meters."
         }
+      }
+    }
+  },
+  "selector": {
+    "installation_type": {
+      "options": {
+        "mix": "Cloud and Local Data",
+        "local": "Local Data via BT",
+        "cloud": "Flipr Cloud Data"
+      }
+    },
+    "mix_ble_confirm_choice": {
+      "options": {
+        "confirm": "Use this Flipr",
+        "manual": "Enter Flipr MAC address manually",
+        "ignore": "Do not use local mode"
       }
     }
   }

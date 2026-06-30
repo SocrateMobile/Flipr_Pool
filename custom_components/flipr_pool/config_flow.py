@@ -1,4 +1,4 @@
-"""Config flow et Options flow pour Flipr Pool.
+"""Config flow et Options flow pour Flipr Pool Control.
 
 Flow d'installation :
   1. async_step_user      → Email + mot de passe
@@ -41,7 +41,7 @@ _LOGGER = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════
 
 class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
-    """Gestion du formulaire de configuration pour Flipr Pool.
+    """Gestion du formulaire de configuration pour Flipr Pool Control.
 
     Étape 1 : Identifiants (email + mot de passe)
     Étape 2 : Sélection de l'appareil parmi ceux détectés sur le compte
@@ -213,23 +213,32 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             label = dev["label"]
             
             if serial_upper.startswith("F"):
-                prefix = "✅ "  # Carré vert avec check (Flipr)
+                prefix = "✅ Sonde Flipr - "
             elif serial_upper.startswith("G"):
-                prefix = "🔌 "  # Pompe / Hub
+                prefix = "🔌 Passerelle Flipr - "
             elif serial_upper.startswith("C"):
-                prefix = "📡 "  # Passerelle de connexion / Link
+                prefix = "🔌 Flipr Hub - "
             else:
                 if dev["type"] == "flipr":
-                    prefix = "✅ "
+                    prefix = "✅ Sonde Flipr - "
                 else:
-                    prefix = "🔌 "
+                    prefix = "🔌 Flipr Hub - "
                     
             device_options[dev["serial"]] = f"{prefix}{label}"
+
+        # Sélectionner par défaut la Sonde Flipr (série F)
+        default_dev = None
+        for dev in self._cloud_devices:
+            if dev["serial"].upper().startswith("F"):
+                default_dev = dev["serial"]
+                break
+        if not default_dev and self._cloud_devices:
+            default_dev = self._cloud_devices[0]["serial"]
 
         return self.async_show_form(
             step_id="select_device",
             data_schema=vol.Schema({
-                vol.Required("device"): vol.In(device_options),
+                vol.Required("device", default=default_dev): vol.In(device_options),
             }),
             description_placeholders={
                 "nb_devices": str(len(self._cloud_devices)),

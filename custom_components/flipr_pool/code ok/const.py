@@ -1,4 +1,4 @@
-"""Constants for the Flipr Pool integration."""
+"""Constants for the Flipr Pool Control integration."""
 
 DOMAIN = "flipr_pool"
 API_BASE_URL = "https://apis.goflipr.com"
