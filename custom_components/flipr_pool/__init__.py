@@ -335,6 +335,8 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 
                 if not m:
                     raise UpdateFailed("Aucune mesure (last_measure) reçue du Cloud.")
+                if (m.get("Temperature") is None and m.get("temperature") is None) and (m.get("PH") is None and m.get("ph") is None):
+                    raise UpdateFailed("L'API a retourné des valeurs nulles/vides.")
 
                 m["alerts_raw"] = data_raw.get("alerts", [])
                 m["thresholds_raw"] = data_raw.get("thresholds", {})
