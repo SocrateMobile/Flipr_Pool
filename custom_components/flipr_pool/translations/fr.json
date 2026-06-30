@@ -34,6 +34,50 @@
         "data": {
           "choice": "Mode Bluetooth"
         }
+      },
+      "manual_mac_choice": {
+        "title": "Flipr introuvable en Bluetooth",
+        "description": "Le Flipr n'a pas été détecté automatiquement. Que voulez-vous faire ?",
+        "menu_options": {
+          "manual_mac": "Entrer manuellement l'adresse MAC",
+          "pool_details": "Ignorer le mode Bluetooth pour l'instant",
+          "select_device": "Retour à la sélection de l'appareil"
+        }
+      },
+      "manual_mac": {
+        "title": "Adresse MAC manuelle",
+        "description": "Saisissez l'adresse MAC Bluetooth de votre Flipr (ex: AA:BB:CC:DD:EE:FF).",
+        "data": {
+          "ble_address": "Adresse MAC"
+        }
+      },
+      "manual_device": {
+        "title": "Saisie manuelle de l'appareil",
+        "description": "Saisissez manuellement l'identifiant de votre Flipr.",
+        "data": {
+          "flipr_id": "Numéro de série / ID",
+          "ble_address": "Adresse MAC",
+          "pool_length": "Longueur de la Piscine",
+          "pool_width": "Largeur de la Piscine",
+          "pool_depth": "Profondeur de la Piscine",
+          "tac": "Valeur du test manuel de TAC",
+          "th": "Valeur du test manuel de TH",
+          "cya": "Valeur du test manuel de CYA",
+          "tds": "Valeur du test manuel de TDS"
+        }
+      },
+      "pool_details": {
+        "title": "Détails du bassin",
+        "description": "Ces dimensions servent à calculer les doses exactes de produits.",
+        "data": {
+          "pool_length": "Longueur de la Piscine",
+          "pool_width": "Largeur de la Piscine",
+          "pool_depth": "Profondeur de la Piscine",
+          "tac": "Valeur du test manuel de TAC",
+          "th": "Valeur du test manuel de TH",
+          "cya": "Valeur du test manuel de CYA",
+          "tds": "Valeur du test manuel de TDS"
+        }
       }
     }
   },
@@ -46,11 +90,13 @@
           "pool_length": "Longueur de la Piscine",
           "pool_width": "Largeur de la Piscine",
           "pool_depth": "Profondeur de la Piscine",
-          "tac": "Valeur du test manuele de TAC",
-          "th": "Valeur du test manuele de TH",
-          "cya": "Valeur du test manuele de CYA",
-          "tds": "Valeur du test manuele de TDS",
-          "enable_ble": "Activer le scanner Bluetooth"
+          "tac": "Valeur du test manuel de TAC",
+          "th": "Valeur du test manuel de TH",
+          "cya": "Valeur du test manuel de CYA",
+          "tds": "Valeur du test manuel de TDS",
+          "ble_enabled": "Activer le mode Bluetooth",
+          "ble_address": "Adresse MAC (optionnel)",
+          "scan_ble": "Lancer un scan Bluetooth pour trouver Flipr"
         }
       },
       "ble_scan": {

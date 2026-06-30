@@ -235,10 +235,20 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
         if not default_dev and self._cloud_devices:
             default_dev = self._cloud_devices[0]["serial"]
 
+        # Construire la liste déroulante avec selector
+        options_list = [
+            {"value": k, "label": v} for k, v in device_options.items()
+        ]
+
         return self.async_show_form(
             step_id="select_device",
             data_schema=vol.Schema({
-                vol.Required("device", default=default_dev): vol.In(device_options),
+                vol.Required("device", default=default_dev): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=options_list,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
             }),
             description_placeholders={
                 "nb_devices": str(len(self._cloud_devices)),
@@ -540,10 +550,20 @@ class FliprOptionsFlow(config_entries.OptionsFlow):
             )
             device_options[dev["address"]] = label
 
+        # Construire la liste déroulante avec selector
+        options_list = [
+            {"value": k, "label": v} for k, v in device_options.items()
+        ]
+
         return self.async_show_form(
             step_id="ble_scan",
             data_schema=vol.Schema({
-                vol.Required("ble_device"): vol.In(device_options),
+                vol.Required("ble_device"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=options_list,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
             }),
             errors=errors,
             description_placeholders={
