@@ -24,14 +24,14 @@ class FliprForceUpdateButton(CoordinatorEntity, ButtonEntity):
 
     def __init__(self, coordinator: DataUpdateCoordinator) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_force_update"
+        self._attr_unique_id = f"flipr_{coordinator.flipr_id}_force_update"
         self._attr_icon = "mdi:sync"
 
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.flipr_id)},
-            name=f"Flipr Pool ({self.coordinator.flipr_id})",
+            name="Flipr Piscine",
             manufacturer="Flipr",
         )
 

@@ -41,14 +41,14 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
 
     def __init__(self, coordinator: DataUpdateCoordinator) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_pump"
+        self._attr_unique_id = f"flipr_{coordinator.flipr_id}_pump"
         self._attr_icon = "mdi:pump"
 
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.flipr_id)},
-            name=f"Flipr Pool ({self.coordinator.flipr_id})",
+            name="Flipr Piscine",
             manufacturer="Flipr",
         )
 
@@ -108,14 +108,14 @@ class FliprBleSwitch(SwitchEntity):
         self.entry = entry
         self.coordinator = coordinator
         
-        self._attr_unique_id = f"flipr_{entry.entry_id}_ble_switch"
+        self._attr_unique_id = f"flipr_{coordinator.flipr_id}_ble_switch"
         self._attr_icon = "mdi:bluetooth-connect"
 
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.flipr_id)},
-            name=f"Flipr Pool ({self.coordinator.flipr_id})",
+            name="Flipr Piscine",
             manufacturer="Flipr",
         )
 

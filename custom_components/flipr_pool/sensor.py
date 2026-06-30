@@ -71,7 +71,7 @@ class FliprFullSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_icon = icon
         self._attr_entity_category = category
-        self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_{data_key}"
+        self._attr_unique_id = f"flipr_{coordinator.flipr_id}_{data_key}"
 
         # MEASUREMENT uniquement pour les capteurs numériques avec unité
         if device_class != SensorDeviceClass.TIMESTAMP and unit is not None:
@@ -82,7 +82,7 @@ class FliprFullSensor(CoordinatorEntity, SensorEntity):
         """Regroupe tous les capteurs sous un appareil Flipr dans la page Appareils."""
         return DeviceInfo(
             identifiers={(DOMAIN, self._flipr_id)},
-            name=f"Flipr Pool ({self._flipr_id})",
+            name="Flipr Piscine",
             manufacturer="Flipr",
             model="Flipr Analyser",
             configuration_url="https://app.goflipr.com",

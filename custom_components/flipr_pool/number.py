@@ -34,7 +34,7 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
         super().__init__(coordinator)
         self._key = key
         self._attr_translation_key = translation_key
-        self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_{key}"
+        self._attr_unique_id = f"flipr_{coordinator.flipr_id}_{key}"
         self._attr_native_min_value = min_val
         self._attr_native_max_value = max_val
         self._attr_native_step = step
@@ -57,7 +57,7 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.flipr_id)},
-            name=f"Flipr Pool ({self.coordinator.flipr_id})",
+            name="Flipr Piscine",
             manufacturer="Flipr",
         )
 
@@ -96,7 +96,7 @@ class FliprDimensionNumber(CoordinatorEntity, NumberEntity):
         super().__init__(coordinator)
         self._key = translation_key
         self._attr_translation_key = translation_key
-        self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_{translation_key}"
+        self._attr_unique_id = f"flipr_{coordinator.flipr_id}_{translation_key}"
         self._attr_native_min_value = 0.0
         self._attr_native_max_value = 50.0
         self._attr_native_step = 0.1
@@ -113,7 +113,7 @@ class FliprDimensionNumber(CoordinatorEntity, NumberEntity):
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.flipr_id)},
-            name=f"Flipr Pool ({self.coordinator.flipr_id})",
+            name="Flipr Piscine",
             manufacturer="Flipr",
         )
 

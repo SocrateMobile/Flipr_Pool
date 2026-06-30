@@ -20,7 +20,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
 
     def __init__(self, coordinator: DataUpdateCoordinator) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"flipr_{coordinator.config_entry.entry_id}_mode"
+        self._attr_unique_id = f"flipr_{coordinator.flipr_id}_mode"
         self._attr_options = ["auto", "manual", "off", "planning"]
         self._attr_icon = "mdi:auto-fix"
 
@@ -35,7 +35,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.flipr_id)},
-            name=f"Flipr Pool ({self.coordinator.flipr_id})",
+            name="Flipr Piscine",
             manufacturer="Flipr",
         )
 
