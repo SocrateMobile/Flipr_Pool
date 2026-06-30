@@ -123,6 +123,9 @@
       "ph_status": {
         "name": "Statut pH"
       },
+      "ph_simple": {
+        "name": "pH (OK / KO)"
+      },
       "redox": {
         "name": "Redox"
       },
@@ -146,6 +149,9 @@
       },
       "chlorine_status": {
         "name": "Statut Chlore"
+      },
+      "chlorine_simple": {
+        "name": "Chlore (OK / KO)"
       },
       "last_update": {
         "name": "Dernière mesure"
