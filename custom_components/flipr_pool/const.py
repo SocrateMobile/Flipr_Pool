@@ -1,7 +1,7 @@
 """Constants for the Flipr Pool integration."""
 
 DOMAIN = "flipr_pool"
-VERSION = "3.3.5"
+VERSION = "3.3.6"
 API_BASE_URL = "https://apis.goflipr.com"
 
 # ── Configuration de traitement ────────────────────────────

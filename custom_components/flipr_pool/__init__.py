@@ -370,7 +370,15 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
         ble_data = _compute_ble_pool_data(ble_raw, self.config_entry)
         
         merged = dict(self.data) if self.data else {}
-        merged.update(ble_data) # Surcharge le Cloud par le BLE
+        
+        # Surcharge intelligente : ne pas écraser les données Cloud par du vide
+        for k, v in ble_data.items():
+            if v is None:
+                continue
+            # Le Bluetooth remonte souvent une conductivité à 0 si non mesurée
+            if k == "conductivity" and v == 0:
+                continue
+            merged[k] = v
         
         self.async_set_updated_data(merged)
         self.hass.async_create_task(self._async_save(merged))
