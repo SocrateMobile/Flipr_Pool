@@ -73,7 +73,7 @@ class FliprApiClient:
                 
                 if resp.status == 429:
                     self._retry_count += 1
-                    backoff_minutes = 60 * (2 ** (self._retry_count - 1))
+                    backoff_minutes = 5 * (2 ** (self._retry_count - 1))
                     self._blocked_until = datetime.now(timezone.utc) + timedelta(minutes=backoff_minutes)
                     raise FliprAuthError(f"Trop de requêtes vers le Cloud Flipr (Erreur 429). IP bloquée pour {backoff_minutes} min (Essai {self._retry_count}).")
 
@@ -123,9 +123,9 @@ class FliprApiClient:
                                 return await retry_resp.text()
                         retry_resp.raise_for_status()
                 elif resp.status == 429:
-                    # Backoff exponentiel (1h, 2h, 4h, 8h...)
+                    # Backoff exponentiel (5m, 10m, 20m, 40m...)
                     self._retry_count += 1
-                    backoff_minutes = 60 * (2 ** (self._retry_count - 1))
+                    backoff_minutes = 5 * (2 ** (self._retry_count - 1))
                     self._blocked_until = datetime.now(timezone.utc) + timedelta(minutes=backoff_minutes)
                     raise FliprApiError(f"Rate Limit (429) atteint. IP bloquée pour {backoff_minutes} min (Essai {self._retry_count}).")
                 else:
