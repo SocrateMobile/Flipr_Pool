@@ -310,7 +310,7 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
             hass, 
             _LOGGER, 
             name="flipr_pool",
-            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN)
+            update_interval=None  # Désactivation du polling automatique HA pour gérer notre propre boucle
         )
         self.api_client = api_client
         self.flipr_id = flipr_id
@@ -322,9 +322,9 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
         self.token = None
 
     async def _async_update_data(self):
-        """Fetch données du Cloud."""
+        """Fetch données du Cloud (uniquement appelé lors d'un Forcer Actualisation ou au 1er démarrage)."""
         try:
-            async with async_timeout.timeout(50):
+            async with async_timeout.timeout(60):
                 data_raw = await self.api_client.get_pool_data(self.flipr_id, self.place_id, self.hub_id)
                 
                 if data_raw.get("place_id") and not self.place_id:
@@ -355,16 +355,20 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
 
                 self.hass.async_create_task(self._async_save(data))
                 return data
-        except (FliprApiError, FliprAuthError) as e:
-            if self.data:
-                _LOGGER.warning("Erreur Flipr Cloud API (%s). Conservation des dernières données.", e)
-                return self.data
-            raise UpdateFailed(f"Erreur Flipr Cloud API: {e}")
         except Exception as err:
             if self.data:
                 _LOGGER.warning("Erreur inattendue Flipr Cloud (%s). Conservation des dernières données.", err)
                 return self.data
             raise UpdateFailed(f"Erreur inattendue Flipr Cloud: {err}")
+
+    async def async_update_cloud_data_safe(self):
+        """Boucle de polling interne qui esquive les Timeouts de Home Assistant."""
+        try:
+            data = await self._async_update_data()
+            if data:
+                self.async_set_updated_data(data)
+        except Exception as err:
+            _LOGGER.warning("Erreur lors de la mise à jour périodique Cloud : %s", err)
 
     @callback
     def async_update_ble_data(self, ble_raw: dict):
@@ -455,6 +459,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         )
         _LOGGER.info("Flipr: Polling BLE activé (adresse: %s, intervalle: %d min)", ble_address, BLE_UPDATE_INTERVAL_DEFAULT)
+
+    # ── Initialisation du Polling Cloud (Custom) ─────────────
+    if coordinator:
+        from homeassistant.helpers.event import async_track_time_interval
+        async def _async_poll_cloud(now=None):
+            await coordinator.async_update_cloud_data_safe()
+        
+        entry.async_on_unload(
+            async_track_time_interval(
+                hass, _async_poll_cloud, timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN)
+            )
+        )
 
     # ── Restauration locale au démarrage ────────────────────
     restored = await store.async_load()
