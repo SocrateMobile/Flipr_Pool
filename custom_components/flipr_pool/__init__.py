@@ -310,7 +310,8 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
             hass, 
             _LOGGER, 
             name="flipr_pool",
-            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN)
+            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN),
+            request_refresh_timeout=65.0
         )
         self.api_client = api_client
         self.flipr_id = flipr_id
@@ -324,7 +325,7 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch données du Cloud."""
         try:
-            async with async_timeout.timeout(60):
+            async with async_timeout.timeout(50):
                 data_raw = await self.api_client.get_pool_data(self.flipr_id, self.place_id, self.hub_id)
                 
                 if data_raw.get("place_id") and not self.place_id:
