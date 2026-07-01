@@ -310,8 +310,7 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
             hass, 
             _LOGGER, 
             name="flipr_pool",
-            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN),
-            request_refresh_timeout=65.0
+            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN)
         )
         self.api_client = api_client
         self.flipr_id = flipr_id
