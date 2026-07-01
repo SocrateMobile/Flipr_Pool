@@ -103,18 +103,24 @@ class FliprApiClient:
 
         try:
             async with self._session.request(method, url, headers=headers, **kwargs) as resp:
-                if resp.status == 200:
+                if 200 <= resp.status < 300:
                     self._retry_count = 0
                     self._blocked_until = None
-                    return await resp.json()
+                    try:
+                        return await resp.json()
+                    except Exception:
+                        return await resp.text()
                 elif resp.status == 401:
                     # Token expiré, on réauthentifie une fois
                     _LOGGER.info("Token expiré, renouvellement...")
                     await self.authenticate()
                     headers["Authorization"] = f"Bearer {self._token}"
                     async with self._session.request(method, url, headers=headers, **kwargs) as retry_resp:
-                        if retry_resp.status == 200:
-                            return await retry_resp.json()
+                        if 200 <= retry_resp.status < 300:
+                            try:
+                                return await retry_resp.json()
+                            except Exception:
+                                return await retry_resp.text()
                         retry_resp.raise_for_status()
                 elif resp.status == 429:
                     # Backoff exponentiel (1h, 2h, 4h, 8h...)
