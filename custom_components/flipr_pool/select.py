@@ -13,6 +13,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     async_add_entities([FliprModeSelect(coordinator)])
 
+MODE_TO_INT = {
+    "off": 0,
+    "manual": 1,
+    "planning": 2,
+    "auto": 3,
+}
+
 class FliprModeSelect(CoordinatorEntity, SelectEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "mode_filtration"
@@ -21,7 +28,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
     def __init__(self, coordinator: DataUpdateCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"flipr_{coordinator.flipr_id}_mode"
-        self._attr_options = ["auto", "manual", "off", "planning"]
+        self._attr_options = ["off", "manual", "planning", "auto"]
         self._attr_icon = "mdi:auto-fix"
 
     @property
@@ -48,8 +55,10 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             _LOGGER.warning("Le contrôle du mode de filtration n'est pas disponible en mode local uniquement.")
             return
 
+        mode_int = MODE_TO_INT.get(option, 3)
+
         try:
-            url = f"{API_BASE_URL}/hub/{hub_id}/mode/{option}"
+            url = f"https://apis.goflipr.com/api/hub/{hub_id}/mode/{mode_int}"
             await api_client._request("PUT", url)
 
             if self.coordinator.data:

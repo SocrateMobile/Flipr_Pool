@@ -78,12 +78,12 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
 
         try:
             # 1. Mettre le Hub en mode manuel d'abord (indispensable pour forcer la marche)
-            mode_url = f"{API_BASE_URL}/hub/{hub_id}/mode/manual"
+            mode_url = f"https://apis.goflipr.com/api/hub/{hub_id}/mode/1"
             await api_client._request("PUT", mode_url)
 
             # 2. Envoyer la commande ON/OFF
-            state_str = "True" if state else "False"
-            state_url = f"{API_BASE_URL}/hub/{hub_id}/Manual/{state_str}"
+            state_str = "true" if state else "false"
+            state_url = f"https://apis.goflipr.com/api/hub/{hub_id}/Manual/{state_str}"
             await api_client._request("POST", state_url)
 
             # 3. Mettre à jour l'état localement pour une réactivité immédiate de l'interface HA
