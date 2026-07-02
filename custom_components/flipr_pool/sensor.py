@@ -23,7 +23,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         # ── Mesures capteur ────────────────────────────────────
         ("temperature",     "temperature",     "°C",    SensorDeviceClass.TEMPERATURE, "mdi:thermometer", None),
         ("ph",              "ph",              "pH",    None,                          "mdi:ph", None),
-        ("ph_status",       "ph_status",       None,    None,                          "mdi:ph", None),
         ("ph_simple",       "ph_simple",       None,    None,                          "mdi:ph", None),
         ("redox",           "redox",           "mV",    None,                          "mdi:flask-outline", None),
         ("battery",         "battery",         "%",     SensorDeviceClass.BATTERY,     "mdi:battery", EntityCategory.DIAGNOSTIC),
@@ -32,7 +31,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         ("air_temp",        "air_temp",        "°C",    SensorDeviceClass.TEMPERATURE, "mdi:thermometer-lines", None),
         ("water_state",     "water_state",     None,    None,                          "mdi:pool", None),
         ("chlorine",        "chlorine",        "mg/L",  None,                          "mdi:water-check", None),
-        ("chlorine_status", "chlorine_status", None,    None,                          "mdi:water-check-outline", None),
         ("chlorine_simple", "chlorine_simple", None,    None,                          "mdi:water-check", None),
         ("last_update",     "last_update",     None,    SensorDeviceClass.TIMESTAMP,   "mdi:clock-outline", EntityCategory.DIAGNOSTIC),
         # ── Calculés (v2.0) ────────────────────────────────────
