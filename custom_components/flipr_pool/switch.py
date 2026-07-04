@@ -77,20 +77,14 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         try:
-            # 1. Mettre le Hub en mode manuel d'abord (indispensable pour forcer la marche)
-            # API officielle : PUT hub/{serial}/mode/{behavior} — behavior est un STRING
-            mode_url = f"https://apis.goflipr.com/hub/{hub_id}/mode/manual"
-            await api_client._request("PUT", mode_url)
-
-            # 2. Envoyer la commande ON/OFF
-            # API officielle : POST hub/{serial}/Manual/{state} — state est un BOOLEAN (True/False)
-            state_str = "True" if state else "False"
+            # Envoyer la commande ON/OFF
+            # API officielle : POST hub/{serial}/Manual/{state} (minuscule)
+            state_str = "true" if state else "false"
             state_url = f"https://apis.goflipr.com/hub/{hub_id}/Manual/{state_str}"
             await api_client._request("POST", state_url)
 
-            # 3. Mettre à jour l'état localement pour une réactivité immédiate de l'interface HA
+            # Mettre à jour l'état localement
             if self.coordinator.data:
-                self.coordinator.data["hub_mode"] = "manual"
                 self.coordinator.data["hub_state"] = "on" if state else "off"
             self.async_write_ha_state()
             _LOGGER.info("Flipr Hub %s: Pompe filtration changée en %s", hub_id, "ON" if state else "OFF")
