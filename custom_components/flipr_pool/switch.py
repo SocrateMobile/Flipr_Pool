@@ -55,21 +55,19 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
 
     @property
     def is_on(self) -> bool | None:
-        """Retourne True si le mode est 'manual' ou si l'état est 'on'."""
+        """Retourne True si l'état de la pompe est 'on'."""
         if not self.coordinator.data:
             return None
-        state = self.coordinator.data.get("hub_state")
+        state = self.coordinator.data.get("hub_state", {}).get("Status")
         return state == "on"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Active la marche forcée (mode manual + pompe ON)."""
+        """Active la pompe (ON)."""
         await self._async_set_pump_state(True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Désactive la filtration (mode manual + pompe OFF)."""
+        """Désactive la pompe (OFF)."""
         await self._async_set_pump_state(False)
-
-
 
     async def _async_set_pump_state(self, state: bool) -> None:
         hub_id = getattr(self.coordinator, "hub_id", None) or self.coordinator.flipr_id
@@ -85,36 +83,24 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
                 # Utiliser l'endpoint FliprHub (comme DomoLink)
                 state_str = "Start" if state else "Stop"
                 state_url = f"https://apis.goflipr.com/FliprHub/Filtration/{state_str}/{place_id}"
-                await api_client._request("POST", state_url, data="")
+                await api_client._request("POST", state_url, data=None)
             else:
-                # 1. Forcer le mode manual avant d'allumer/éteindre (comme dans domolink patch)
-                mode_url = f"https://apis.goflipr.com/hub/{hub_id}/mode/manual"
-                await api_client._request("PUT", mode_url, data="")
-
-                # 2. Envoyer la commande ON/OFF
+                # 1. Envoyer la commande ON/OFF sur l'ancien endpoint
                 state_str = "True" if state else "False"
                 state_url = f"https://apis.goflipr.com/hub/{hub_id}/Manual/{state_str}"
-                await api_client._request("POST", state_url, data="")
+                await api_client._request("POST", state_url, data=None)
 
-            # Mettre à jour l'état localement (optimiste)
+            # Mise à jour de l'état localement (optimiste)
             if self.coordinator.data:
                 if not isinstance(self.coordinator.data.get("hub_state"), dict):
                     self.coordinator.data["hub_state"] = {}
                 self.coordinator.data["hub_state"]["Status"] = "on" if state else "off"
-                self.coordinator.data["hub_state"]["Mode"] = "manual"
             self.async_write_ha_state()
-            _LOGGER.info("Flipr Hub %s: Pompe filtration changée en %s", hub_id, "ON" if state else "OFF")
+            _LOGGER.info("Flipr Hub %s: Pompe changée en %s", hub_id, "ON" if state else "OFF")
 
-            # 3. Temporisation (polling) pour attendre que Flipr prenne en compte
-            for _ in range(5):
-                await asyncio.sleep(3)
-                try:
-                    await self.coordinator.async_request_refresh()
-                    current_status = self.coordinator.data.get("hub_state", {}).get("Status")
-                    if (current_status == "on") == state:
-                        break
-                except Exception:
-                    pass
+            # Temporisation pour permettre à l'API Flipr de se mettre à jour
+            await asyncio.sleep(4)
+            await self.coordinator.async_request_refresh()
 
         except Exception as e:
             _LOGGER.error("Erreur lors du contrôle de la pompe du Hub %s: %s", hub_id, e)

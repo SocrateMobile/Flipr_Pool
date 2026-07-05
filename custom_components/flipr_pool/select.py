@@ -64,7 +64,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             # API officielle : PUT hub/{serial}/mode/{behavior}
             # behavior = string parmi "manual", "auto", "planning"
             url = f"https://apis.goflipr.com/hub/{hub_id}/mode/{option}"
-            await api_client._request("PUT", url, data="")
+            await api_client._request("PUT", url, data=None)
 
             # Mettre à jour l'état localement (optimiste)
             if self.coordinator.data:
@@ -74,15 +74,8 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             self.async_write_ha_state()
 
             # Temporisation et polling
-            for _ in range(5):
-                await asyncio.sleep(3)
-                try:
-                    await self.coordinator.async_request_refresh()
-                    current_mode = self.coordinator.data.get("hub_state", {}).get("Mode")
-                    if current_mode == option:
-                        break
-                except Exception:
-                    pass
+            await asyncio.sleep(4)
+            await self.coordinator.async_request_refresh()
 
         except Exception as err:
             _LOGGER.error("Erreur lors du changement de mode Flipr Hub : %s", err)
