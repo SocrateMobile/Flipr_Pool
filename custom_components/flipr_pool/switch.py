@@ -81,14 +81,20 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         try:
-            # 1. Forcer le mode manual avant d'allumer/éteindre (comme dans domolink patch)
-            mode_url = f"https://apis.goflipr.com/hub/{hub_id}/mode/manual"
-            await api_client._request("PUT", mode_url, data="")
+            if place_id:
+                # Utiliser l'endpoint FliprHub (comme DomoLink)
+                state_str = "Start" if state else "Stop"
+                state_url = f"https://apis.goflipr.com/FliprHub/Filtration/{state_str}/{place_id}"
+                await api_client._request("POST", state_url, data="")
+            else:
+                # 1. Forcer le mode manual avant d'allumer/éteindre (comme dans domolink patch)
+                mode_url = f"https://apis.goflipr.com/hub/{hub_id}/mode/manual"
+                await api_client._request("PUT", mode_url, data="")
 
-            # 2. Envoyer la commande ON/OFF
-            state_str = "True" if state else "False"
-            state_url = f"https://apis.goflipr.com/hub/{hub_id}/Manual/{state_str}"
-            await api_client._request("POST", state_url, data="")
+                # 2. Envoyer la commande ON/OFF
+                state_str = "True" if state else "False"
+                state_url = f"https://apis.goflipr.com/hub/{hub_id}/Manual/{state_str}"
+                await api_client._request("POST", state_url, data="")
 
             # Mettre à jour l'état localement (optimiste)
             if self.coordinator.data:

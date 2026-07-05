@@ -11,9 +11,8 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 # Les modes acceptés par l'API officielle Flipr (PUT hub/{serial}/mode/{behavior})
-# behavior est un STRING : "manual", "auto", "planning"
-# Note : "off" n'existe pas dans l'API — on utilise POST Manual/False pour arrêter
-VALID_MODES = ["manual", "planning", "auto"]
+# behavior est un STRING : "manual", "auto", "planning", "off"
+VALID_MODES = ["off", "manual", "planning", "auto"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]

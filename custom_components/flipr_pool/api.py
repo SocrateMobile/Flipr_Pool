@@ -214,8 +214,8 @@ class FliprApiClient:
         except Exception:
             pass
 
-        # Si place_id n'est pas fourni, on tente de le trouver via les places
-        if not place_id:
+        # Si place_id ou hub_id n'est pas fourni, on tente de le trouver via les places
+        if not place_id or not hub_id:
             try:
                 places = await self._request("GET", PLACES_URL)
                 if isinstance(places, list):
@@ -233,11 +233,11 @@ class FliprApiClient:
                 pass
 
         # 3. État du Hub
-        if hub_id:
-            hub_url = f"https://apis.goflipr.com/hub/{hub_id}/state"
+        if place_id:
+            hub_url = f"https://apis.goflipr.com/FliprHub/GetStatus/{place_id}"
             try:
                 hub_data = await self._request("GET", hub_url)
-                behavior = hub_data.get("behavior")
+                behavior = hub_data.get("Mode")
                 mode_str = "auto"
                 if behavior == 1:
                     mode_str = "manual"
@@ -250,7 +250,7 @@ class FliprApiClient:
 
                 data["hub_state"] = {
                     "Mode": mode_str,
-                    "Status": "on" if hub_data.get("stateEquipment") else "off"
+                    "Status": "on" if hub_data.get("PumpState") else "off"
                 }
             except Exception as e:
                 _LOGGER.debug("Erreur Hub State: %s", e)
