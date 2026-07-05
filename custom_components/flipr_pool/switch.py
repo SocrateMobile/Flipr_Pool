@@ -1,3 +1,4 @@
+import asyncio
 """Switches pour Flipr Pool : pompe filtration + activation BLE."""
 
 import logging
@@ -68,6 +69,8 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
         """Désactive la filtration (mode manual + pompe OFF)."""
         await self._async_set_pump_state(False)
 
+
+
     async def _async_set_pump_state(self, state: bool) -> None:
         hub_id = getattr(self.coordinator, "hub_id", None) or self.coordinator.flipr_id
         api_client = getattr(self.coordinator, "api_client", None)
@@ -77,22 +80,35 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
             _LOGGER.warning("Le contrôle de la pompe n'est pas disponible en mode local uniquement.")
             return
 
-        if not place_id:
-            _LOGGER.error("Impossible de contrôler la pompe: place_id inconnu.")
-            return
-
         try:
-            # Envoyer la commande ON/OFF
-            # Utilisation de l'API FliprHub (similaire à l'application fonctionnelle)
-            action = "Start" if state else "Stop"
-            state_url = f"https://apis.goflipr.com/FliprHub/Filtration/{action}/{place_id}"
-            await api_client._request("POST", state_url)
+            # 1. Forcer le mode manual avant d'allumer/éteindre (comme dans domolink patch)
+            mode_url = f"https://apis.goflipr.com/hub/{hub_id}/mode/manual"
+            await api_client._request("PUT", mode_url, data="")
 
-            # Mettre à jour l'état localement
+            # 2. Envoyer la commande ON/OFF
+            state_str = "True" if state else "False"
+            state_url = f"https://apis.goflipr.com/hub/{hub_id}/Manual/{state_str}"
+            await api_client._request("POST", state_url, data="")
+
+            # Mettre à jour l'état localement (optimiste)
             if self.coordinator.data:
-                self.coordinator.data["hub_state"] = "on" if state else "off"
+                if not isinstance(self.coordinator.data.get("hub_state"), dict):
+                    self.coordinator.data["hub_state"] = {}
+                self.coordinator.data["hub_state"]["Status"] = "on" if state else "off"
+                self.coordinator.data["hub_state"]["Mode"] = "manual"
             self.async_write_ha_state()
-            _LOGGER.info("Flipr Hub %s: Pompe filtration changée en %s via %s", hub_id, "ON" if state else "OFF", state_url)
+            _LOGGER.info("Flipr Hub %s: Pompe filtration changée en %s", hub_id, "ON" if state else "OFF")
+
+            # 3. Temporisation (polling) pour attendre que Flipr prenne en compte
+            for _ in range(5):
+                await asyncio.sleep(3)
+                try:
+                    await self.coordinator.async_request_refresh()
+                    current_status = self.coordinator.data.get("hub_state", {}).get("Status")
+                    if (current_status == "on") == state:
+                        break
+                except Exception:
+                    pass
 
         except Exception as e:
             _LOGGER.error("Erreur lors du contrôle de la pompe du Hub %s: %s", hub_id, e)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from homeassistant.components.select import SelectEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
@@ -50,6 +51,8 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             manufacturer="Flipr",
         )
 
+
+
     async def async_select_option(self, option: str) -> None:
         hub_id = getattr(self.coordinator, "hub_id", None) or self.coordinator.flipr_id
         api_client = getattr(self.coordinator, "api_client", None)
@@ -64,10 +67,23 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             url = f"https://apis.goflipr.com/hub/{hub_id}/mode/{option}"
             await api_client._request("PUT", url, data="")
 
+            # Mettre à jour l'état localement (optimiste)
             if self.coordinator.data:
                 if "hub_state" not in self.coordinator.data:
                     self.coordinator.data["hub_state"] = {}
                 self.coordinator.data["hub_state"]["Mode"] = option
             self.async_write_ha_state()
+
+            # Temporisation et polling
+            for _ in range(5):
+                await asyncio.sleep(3)
+                try:
+                    await self.coordinator.async_request_refresh()
+                    current_mode = self.coordinator.data.get("hub_state", {}).get("Mode")
+                    if current_mode == option:
+                        break
+                except Exception:
+                    pass
+
         except Exception as err:
             _LOGGER.error("Erreur lors du changement de mode Flipr Hub : %s", err)

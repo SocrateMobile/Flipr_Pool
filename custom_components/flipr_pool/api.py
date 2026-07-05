@@ -237,8 +237,19 @@ class FliprApiClient:
             hub_url = f"https://apis.goflipr.com/hub/{hub_id}/state"
             try:
                 hub_data = await self._request("GET", hub_url)
+                behavior = hub_data.get("behavior")
+                mode_str = "auto"
+                if behavior == 1:
+                    mode_str = "manual"
+                elif behavior == 2:
+                    mode_str = "planning"
+                elif behavior == 3:
+                    mode_str = "auto"
+                elif isinstance(behavior, str):
+                    mode_str = behavior.lower()
+
                 data["hub_state"] = {
-                    "Mode": hub_data.get("behavior"),
+                    "Mode": mode_str,
                     "Status": "on" if hub_data.get("stateEquipment") else "off"
                 }
             except Exception as e:
