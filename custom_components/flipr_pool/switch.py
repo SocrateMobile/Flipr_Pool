@@ -71,23 +71,28 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
     async def _async_set_pump_state(self, state: bool) -> None:
         hub_id = getattr(self.coordinator, "hub_id", None) or self.coordinator.flipr_id
         api_client = getattr(self.coordinator, "api_client", None)
+        place_id = self.coordinator.data.get("place_id") if self.coordinator.data else None
         
         if not api_client:
             _LOGGER.warning("Le contrôle de la pompe n'est pas disponible en mode local uniquement.")
             return
 
+        if not place_id:
+            _LOGGER.error("Impossible de contrôler la pompe: place_id inconnu.")
+            return
+
         try:
             # Envoyer la commande ON/OFF
-            # API officielle : POST hub/{serial}/Manual/{state} (minuscule)
-            state_str = "true" if state else "false"
-            state_url = f"https://apis.goflipr.com/hub/{hub_id}/Manual/{state_str}"
+            # Utilisation de l'API FliprHub (similaire à l'application fonctionnelle)
+            action = "Start" if state else "Stop"
+            state_url = f"https://apis.goflipr.com/FliprHub/Filtration/{action}/{place_id}"
             await api_client._request("POST", state_url)
 
             # Mettre à jour l'état localement
             if self.coordinator.data:
                 self.coordinator.data["hub_state"] = "on" if state else "off"
             self.async_write_ha_state()
-            _LOGGER.info("Flipr Hub %s: Pompe filtration changée en %s", hub_id, "ON" if state else "OFF")
+            _LOGGER.info("Flipr Hub %s: Pompe filtration changée en %s via %s", hub_id, "ON" if state else "OFF", state_url)
 
         except Exception as e:
             _LOGGER.error("Erreur lors du contrôle de la pompe du Hub %s: %s", hub_id, e)
