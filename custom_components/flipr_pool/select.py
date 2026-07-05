@@ -34,7 +34,9 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
         """Retourne le mode actuel depuis le coordinateur."""
         if not self.coordinator.data:
             return None
-        mode = self.coordinator.data.get("hub_mode")
+        # Lire depuis hub_state["Mode"] (peuplé dans api.py)
+        hub_state = self.coordinator.data.get("hub_state") or {}
+        mode = hub_state.get("Mode")
         # S'assurer que le mode est dans la liste des options valides
         if mode in VALID_MODES:
             return mode
@@ -60,10 +62,12 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             # API officielle : PUT hub/{serial}/mode/{behavior}
             # behavior = string parmi "manual", "auto", "planning"
             url = f"https://apis.goflipr.com/hub/{hub_id}/mode/{option}"
-            await api_client._request("PUT", url)
+            await api_client._request("PUT", url, data="")
 
             if self.coordinator.data:
-                self.coordinator.data["hub_mode"] = option
+                if "hub_state" not in self.coordinator.data:
+                    self.coordinator.data["hub_state"] = {}
+                self.coordinator.data["hub_state"]["Mode"] = option
             self.async_write_ha_state()
         except Exception as err:
             _LOGGER.error("Erreur lors du changement de mode Flipr Hub : %s", err)
