@@ -34,9 +34,8 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
         """Retourne le mode actuel depuis le coordinateur."""
         if not self.coordinator.data:
             return None
-        # Lire depuis hub_state["Mode"] (peuplé dans api.py)
-        hub_state = self.coordinator.data.get("hub_state") or {}
-        mode = hub_state.get("Mode")
+        # Lire depuis hub_mode (peuplé dans api.py)
+        mode = self.coordinator.data.get("hub_mode")
         # S'assurer que le mode est dans la liste des options valides
         if mode in VALID_MODES:
             return mode
@@ -66,11 +65,8 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             url = f"https://apis.goflipr.com/hub/{hub_id}/mode/{option}"
             await api_client._request("PUT", url, data=None)
 
-            # Mettre à jour l'état localement (optimiste)
             if self.coordinator.data:
-                if "hub_state" not in self.coordinator.data:
-                    self.coordinator.data["hub_state"] = {}
-                self.coordinator.data["hub_state"]["Mode"] = option
+                self.coordinator.data["hub_mode"] = option
             self.async_write_ha_state()
 
             # Temporisation et polling

@@ -58,7 +58,7 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
         """Retourne True si l'état de la pompe est 'on'."""
         if not self.coordinator.data:
             return None
-        state = self.coordinator.data.get("hub_state", {}).get("Status")
+        state = self.coordinator.data.get("hub_state")
         return state == "on"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -92,9 +92,7 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
 
             # Mise à jour de l'état localement (optimiste)
             if self.coordinator.data:
-                if not isinstance(self.coordinator.data.get("hub_state"), dict):
-                    self.coordinator.data["hub_state"] = {}
-                self.coordinator.data["hub_state"]["Status"] = "on" if state else "off"
+                self.coordinator.data["hub_state"] = "on" if state else "off"
             self.async_write_ha_state()
             _LOGGER.info("Flipr Hub %s: Pompe changée en %s", hub_id, "ON" if state else "OFF")
 
