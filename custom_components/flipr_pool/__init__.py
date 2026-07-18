@@ -113,11 +113,11 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
 
     # ── Statuts pH & Chlore ─────────────────────────────────
     ph_sector   = ph_raw.get("DeviationSector")  if isinstance(ph_raw, dict) else None
-    ph_status   = "OK" if ph_sector == "OK" else (ph_raw.get("Message", "Inconnu") if isinstance(ph_raw, dict) else None)
+    ph_status   = "OK" if isinstance(ph_sector, str) and ph_sector.lower() == "ok" else (ph_raw.get("Message", "Inconnu") if isinstance(ph_raw, dict) else None)
 
     cl_val      = round(desinf_raw.get("Value"), 3) if isinstance(desinf_raw, dict) and desinf_raw.get("Value") is not None else desinf_raw
     cl_sector   = desinf_raw.get("DeviationSector") if isinstance(desinf_raw, dict) else None
-    cl_status   = "OK" if cl_sector == "OK" else (desinf_raw.get("Message", "Inconnu") if isinstance(desinf_raw, dict) else None)
+    cl_status   = "OK" if isinstance(cl_sector, str) and cl_sector.lower() == "ok" else (desinf_raw.get("Message", "Inconnu") if isinstance(desinf_raw, dict) else None)
 
     # ── Horodatage ──────────────────────────────────────────
     dt_raw = m.get("DateTime")
