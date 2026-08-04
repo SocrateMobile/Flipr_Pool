@@ -111,13 +111,21 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     battery_val = round(battery_raw.get("Deviation", 0) * 100, 1) if isinstance(battery_raw, dict) else battery_raw
     cond_val    = cond_raw.get("Value")          if isinstance(cond_raw, dict)    else cond_raw
 
+    # ── Helper for Status ───────────────────────────────────
+    def _is_ok(status_val):
+        if not isinstance(status_val, str):
+            return False
+        return status_val.lower() in ["ok", "perfect", "good", "excellent", "none", "parfait", "bon"]
+
     # ── Statuts pH & Chlore ─────────────────────────────────
     ph_sector   = ph_raw.get("DeviationSector")  if isinstance(ph_raw, dict) else None
-    ph_status   = "OK" if isinstance(ph_sector, str) and ph_sector.lower() == "ok" else (ph_raw.get("Message", "Inconnu") if isinstance(ph_raw, dict) else None)
+    ph_msg      = ph_raw.get("Message") if isinstance(ph_raw, dict) else None
+    ph_status   = "OK" if (_is_ok(ph_sector) or _is_ok(ph_msg)) else (ph_msg if ph_msg else "Inconnu")
 
     cl_val      = round(desinf_raw.get("Value"), 3) if isinstance(desinf_raw, dict) and desinf_raw.get("Value") is not None else desinf_raw
     cl_sector   = desinf_raw.get("DeviationSector") if isinstance(desinf_raw, dict) else None
-    cl_status   = "OK" if isinstance(cl_sector, str) and cl_sector.lower() == "ok" else (desinf_raw.get("Message", "Inconnu") if isinstance(desinf_raw, dict) else None)
+    cl_msg      = desinf_raw.get("Message") if isinstance(desinf_raw, dict) else None
+    cl_status   = "OK" if (_is_ok(cl_sector) or _is_ok(cl_msg)) else (cl_msg if cl_msg else "Inconnu")
 
     # ── Horodatage ──────────────────────────────────────────
     dt_raw = m.get("DateTime")
@@ -158,32 +166,36 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         dose_cl_maint = dose_cl_shock = None
 
     # ── Météo (Weather) ─────────────────────────────────────
-    weather = m.get("Weather", {})
+    weather = m.get("Weather")
     if not isinstance(weather, dict):
         weather = {}
+
+    def _first_not_none(*args):
+        for arg in args:
+            if arg is not None:
+                return arg
+        return None
 
     # ── Température Air ─────────────────────────────────────
     air_temp = None
     water_state = None
     if isinstance(s, dict):
-        air_temp = s.get("AirTemperature") or s.get("airTemperature")
-        water_state = s.get("WaterState") or s.get("waterState")
+        air_temp = _first_not_none(s.get("AirTemperature"), s.get("airTemperature"))
+        water_state = _first_not_none(s.get("WaterState"), s.get("waterState"))
     elif isinstance(s, list) and len(s) > 0:
         first_s = s[0]
         if isinstance(first_s, dict):
-            air_temp = first_s.get("AirTemperature") or first_s.get("airTemperature")
-            water_state = first_s.get("WaterState") or first_s.get("waterState")
+            air_temp = _first_not_none(first_s.get("AirTemperature"), first_s.get("airTemperature"))
+            water_state = _first_not_none(first_s.get("WaterState"), first_s.get("waterState"))
 
     if air_temp is None:
-        air_temp = weather.get("AirTemperature") or weather.get("airTemperature") or weather.get("Temperature") or weather.get("temperature")
+        air_temp = _first_not_none(weather.get("AirTemperature"), weather.get("airTemperature"), weather.get("Temperature"), weather.get("temperature"))
 
     if air_temp is None:
-        air_temp = m.get("AirTemperature") or m.get("airTemperature")
+        air_temp = _first_not_none(m.get("AirTemperature"), m.get("airTemperature"))
 
     # ── Indice UV ───────────────────────────────────────────
-    uv_index = weather.get("UvIndex") or weather.get("uvIndex") or weather.get("UV") or weather.get("uv")
-    if uv_index is None:
-        uv_index = m.get("UvIndex") or m.get("uvIndex")
+    uv_index = _first_not_none(weather.get("UvIndex"), weather.get("uvIndex"), weather.get("UV"), weather.get("uv"), m.get("UvIndex"), m.get("uvIndex"))
 
     # ── Durée de pompage & Conseil ──────────────────────────
     water_temp = m.get("Temperature")
