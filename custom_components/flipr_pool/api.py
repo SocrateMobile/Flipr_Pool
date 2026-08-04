@@ -58,6 +58,7 @@ class FliprApiClient:
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
+            "User-Agent": "X-Flipr"
         }
 
         try:
@@ -100,6 +101,7 @@ class FliprApiClient:
 
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Bearer {self._token}"
+        headers["User-Agent"] = "X-Flipr"
 
         try:
             async with self._session.request(method, url, headers=headers, **kwargs) as resp:
