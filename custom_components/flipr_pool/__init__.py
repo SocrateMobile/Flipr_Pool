@@ -99,6 +99,12 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     Le paramètre `data_source` est injecté dans le résultat.
     """
 
+    # ── Déballage de "Current" si présent (API NewResume / JSON imbriqué) ──
+    if isinstance(m, dict) and "Current" in m and isinstance(m["Current"], dict):
+        current_dict = m["Current"]
+        # Merge Current with root m, giving precedence to Current keys
+        m = {**m, **current_dict}
+
     # ── Mesures brutes ───────────────────────────────────────
     ph_raw      = m.get("PH") or m.get("ph")
     redox_raw   = m.get("OxydoReductionPotentiel") or m.get("oxydoReductionPotentiel") or m.get("redox")
@@ -166,7 +172,7 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         dose_cl_maint = dose_cl_shock = None
 
     # ── Météo (Weather) ─────────────────────────────────────
-    weather = m.get("Weather")
+    weather = m.get("Weather") or m.get("weather") or {}
     if not isinstance(weather, dict):
         weather = {}
 
@@ -180,22 +186,32 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     air_temp = None
     water_state = None
     if isinstance(s, dict):
-        air_temp = _first_not_none(s.get("AirTemperature"), s.get("airTemperature"))
+        air_temp = _first_not_none(s.get("AirTemperature"), s.get("airTemperature"), s.get("AirTemp"), s.get("airTemp"))
         water_state = _first_not_none(s.get("WaterState"), s.get("waterState"))
     elif isinstance(s, list) and len(s) > 0:
         first_s = s[0]
         if isinstance(first_s, dict):
-            air_temp = _first_not_none(first_s.get("AirTemperature"), first_s.get("airTemperature"))
+            air_temp = _first_not_none(first_s.get("AirTemperature"), first_s.get("airTemperature"), first_s.get("AirTemp"), first_s.get("airTemp"))
             water_state = _first_not_none(first_s.get("WaterState"), first_s.get("waterState"))
 
     if air_temp is None:
-        air_temp = _first_not_none(weather.get("AirTemperature"), weather.get("airTemperature"), weather.get("Temperature"), weather.get("temperature"))
+        air_temp = _first_not_none(
+            weather.get("AirTemperature"), weather.get("airTemperature"),
+            weather.get("AirTemp"), weather.get("airTemp"),
+            weather.get("Temperature"), weather.get("temperature")
+        )
 
     if air_temp is None:
-        air_temp = _first_not_none(m.get("AirTemperature"), m.get("airTemperature"))
+        air_temp = _first_not_none(
+            m.get("AirTemperature"), m.get("airTemperature"),
+            m.get("AirTemp"), m.get("airTemp")
+        )
 
     # ── Indice UV ───────────────────────────────────────────
-    uv_index = _first_not_none(weather.get("UvIndex"), weather.get("uvIndex"), weather.get("UV"), weather.get("uv"), m.get("UvIndex"), m.get("uvIndex"))
+    uv_index = _first_not_none(
+        weather.get("UvIndex"), weather.get("uvIndex"), weather.get("UV"), weather.get("uv"),
+        m.get("UvIndex"), m.get("uvIndex"), m.get("UV"), m.get("uv")
+    )
 
     # ── Durée de pompage & Conseil ──────────────────────────
     water_temp = m.get("Temperature")

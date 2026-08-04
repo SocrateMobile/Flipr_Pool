@@ -207,7 +207,14 @@ class FliprApiClient:
         try:
             data["module_last_measure"] = await self._request("GET", module_url)
         except Exception as e:
-            _LOGGER.warning("Impossible de lire la dernière mesure Cloud: %s", e)
+            _LOGGER.warning("Impossible de lire survey/last: %s. Tentative NewResume...", e)
+
+        if not data["module_last_measure"]:
+            new_resume_url = f"https://apis.goflipr.com/modules/{flipr_id}/NewResume"
+            try:
+                data["module_last_measure"] = await self._request("GET", new_resume_url)
+            except Exception as e:
+                _LOGGER.warning("Impossible de lire NewResume Cloud: %s", e)
 
         # 2. ShortTerm (pour l'état de l'eau)
         shortterm_url = f"https://apis.goflipr.com/modules/{flipr_id}/shortterm"
