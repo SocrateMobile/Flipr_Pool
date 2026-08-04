@@ -356,6 +356,14 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                     self.place_id = data_raw["place_id"]
                 if data_raw.get("hub_id") and not self.hub_id:
                     self.hub_id = data_raw["hub_id"]
+                
+                try:
+                    import json
+                    debug_path = self.hass.config.path("flipr_debug.json")
+                    with open(debug_path, "w") as f:
+                        json.dump(data_raw, f, indent=2)
+                except Exception as e:
+                    _LOGGER.error(f"Error writing flipr_debug.json: {e}")
 
                 m = data_raw.get("module_last_measure")
                 s = data_raw.get("module_shortterm")
