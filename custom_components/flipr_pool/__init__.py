@@ -102,7 +102,6 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     # ── Déballage de "Current" si présent (API NewResume / JSON imbriqué) ──
     if isinstance(m, dict) and "Current" in m and isinstance(m["Current"], dict):
         current_dict = m["Current"]
-        # Merge Current with root m, giving precedence to Current keys
         m = {**m, **current_dict}
 
     # ── Mesures brutes ───────────────────────────────────────
@@ -112,10 +111,33 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     cond_raw    = m.get("Conductivity") or m.get("conductivity")
     desinf_raw  = m.get("Desinfectant") or m.get("desinfectant") or m.get("chlorine")
 
-    ph_val      = ph_raw.get("Value")            if isinstance(ph_raw, dict)      else ph_raw
-    redox_val   = redox_raw.get("Value")         if isinstance(redox_raw, dict)   else redox_raw
+    ph_val = ph_raw.get("Value") if isinstance(ph_raw, dict) else ph_raw
+    if ph_val is not None:
+        try:
+            ph_val = float(ph_val)
+        except (ValueError, TypeError):
+            ph_val = None
+
+    redox_val = redox_raw.get("Value") if isinstance(redox_raw, dict) else redox_raw
+    if redox_val is not None:
+        try:
+            redox_val = float(redox_val)
+        except (ValueError, TypeError):
+            redox_val = None
+
     battery_val = round(battery_raw.get("Deviation", 0) * 100, 1) if isinstance(battery_raw, dict) else battery_raw
-    cond_val    = cond_raw.get("Value")          if isinstance(cond_raw, dict)    else cond_raw
+    if battery_val is not None:
+        try:
+            battery_val = float(battery_val)
+        except (ValueError, TypeError):
+            battery_val = None
+
+    cond_val = cond_raw.get("Value") if isinstance(cond_raw, dict) else cond_raw
+    if cond_val is not None:
+        try:
+            cond_val = float(cond_val)
+        except (ValueError, TypeError):
+            cond_val = None
 
     # ── Helper for Status ───────────────────────────────────
     def _is_ok(status_val):
@@ -123,15 +145,32 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
             return False
         return status_val.lower() in ["ok", "perfect", "good", "excellent", "none", "parfait", "bon"]
 
-    # ── Statuts pH & Chlore ─────────────────────────────────
-    ph_sector   = ph_raw.get("DeviationSector")  if isinstance(ph_raw, dict) else None
-    ph_msg      = ph_raw.get("Message") if isinstance(ph_raw, dict) else None
-    ph_status   = "OK" if (_is_ok(ph_sector) or _is_ok(ph_msg)) else (ph_msg if ph_msg else "Inconnu")
+    def _compute_status(sector, msg, val):
+        if _is_ok(sector) or _is_ok(msg):
+            return "OK"
+        if msg:
+            return msg
+        if sector:
+            return sector
+        if val is not None:
+            return "OK"
+        return "Inconnu"
 
-    cl_val      = round(desinf_raw.get("Value"), 3) if isinstance(desinf_raw, dict) and desinf_raw.get("Value") is not None else desinf_raw
-    cl_sector   = desinf_raw.get("DeviationSector") if isinstance(desinf_raw, dict) else None
-    cl_msg      = desinf_raw.get("Message") if isinstance(desinf_raw, dict) else None
-    cl_status   = "OK" if (_is_ok(cl_sector) or _is_ok(cl_msg)) else (cl_msg if cl_msg else "Inconnu")
+    # ── Statuts pH & Chlore ─────────────────────────────────
+    ph_sector = ph_raw.get("DeviationSector") if isinstance(ph_raw, dict) else None
+    ph_msg    = ph_raw.get("Message") if isinstance(ph_raw, dict) else None
+    ph_status = _compute_status(ph_sector, ph_msg, ph_val)
+
+    cl_val = round(desinf_raw.get("Value"), 3) if isinstance(desinf_raw, dict) and desinf_raw.get("Value") is not None else desinf_raw
+    if cl_val is not None:
+        try:
+            cl_val = float(cl_val)
+        except (ValueError, TypeError):
+            cl_val = None
+
+    cl_sector = desinf_raw.get("DeviationSector") if isinstance(desinf_raw, dict) else None
+    cl_msg    = desinf_raw.get("Message") if isinstance(desinf_raw, dict) else None
+    cl_status = _compute_status(cl_sector, cl_msg, cl_val)
 
     # ── Horodatage ──────────────────────────────────────────
     dt_raw = m.get("DateTime")
@@ -207,14 +246,31 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
             m.get("AirTemp"), m.get("airTemp")
         )
 
+    if air_temp is not None:
+        try:
+            air_temp = float(air_temp)
+        except (ValueError, TypeError):
+            air_temp = None
+
     # ── Indice UV ───────────────────────────────────────────
     uv_index = _first_not_none(
         weather.get("UvIndex"), weather.get("uvIndex"), weather.get("UV"), weather.get("uv"),
         m.get("UvIndex"), m.get("uvIndex"), m.get("UV"), m.get("uv")
     )
+    if uv_index is not None:
+        try:
+            uv_index = float(uv_index)
+        except (ValueError, TypeError):
+            uv_index = None
 
     # ── Durée de pompage & Conseil ──────────────────────────
-    water_temp = m.get("Temperature")
+    water_temp_raw = m.get("Temperature") or m.get("temperature")
+    water_temp = water_temp_raw.get("Value") if isinstance(water_temp_raw, dict) else water_temp_raw
+    if water_temp is not None:
+        try:
+            water_temp = float(water_temp)
+        except (ValueError, TypeError):
+            water_temp = None
     conseil_filtration = None
 
     if water_temp is not None:

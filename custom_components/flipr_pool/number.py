@@ -132,7 +132,5 @@ class FliprDimensionNumber(CoordinatorEntity, NumberEntity):
         # On met à jour les options de l'entrée de configuration en préservant les données (credentials)
         self.coordinator.hass.config_entries.async_update_entry(entry, data=dict(entry.data), options=new_options)
 
-        # On force un rafraîchissement des calculs via le coordinateur Cloud
-        cloud_coord = self.coordinator.cloud_coord
-        if cloud_coord:
-            await cloud_coord.async_request_refresh()
+        # On force un rafraîchissement des calculs via le coordinateur
+        await self.coordinator.async_request_refresh()

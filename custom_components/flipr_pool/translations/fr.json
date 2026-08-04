@@ -269,6 +269,14 @@
       "param_tds": {
         "name": "Solides Dissous Totaux (TDS)"
       }
+    },
+    "binary_sensor": {
+      "ph_status": {
+        "name": "Statut pH"
+      },
+      "chlorine_status": {
+        "name": "Statut Chlore"
+      }
     }
   },
   "services": {

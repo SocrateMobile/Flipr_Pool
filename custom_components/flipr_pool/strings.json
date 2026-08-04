@@ -211,6 +211,14 @@
       "param_tds": {
         "name": "Total Dissolved Solids (TDS)"
       }
+    },
+    "binary_sensor": {
+      "ph_status": {
+        "name": "pH Status"
+      },
+      "chlorine_status": {
+        "name": "Chlorine Status"
+      }
     }
   },
   "services": {
