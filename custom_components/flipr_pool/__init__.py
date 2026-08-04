@@ -157,6 +157,11 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     else:
         dose_cl_maint = dose_cl_shock = None
 
+    # ── Météo (Weather) ─────────────────────────────────────
+    weather = m.get("Weather", {})
+    if not isinstance(weather, dict):
+        weather = {}
+
     # ── Température Air ─────────────────────────────────────
     air_temp = None
     water_state = None
@@ -170,7 +175,15 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
             water_state = first_s.get("WaterState") or first_s.get("waterState")
 
     if air_temp is None:
+        air_temp = weather.get("AirTemperature") or weather.get("airTemperature") or weather.get("Temperature") or weather.get("temperature")
+
+    if air_temp is None:
         air_temp = m.get("AirTemperature") or m.get("airTemperature")
+
+    # ── Indice UV ───────────────────────────────────────────
+    uv_index = weather.get("UvIndex") or weather.get("uvIndex") or weather.get("UV") or weather.get("uv")
+    if uv_index is None:
+        uv_index = m.get("UvIndex") or m.get("uvIndex")
 
     # ── Durée de pompage & Conseil ──────────────────────────
     water_temp = m.get("Temperature")
@@ -240,7 +253,7 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         "redox":               redox_val,
         "battery":             battery_val,
         "conductivity":        cond_val,
-        "uv_index":            m.get("UvIndex"),
+        "uv_index":            uv_index,
         "air_temp":            air_temp,
         "water_state":         water_state,
         "chlorine":            cl_val,
