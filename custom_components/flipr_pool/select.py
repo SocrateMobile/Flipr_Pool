@@ -10,9 +10,8 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Les modes acceptés par l'API officielle Flipr (PUT hub/{serial}/mode/{behavior})
-# behavior est un STRING : "manual", "auto", "planning", "off"
-VALID_MODES = ["off", "manual", "planning", "auto"]
+# Les modes acceptés par l'API officielle Flipr (PUT /hub/{serial}/mode/{behavior})
+VALID_MODES = ["manual", "planning", "auto"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
@@ -34,9 +33,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
         """Retourne le mode actuel depuis le coordinateur."""
         if not self.coordinator.data:
             return None
-        # Lire depuis hub_mode (peuplé dans api.py)
         mode = self.coordinator.data.get("hub_mode")
-        # S'assurer que le mode est dans la liste des options valides
         if mode in VALID_MODES:
             return mode
         return None
@@ -49,8 +46,6 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             manufacturer="Flipr",
         )
 
-
-
     async def async_select_option(self, option: str) -> None:
         hub_id = getattr(self.coordinator, "hub_id", None) or self.coordinator.flipr_id
         api_client = getattr(self.coordinator, "api_client", None)
@@ -60,10 +55,8 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             return
 
         try:
-            # API officielle : PUT hub/{serial}/mode/{behavior}
-            # behavior = string parmi "manual", "auto", "planning"
-            url = f"https://apis.goflipr.com/hub/{hub_id}/mode/{option}"
-            await api_client._request("PUT", url, data=None)
+            # Utiliser la méthode set_hub_mode() qui valide le mode
+            await api_client.set_hub_mode(hub_id, option)
 
             if self.coordinator.data:
                 self.coordinator.data["hub_mode"] = option

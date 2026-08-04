@@ -107,7 +107,6 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     # ── Mesures brutes ───────────────────────────────────────
     ph_raw      = m.get("PH") or m.get("ph")
     redox_raw   = m.get("OxydoReductionPotentiel") or m.get("oxydoReductionPotentiel") or m.get("redox")
-    battery_raw = m.get("Battery") or m.get("battery")
     cond_raw    = m.get("Conductivity") or m.get("conductivity")
     desinf_raw  = m.get("Desinfectant") or m.get("desinfectant") or m.get("chlorine")
 
@@ -125,12 +124,30 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         except (ValueError, TypeError):
             redox_val = None
 
-    battery_val = round(battery_raw.get("Deviation", 0) * 100, 1) if isinstance(battery_raw, dict) else battery_raw
-    if battery_val is not None:
+    # Batterie : BatteryLevel (float %, NewResume) ou Battery.Deviation (fraction 0-1, survey/last)
+    battery_level_direct = m.get("BatteryLevel") or m.get("batteryLevel")
+    battery_raw = m.get("Battery") or m.get("battery")
+
+    if battery_level_direct is not None:
+        # NewResume retourne BatteryLevel directement en pourcentage
         try:
-            battery_val = float(battery_val)
+            battery_val = float(battery_level_direct)
         except (ValueError, TypeError):
             battery_val = None
+    elif isinstance(battery_raw, dict):
+        # survey/last retourne Battery: { Deviation: 0.85 } → 85%
+        try:
+            battery_val = round(float(battery_raw.get("Deviation", 0)) * 100, 1)
+        except (ValueError, TypeError):
+            battery_val = None
+    elif battery_raw is not None:
+        # BLE retourne un float direct
+        try:
+            battery_val = float(battery_raw)
+        except (ValueError, TypeError):
+            battery_val = None
+    else:
+        battery_val = None
 
     cond_val = cond_raw.get("Value") if isinstance(cond_raw, dict) else cond_raw
     if cond_val is not None:
@@ -161,7 +178,7 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     ph_msg    = ph_raw.get("Message") if isinstance(ph_raw, dict) else None
     ph_status = _compute_status(ph_sector, ph_msg, ph_val)
 
-    cl_val = round(desinf_raw.get("Value"), 3) if isinstance(desinf_raw, dict) and desinf_raw.get("Value") is not None else desinf_raw
+    cl_val = round(desinf_raw.get("Value"), 3) if isinstance(desinf_raw, dict) and desinf_raw.get("Value") is not None else (desinf_raw if not isinstance(desinf_raw, dict) else None)
     if cl_val is not None:
         try:
             cl_val = float(cl_val)
@@ -432,17 +449,21 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 try:
                     import json
                     debug_path = self.hass.config.path("flipr_debug.json")
-                    with open(debug_path, "w") as f:
-                        json.dump(data_raw, f, indent=2)
+                    debug_content = json.dumps(data_raw, indent=2, default=str)
+                    await self.hass.async_add_executor_job(
+                        lambda: open(debug_path, "w").write(debug_content)
+                    )
                 except Exception as e:
-                    _LOGGER.error(f"Error writing flipr_debug.json: {e}")
+                    _LOGGER.debug("Erreur écriture flipr_debug.json: %s", e)
 
                 m = data_raw.get("module_last_measure")
                 s = data_raw.get("module_shortterm")
                 
                 if not m:
                     raise UpdateFailed("Aucune mesure (last_measure) reçue du Cloud.")
-                if (m.get("Temperature") is None and m.get("temperature") is None) and (m.get("PH") is None and m.get("ph") is None):
+                # NewResume imbrique les données dans Current, vérifier les deux niveaux
+                check = m.get("Current", m) if isinstance(m.get("Current"), dict) else m
+                if (check.get("Temperature") is None and check.get("temperature") is None) and (check.get("PH") is None and check.get("ph") is None):
                     raise UpdateFailed("L'API a retourné des valeurs nulles/vides.")
 
                 m["alerts_raw"] = data_raw.get("alerts", [])

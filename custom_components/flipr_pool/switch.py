@@ -72,27 +72,21 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
     async def _async_set_pump_state(self, state: bool) -> None:
         hub_id = getattr(self.coordinator, "hub_id", None) or self.coordinator.flipr_id
         api_client = getattr(self.coordinator, "api_client", None)
-        place_id = self.coordinator.data.get("place_id") if self.coordinator.data else None
         
         if not api_client:
             _LOGGER.warning("Le contrôle de la pompe n'est pas disponible en mode local uniquement.")
             return
 
         try:
-            if place_id:
-                # Utiliser l'endpoint FliprHub (comme DomoLink)
-                state_str = "Start" if state else "Stop"
-                state_url = f"https://apis.goflipr.com/FliprHub/Filtration/{state_str}/{place_id}"
-                await api_client._request("POST", state_url, data=None)
-            else:
-                # 1. Envoyer la commande ON/OFF sur l'ancien endpoint
-                state_str = "True" if state else "False"
-                state_url = f"https://apis.goflipr.com/hub/{hub_id}/Manual/{state_str}"
-                await api_client._request("POST", state_url, data=None)
+            # Utiliser la méthode set_hub_pump() qui gère automatiquement :
+            # 1. PUT /hub/{id}/mode/manual  (passage en mode manual)
+            # 2. POST /hub/{id}/Manual/True|False  (commande pompe)
+            await api_client.set_hub_pump(hub_id, state)
 
             # Mise à jour de l'état localement (optimiste)
             if self.coordinator.data:
                 self.coordinator.data["hub_state"] = "on" if state else "off"
+                self.coordinator.data["hub_mode"] = "manual"
             self.async_write_ha_state()
             _LOGGER.info("Flipr Hub %s: Pompe changée en %s", hub_id, "ON" if state else "OFF")
 
