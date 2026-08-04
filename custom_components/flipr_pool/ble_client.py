@@ -244,9 +244,9 @@ async def read_flipr_ble(
                 device = async_ble_device_from_address(hass, address, connectable=True)
                 if not device:
                     from bleak.backends.device import BLEDevice
-                    device = BLEDevice(address, name=None, details=None, rssi=0)
+                    device = BLEDevice(address, name=address, details={}, rssi=0)
                 client = await asyncio.wait_for(
-                    establish_fn(BleakClient, device, max_attempts=3),
+                    establish_fn(BleakClient, device, device.name or address, max_attempts=3),
                     timeout=BLE_CONNECTION_TIMEOUT,
                 )
             else:
