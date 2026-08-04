@@ -9,12 +9,11 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
-    # On ajoute 4 entités pour les seuils
     entities = [
-        FliprThresholdNumber(coordinator, "ph_min", "target_ph", 6.0, 8.0, 0.1, "mdi:ph"),
-        FliprThresholdNumber(coordinator, "ph_max", "target_ph", 7.0, 9.0, 0.1, "mdi:ph"), # Note: target_ph doesn't differentiate min/max in strings, but we can reuse it
-        FliprThresholdNumber(coordinator, "cl_min", "target_chlorine", 0.0, 2.0, 0.1, "mdi:water-minus"),
-        FliprThresholdNumber(coordinator, "cl_max", "target_chlorine", 1.0, 5.0, 0.1, "mdi:water-plus"),
+        FliprThresholdNumber(coordinator, "ph_min", "target_ph_min", 6.0, 8.0, 0.1, "mdi:ph", 7.0),
+        FliprThresholdNumber(coordinator, "ph_max", "target_ph_max", 7.0, 9.0, 0.1, "mdi:ph", 7.4),
+        FliprThresholdNumber(coordinator, "cl_min", "target_chlorine_min", 0.0, 2.0, 0.1, "mdi:water-minus", 1.0),
+        FliprThresholdNumber(coordinator, "cl_max", "target_chlorine_max", 1.0, 5.0, 0.1, "mdi:water-plus", 3.0),
     ]
 
     # On ajoute 3 entités pour les dimensions de la piscine
@@ -30,7 +29,7 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
 
-    def __init__(self, coordinator, key, translation_key, min_val, max_val, step, icon):
+    def __init__(self, coordinator, key, translation_key, min_val, max_val, step, icon, default_val):
         super().__init__(coordinator)
         self._key = key
         self._attr_translation_key = translation_key
@@ -39,19 +38,21 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
         self._attr_native_max_value = max_val
         self._attr_native_step = step
         self._attr_icon = icon
+        self._default_val = default_val
 
     @property
     def native_value(self):
         if not self.coordinator.data:
-            return None
+            return self._default_val
         t = self.coordinator.data.get("thresholds", {})
-        if not t: return None
+        if not t:
+            return self._default_val
 
-        if self._key == "ph_min": return t.get("PHMin")
-        if self._key == "ph_max": return t.get("PHMax")
-        if self._key == "cl_min": return t.get("ChlorineMin")
-        if self._key == "cl_max": return t.get("ChlorineMax")
-        return None
+        if self._key == "ph_min": return t.get("PHMin", self._default_val)
+        if self._key == "ph_max": return t.get("PHMax", self._default_val)
+        if self._key == "cl_min": return t.get("ChlorineMin", self._default_val)
+        if self._key == "cl_max": return t.get("ChlorineMax", self._default_val)
+        return self._default_val
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -71,8 +72,14 @@ class FliprThresholdNumber(CoordinatorEntity, NumberEntity):
         if not self.coordinator.data:
             return
             
-        # On récupère les seuils actuels pour ne modifier que celui-ci
+        # On récupère les seuils actuels. S'ils sont absents, on met des valeurs par défaut
+        # pour éviter d'envoyer un JSON incomplet à l'API Flipr.
         t = dict(self.coordinator.data.get("thresholds", {}) or {})
+        
+        t.setdefault("PHMin", 7.0)
+        t.setdefault("PHMax", 7.4)
+        t.setdefault("ChlorineMin", 1.0)
+        t.setdefault("ChlorineMax", 3.0)
 
         if self._key == "ph_min": t["PHMin"] = value
         elif self._key == "ph_max": t["PHMax"] = value

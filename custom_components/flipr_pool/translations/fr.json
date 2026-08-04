@@ -233,11 +233,17 @@
       }
     },
     "number": {
-      "target_ph": {
-        "name": "Cible pH"
+      "target_ph_min": {
+        "name": "Cible pH (Min)"
       },
-      "target_chlorine": {
-        "name": "Cible Chlore"
+      "target_ph_max": {
+        "name": "Cible pH (Max)"
+      },
+      "target_chlorine_min": {
+        "name": "Cible Chlore (Min)"
+      },
+      "target_chlorine_max": {
+        "name": "Cible Chlore (Max)"
       },
       "pool_length": {
         "name": "Longueur du bassin"

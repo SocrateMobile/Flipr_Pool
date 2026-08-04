@@ -176,11 +176,17 @@
       }
     },
     "number": {
-      "target_ph": {
-        "name": "Target pH"
+      "target_ph_min": {
+        "name": "Target pH (Min)"
       },
-      "target_chlorine": {
-        "name": "Target Chlorine"
+      "target_ph_max": {
+        "name": "Target pH (Max)"
+      },
+      "target_chlorine_min": {
+        "name": "Target Chlorine (Min)"
+      },
+      "target_chlorine_max": {
+        "name": "Target Chlorine (Max)"
       },
       "pool_length": {
         "name": "Pool Length"
