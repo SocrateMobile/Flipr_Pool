@@ -34,9 +34,6 @@ custom_fields:
       const cl_status = states['sensor.flipr_statut_chlore'] ? states['sensor.flipr_statut_chlore'].state : 'Parfait';
       const last_measure = states['sensor.flipr_derniere_mesure'] ? states['sensor.flipr_derniere_mesure'].state : 'mar. 04/08 01:20';
       
-      // Ici vous pouvez remplacer par de vrais capteurs historiques si vous utilisez ApexCharts ou autre pour stocker l'historique
-      // Pour l'interface, on simule l'affichage
-      
       return `
         <div style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
           
@@ -76,6 +73,20 @@ custom_fields:
                 <div style="border: 1.5px solid #64748b; border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 700; color: #334155;">
                   UV ${uv_index}
                 </div>
+              </div>
+            </div>
+
+            <!-- POMPE A FILTRATION -->
+            <div style="background: white; border-radius: 16px; padding: 16px 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 14px rgba(0,0,0,0.03);">
+              <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+                <div style="font-size: 28px; line-height: 1;">🚰</div>
+                <div style="font-size: 11px; font-weight: 500; color: #1e293b;">Pompe à filtration</div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <div style="background: #f1f5f9; color: #94a3b8; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;">⚡ᴬ</div>
+                <div style="background: #f1f5f9; color: #94a3b8; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">⏱️</div>
+                <div style="background: #22c55e; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 2px 8px rgba(34,197,94,0.4);">⏻</div>
+                <div style="background: #f1f5f9; color: #94a3b8; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">⚙️</div>
               </div>
             </div>
 
@@ -144,83 +155,34 @@ custom_fields:
               </div>
             </div>
 
-            <!-- DERNIERE MESURE -->
-            <div style="background: white; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 14px rgba(0,0,0,0.03);">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="background: #ff2d75; color: white; width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
-                  📡
-                </div>
-                <div>
-                  <div style="font-size: 14px; font-weight: 700; color: #0f172a;">Dernière Mesure</div>
-                  <div style="font-size: 12px; color: #64748b; font-weight: 400; margin-top: 1px;">${last_measure}</div>
-                </div>
-              </div>
-              <div style="background: #f1f5f9; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #64748b;">
-                ⚙️
-              </div>
-            </div>
-
           </div>
 
-          <!-- SECTION BASSE DEGRADÉ (Eau, Jauges) -->
-          <div style="background: linear-gradient(170deg, #10b981 0%, #0284c7 40%, #1e3a8a 100%); border-top-left-radius: 34px; border-top-right-radius: 34px; padding: 24px 20px 16px 20px; color: white; display: flex; flex-direction: column; gap: 20px;">
+          <!-- SECTION BASSE DEGRADÉ SIMPLIFIÉE (Sans jauges, juste texte) -->
+          <div style="background: linear-gradient(170deg, #10b981 0%, #0284c7 40%, #1e3a8a 100%); border-top-left-radius: 40px; border-top-right-radius: 40px; padding: 24px 20px 16px 20px; color: white; display: flex; flex-direction: column; gap: 20px;">
             
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div style="display: flex; align-items: baseline; gap: 10px;">
-                <span style="font-size: 22px; font-weight: 400; opacity: 0.9;">eau</span>
-                <span style="font-size: 52px; font-weight: 700; letter-spacing: -1.5px;">${water_temp}°C</span>
-              </div>
-              <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid rgba(255,255,255,0.3);">
-                🔗
-              </div>
-            </div>
-
-            <!-- Jauges -->
-            <div style="display: flex; justify-content: space-around; align-items: flex-end; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-around; align-items: flex-end; padding-top: 10px; padding-bottom: 10px;">
               
-              <!-- JAUGE pH -->
+              <!-- INFO EAU -->
               <div style="text-align: center; flex: 1;">
-                <div style="position: relative; width: 120px; height: 120px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                  <svg width="120" height="120" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
-                    <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" />
-                    <circle cx="50" cy="50" r="42" stroke="#ffffff" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="180" stroke-linecap="round" fill="none" />
-                  </svg>
-                  <div style="position: absolute; top: 12px; left: 24px; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
-                  
-                  <div style="position: absolute; font-size: 32px; font-weight: 600;">${ph_val}</div>
-                </div>
-                <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">pH</div>
-                <div style="display: inline-block; margin-top: 10px; padding: 6px 20px; border: 1.5px solid white; border-radius: 20px; font-size: 13px; font-weight: 600; background: transparent;">
-                  👍 ${ph_status}
-                </div>
+                <div style="font-size: 15px; font-weight: 400; opacity: 0.9; margin-bottom: 4px;">eau</div>
+                <div style="font-size: 32px; font-weight: 600; letter-spacing: -1px;">${water_temp}°C</div>
               </div>
 
-              <!-- JAUGE CHLORE -->
+              <!-- INFO pH -->
               <div style="text-align: center; flex: 1;">
-                <div style="position: relative; width: 120px; height: 120px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                  <svg width="120" height="120" viewBox="0 0 100 100">
-                    <!-- Arc principal de fond -->
-                    <path d="M 15 75 A 35 35 0 0 1 85 75" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" stroke-linecap="round" />
-                    <!-- Zone "Parfait" (Arc blanc brillant au milieu) -->
-                    <path d="M 35 48 A 35 35 0 0 1 65 48" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round" />
-                    <!-- Petites graduations -->
-                    <path d="M 15 75 L 20 75 M 32 52 L 36 55 M 50 40 L 50 45 M 68 52 L 64 55 M 85 75 L 80 75" stroke="white" stroke-width="2" stroke-linecap="round" />
-                    <!-- Aiguille foncée -->
-                    <line x1="50" y1="75" x2="50" y2="40" stroke="#1e293b" stroke-width="6" stroke-linecap="round" transform="rotate(10, 50, 75)" />
-                    <!-- Base de l'aiguille -->
-                    <circle cx="50" cy="75" r="5" fill="#1e293b" />
-                  </svg>
-                </div>
-                <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">Chlore</div>
-                <div style="display: inline-block; margin-top: 10px; padding: 6px 20px; border: 1.5px solid white; border-radius: 20px; font-size: 13px; font-weight: 600; background: transparent;">
-                  👍 ${cl_status}
-                </div>
+                <div style="font-size: 15px; font-weight: 400; opacity: 0.9; margin-bottom: 4px;">pH</div>
+                <div style="font-size: 26px; font-weight: 600;">${ph_val}</div>
               </div>
 
+              <!-- INFO CHLORE -->
+              <div style="text-align: center; flex: 1;">
+                <div style="font-size: 15px; font-weight: 400; opacity: 0.9; margin-bottom: 4px;">Chlore</div>
+                <div style="font-size: 20px; font-weight: 600;">${cl_status}</div>
+              </div>
             </div>
 
             <!-- BANNIERES BOTTOM -->
-            <div style="background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; margin-top: 10px;">
+            <div style="background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; margin-top: 4px;">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="border: 2px solid white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">!</span> 
                 Mesure ancienne
