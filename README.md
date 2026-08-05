@@ -1,8 +1,8 @@
-# Flipr Pool Control pour Home Assistant (v5.4.4)
+# Flipr Pool Control pour Home Assistant (v5.5.0)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.4.4-blue)
+![Version](https://img.shields.io/badge/version-5.5.0-blue)
 
 Intégration universelle et complète pour Home Assistant dédiée aux analyseurs de piscine et spas **Flipr** (AnalysR, Start, Start Max) et aux boîtiers de contrôle de pompe **Flipr Hub / Control**.
 
@@ -21,7 +21,7 @@ Dans le répertoire `examples/` de cette intégration, vous trouverez des exempl
 
 ---
 
-## ✨ Les 6 Catégories d'Entités (v5.4.4)
+## ✨ Les 6 Catégories d'Entités (v5.5.0)
 
 Toutes les entités créées dans Home Assistant sont automatiquement organisées et rangées selon 6 thématiques claires :
 
@@ -81,7 +81,7 @@ Toutes les entités créées dans Home Assistant sont automatiquement organisée
 - 🚨 **Dernière Alerte**
 - 🔀 **Source des données** (*Cloud API* ou *Bluetooth BLE*)
 - 📡 **Signal BLE & Statut BLE** (RSSI en dBm)
-- ℹ️ **Version de l'intégration** (`5.4.4`)
+- ℹ️ **Version de l'intégration** (`5.5.0`)
 
 ---
 
@@ -121,6 +121,13 @@ Un service personnalisé est disponible dans Home Assistant sous **Outils de dé
 ---
 
 ## 📜 Historique des Versions (Changelog)
+
+### v5.5.0 — Correctif majeur Hub
+- 🔧 **Refonte complète de la chaîne Hub** : 
+  - Le `hub_id` découvert est désormais **persisté** dans les options de l'intégration (plus besoin de redécouvrir à chaque redémarrage).
+  - Suppression de la double normalisation des données Hub qui causait la perte des clés `behavior` et `stateEquipment`.
+  - Parsing robuste qui accepte TOUTES les variantes de clés possibles (`behavior`/`Mode`/`mode`, `stateEquipment`/`Status`/`State`).
+  - Logging détaillé pour diagnostic en cas de problème.
 
 ### v5.4.4
 - 🛠️ **Nouvelle Action (Service)** : Ajout de l'action `flipr_pool.dump_entities` qui permet d'exporter la liste de toutes vos entités Flipr dans un fichier `flipr_card_list.json` pour vous aider à les copier/coller plus facilement lors de la configuration de votre carte Lovelace !

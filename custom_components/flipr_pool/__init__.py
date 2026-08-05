@@ -617,7 +617,8 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
         self._store = store
         
         self.place_id = None
-        self.hub_id = flipr_id if flipr_id.upper().startswith("G") else None
+        # Restaurer le hub_id depuis les options si déjà découvert
+        self.hub_id = entry.options.get("discovered_hub_id") or None
         self.token = None
 
     async def _async_update_data(self):
@@ -630,6 +631,14 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                     self.place_id = data_raw["place_id"]
                 if data_raw.get("hub_id") and not self.hub_id:
                     self.hub_id = data_raw["hub_id"]
+                    # Persister le hub_id découvert pour les prochains redémarrages
+                    if self.hub_id:
+                        new_options = dict(self.config_entry.options)
+                        new_options["discovered_hub_id"] = self.hub_id
+                        self.hass.config_entries.async_update_entry(
+                            self.config_entry, options=new_options
+                        )
+                        _LOGGER.info("Flipr Hub découvert et sauvegardé: %s", self.hub_id)
                 
                 try:
                     import json
@@ -655,19 +664,35 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 m["thresholds_raw"] = data_raw.get("thresholds", {})
 
                 data = _compute_pool_data(m, s, self.config_entry, data_source="cloud")
-                hub_id = data_raw.get("hub_id")
+                hub_id = data_raw.get("hub_id") or self.hub_id
                 data["hub_id"] = hub_id
-                self.hub_id = hub_id
+                if hub_id:
+                    self.hub_id = hub_id
                 hub_state = data_raw.get("hub_state", {})
-                data["hub_mode"] = hub_state.get("behavior") or hub_state.get("Mode")
                 
-                # L'état peut être dans 'stateEquipment' (int 1/0) ou 'Status'
-                st = hub_state.get("stateEquipment")
-                if st is not None:
-                    data["hub_state"] = "on" if st == 1 else "off"
+                # Extraction du mode : clés brutes API ou normalisées
+                data["hub_mode"] = (
+                    hub_state.get("behavior")
+                    or hub_state.get("Behavior")
+                    or hub_state.get("Mode")
+                    or hub_state.get("mode")
+                )
+                
+                # Extraction de l'état pompe : clés brutes API ou normalisées
+                st_eq = hub_state.get("stateEquipment")
+                st_status = hub_state.get("Status") or hub_state.get("status")
+                st_state = hub_state.get("State") or hub_state.get("state")
+                
+                if st_eq is not None:
+                    data["hub_state"] = "on" if (st_eq == 1 or st_eq is True) else "off"
+                elif st_status is not None:
+                    data["hub_state"] = "on" if str(st_status).lower() in ("true", "1", "on", "active") else "off"
+                elif st_state is not None:
+                    data["hub_state"] = "on" if str(st_state).lower() in ("true", "1", "on", "active") else "off"
                 else:
-                    st2 = hub_state.get("Status")
-                    data["hub_state"] = "on" if str(st2).lower() in ("true", "1", "on", "active") else "off"
+                    data["hub_state"] = None  # Pas de Hub ou pas de données
+                
+                _LOGGER.debug("Hub state parsed: hub_id=%s, mode=%s, state=%s, raw=%s", hub_id, data['hub_mode'], data['hub_state'], hub_state)
                 
                 # Conserver les propriétés BLE existantes s'il y en a
                 if self.data:

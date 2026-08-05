@@ -250,17 +250,26 @@ class FliprApiClient:
             modules_list = await self._request("GET", MODULES_URL)
             if isinstance(modules_list, list):
                 data["raw_modules"] = modules_list
-                for mod in modules_list:
-                    mtype = mod.get("ModuleType_Id")
-                    ctype = str((mod.get("CommercialType") or {}).get("Value") if isinstance(mod.get("CommercialType"), dict) else mod.get("CommercialType") or "").lower()
-                    # ModuleType_Id == 3 est le Flipr Control / Hub!
-                    if mtype in (3, 4) or "control" in ctype or "hub" in ctype:
+                if not hub_id:
+                    for mod in modules_list:
                         discovered_hub_id = str(mod.get("Serial") or mod.get("Id") or "")
-                        if discovered_hub_id:
-                            hub_id = discovered_hub_id
-                            data["hub_id"] = hub_id
-                            _LOGGER.info("Flipr Hub identifié via /modules: %s (ModuleType_Id=%s)", hub_id, mtype)
-                            break
+                        if not discovered_hub_id or discovered_hub_id == flipr_id:
+                            continue  # Ne pas tester le Flipr lui-même
+                        
+                        # Test de l'endpoint d'état pour confirmer si c'est un Hub
+                        try:
+                            state_url = f"{API_BASE_URL}/hub/{discovered_hub_id}/state"
+                            hub_state = await self._request("GET", state_url)
+                            if isinstance(hub_state, dict) and hub_state.get("ErrorCode") != "Forbidden" and "is not a HUB" not in str(hub_state.get("ErrorMessage", "")):
+                                hub_id = discovered_hub_id
+                                data["hub_id"] = hub_id
+                                data["hub_state"] = hub_state
+                                _LOGGER.info("Flipr Hub confirmé via API: %s", hub_id)
+                                break
+                            else:
+                                _LOGGER.debug("Module %s n'est pas un Hub: %s", discovered_hub_id, hub_state)
+                        except Exception as e:
+                            _LOGGER.warning("Erreur test Hub pour %s: %s", discovered_hub_id, e)
         except Exception as e:
             _LOGGER.debug("Erreur interrogation /modules : %s", e)
 
@@ -288,37 +297,16 @@ class FliprApiClient:
                 pass
 
         # ── 4. Hub State : GET /hub/{hubId}/state ──
-        if hub_id:
-            for hub_url in [
-                f"{API_BASE_URL}/hub/{hub_id}/state",
-                f"{API_BASE_URL}/hub/{hub_id}",
-                f"{API_BASE_URL}/modules/{hub_id}/equipment",
-            ]:
-                try:
-                    hub_resp = await self._request("GET", hub_url)
-                    if isinstance(hub_resp, dict):
-                        behavior = hub_resp.get("behavior", hub_resp.get("Behavior", "auto"))
-                        if isinstance(behavior, str):
-                            mode_str = behavior.lower()
-                        else:
-                            mode_str = {1: "manual", 2: "planning"}.get(behavior, "auto")
-
-                        pump_on = bool(
-                            hub_resp.get("stateEquipment")
-                            or hub_resp.get("StateEquipment")
-                            or hub_resp.get("state") == "on"
-                            or hub_resp.get("State") == "on"
-                            or hub_resp.get("status") == "on"
-                            or hub_resp.get("Status") == "on"
-                        )
-                        data["hub_state"] = {
-                            "Mode": mode_str,
-                            "Status": "on" if pump_on else "off",
-                        }
-                        _LOGGER.debug("Flipr Hub %s state: Mode=%s, Status=%s", hub_id, mode_str, pump_on)
-                        break
-                except Exception as e:
-                    _LOGGER.debug("Essai URL Hub %s échoué : %s", hub_url, e)
+        if hub_id and not data.get("hub_state"):
+            try:
+                hub_url = f"{API_BASE_URL}/hub/{hub_id}/state"
+                hub_resp = await self._request("GET", hub_url)
+                if isinstance(hub_resp, dict) and "ErrorCode" not in hub_resp:
+                    # Passer les données brutes pour que le coordinateur les parse
+                    data["hub_state"] = hub_resp
+                    _LOGGER.debug("Flipr Hub %s state brut: %s", hub_id, hub_resp)
+            except Exception as e:
+                _LOGGER.debug("Échec GET hub state pour %s : %s", hub_id, e)
 
         # ── 5. Alertes ──
         if place_id:
