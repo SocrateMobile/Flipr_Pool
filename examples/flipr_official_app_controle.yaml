@@ -18,9 +18,11 @@ styles:
     - background: "#eef4f8"
     - box-shadow: "0 10px 30px rgba(0,0,0,0.3)"
     - width: 100%
+    - height: 100%
   custom_fields:
     app_container:
       - width: 100%
+      - height: 100%
       - padding: 0px
 
 custom_fields:
@@ -35,7 +37,7 @@ custom_fields:
       const last_measure = states['sensor.flipr_derniere_mesure'] ? states['sensor.flipr_derniere_mesure'].state : 'mar. 04/08 01:20';
       
       return `
-        <div style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+        <div style="display: flex; flex-direction: column; width: 100%; height: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
           
           <!-- EN-TÊTE & SELECTIONS -->
           <div style="padding: 16px 18px 8px 18px; text-align: center;">
@@ -158,7 +160,7 @@ custom_fields:
           </div>
 
           <!-- SECTION BASSE DEGRADÉ SIMPLIFIÉE (Sans jauges, juste texte) -->
-          <div style="background: linear-gradient(170deg, #10b981 0%, #0284c7 40%, #1e3a8a 100%); border-top-left-radius: 40px; border-top-right-radius: 40px; padding: 24px 20px 16px 20px; color: white; display: flex; flex-direction: column; gap: 20px;">
+          <div style="background: linear-gradient(170deg, #10b981 0%, #0284c7 40%, #1e3a8a 100%); border-top-left-radius: 40px; border-top-right-radius: 40px; padding: 24px 20px 16px 20px; color: white; display: flex; flex-direction: column; gap: 20px; flex-grow: 1; justify-content: space-between;">
             
             <div style="display: flex; justify-content: space-around; align-items: flex-end; padding-top: 10px; padding-bottom: 10px;">
               

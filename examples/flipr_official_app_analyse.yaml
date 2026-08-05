@@ -18,9 +18,11 @@ styles:
     - background: "#eef4f8"
     - box-shadow: "0 10px 30px rgba(0,0,0,0.3)"
     - width: 100%
+    - height: 100%
   custom_fields:
     app_container:
       - width: 100%
+      - height: 100%
       - padding: 0px
 
 custom_fields:
@@ -36,7 +38,7 @@ custom_fields:
       const redox_val = states['sensor.flipr_redox'] ? states['sensor.flipr_redox'].state : '545';
       
       return `
-        <div style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+        <div style="display: flex; flex-direction: column; width: 100%; height: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
           
           <!-- EN-TÊTE & SELECTIONS -->
           <div style="padding: 16px 18px 8px 18px; text-align: center;">
@@ -125,7 +127,7 @@ custom_fields:
           </div>
 
           <!-- SECTION BASSE DEGRADÉ (Eau, Jauges) -->
-          <div style="background: linear-gradient(170deg, #10b981 0%, #0284c7 40%, #1e3a8a 100%); border-top-left-radius: 34px; border-top-right-radius: 34px; padding: 24px 20px 16px 20px; color: white; display: flex; flex-direction: column; gap: 20px;">
+          <div style="background: linear-gradient(170deg, #10b981 0%, #0284c7 40%, #1e3a8a 100%); border-top-left-radius: 34px; border-top-right-radius: 34px; padding: 24px 20px 16px 20px; color: white; display: flex; flex-direction: column; gap: 20px; flex-grow: 1; justify-content: space-between;">
             
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <div style="display: flex; align-items: baseline; gap: 10px;">
