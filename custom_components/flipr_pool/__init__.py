@@ -300,14 +300,14 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
 
     if air_temp is not None:
         try:
-            air_temp = float(air_temp)
+            air_temp = round(float(air_temp), 1)
         except (ValueError, TypeError):
             air_temp = None
 
     air_temp_next_hour = weather.get("NextHourTemperature") or weather.get("nextHourTemperature")
     if air_temp_next_hour is not None:
         try:
-            air_temp_next_hour = float(air_temp_next_hour)
+            air_temp_next_hour = round(float(air_temp_next_hour), 1)
         except (ValueError, TypeError):
             air_temp_next_hour = None
 
@@ -323,7 +323,7 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     )
     if uv_index is not None:
         try:
-            uv_index = float(uv_index)
+            uv_index = round(float(uv_index), 2)
         except (ValueError, TypeError):
             uv_index = None
 
