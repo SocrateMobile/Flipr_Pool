@@ -62,6 +62,14 @@
     }
   },
   "entity": {
+    "button": {
+      "force_refresh": {
+        "name": "Force Cloud Refresh"
+      },
+      "generate_card": {
+        "name": "Generate Lovelace Card"
+      }
+    },
     "sensor": {
       "temperature": {
         "name": "Water Temperature"

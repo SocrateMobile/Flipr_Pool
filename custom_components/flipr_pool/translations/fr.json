@@ -113,6 +113,14 @@
     }
   },
   "entity": {
+    "button": {
+      "force_refresh": {
+        "name": "Forcer rafraîchissement Cloud"
+      },
+      "generate_card": {
+        "name": "Générer la carte Lovelace"
+      }
+    },
     "binary_sensor": {
       "ph_status": {
         "name": "Statut pH"
