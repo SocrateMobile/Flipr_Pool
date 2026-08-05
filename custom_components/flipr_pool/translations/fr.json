@@ -356,6 +356,11 @@
           "description": "La profondeur moyenne en mètres."
         }
       }
+    },
+    "dump_hub_debug": {
+      "name": "Exporter le diagnostic du Hub (JSON)",
+      "description": "Exécute les requêtes d'analyse du Hub Flipr et génère le fichier /config/flipr_hub_debug.json.",
+      "fields": {}
     }
   },
   "selector": {

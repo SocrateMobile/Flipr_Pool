@@ -797,10 +797,71 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         await c.async_request_refresh()
                     break
 
+    async def handle_dump_hub_debug(call: ServiceCall):
+        if not api_client:
+            _LOGGER.error("Dump Hub Debug impossible : client API non configuré.")
+            return
+
+        _LOGGER.info("Démarrage du diagnostic Hub Flipr...")
+        debug_info = {}
+        try:
+            places = await api_client._request("GET", PLACES_URL)
+            debug_info["place"] = places
+        except Exception as e:
+            debug_info["place_error"] = str(e)
+
+        try:
+            modules = await api_client._request("GET", MODULES_URL)
+            debug_info["modules"] = modules
+        except Exception as e:
+            debug_info["modules_error"] = str(e)
+
+        hubs = []
+        if isinstance(debug_info.get("place"), list):
+            for p in debug_info["place"]:
+                for h in (p.get("Hubs") or p.get("hubs") or []):
+                    hubs.append(h)
+
+        debug_info["detected_hubs"] = hubs
+        debug_info["hub_endpoints"] = {}
+
+        for h in hubs:
+            hid = str(h.get("Serial") or h.get("Id") or "")
+            if not hid:
+                continue
+            hub_res = {}
+            for ep_name, ep_url in [
+                ("state", f"{API_BASE_URL}/hub/{hid}/state"),
+                ("info", f"{API_BASE_URL}/hub/{hid}"),
+                ("status", f"{API_BASE_URL}/hub/{hid}/status"),
+                ("mode", f"{API_BASE_URL}/hub/{hid}/mode"),
+                ("module_hub", f"{API_BASE_URL}/modules/{flipr_id}/hub"),
+                ("module_equipment", f"{API_BASE_URL}/modules/{flipr_id}/equipment"),
+            ]:
+                try:
+                    r = await api_client._request("GET", ep_url)
+                    hub_res[ep_name] = r
+                except Exception as e:
+                    hub_res[ep_name] = {"error": str(e)}
+            debug_info["hub_endpoints"][hid] = hub_res
+
+        out_path = hass.config.path("flipr_hub_debug.json")
+        try:
+            import json
+            def _write():
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump(debug_info, f, indent=2, ensure_ascii=False)
+            await hass.async_add_executor_job(_write)
+            _LOGGER.info("Diagnostic Hub sauvegardé avec succès dans %s", out_path)
+        except Exception as e:
+            _LOGGER.error("Erreur sauvegarde hub debug: %s", e)
+
     if not hass.services.has_service(DOMAIN, "force_cloud_sync"):
         hass.services.async_register(DOMAIN, "force_cloud_sync", handle_force_cloud_sync)
     if not hass.services.has_service(DOMAIN, "update_dimensions"):
         hass.services.async_register(DOMAIN, "update_dimensions", handle_update_dimensions)
+    if not hass.services.has_service(DOMAIN, "dump_hub_debug"):
+        hass.services.async_register(DOMAIN, "dump_hub_debug", handle_dump_hub_debug)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

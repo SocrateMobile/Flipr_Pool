@@ -242,6 +242,11 @@
           "description": "The average depth in meters."
         }
       }
+    },
+    "dump_hub_debug": {
+      "name": "Dump Hub Debug JSON",
+      "description": "Fetches and exports full Flipr Hub API responses to /config/flipr_hub_debug.json for debugging.",
+      "fields": {}
     }
   },
   "selector": {
