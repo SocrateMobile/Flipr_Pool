@@ -1,8 +1,8 @@
-# Flipr Pool Control pour Home Assistant (v5.4.3)
+# Flipr Pool Control pour Home Assistant (v5.4.4)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.4.3-blue)
+![Version](https://img.shields.io/badge/version-5.4.4-blue)
 
 Intégration universelle et complète pour Home Assistant dédiée aux analyseurs de piscine et spas **Flipr** (AnalysR, Start, Start Max) et aux boîtiers de contrôle de pompe **Flipr Hub / Control**.
 
@@ -21,7 +21,7 @@ Dans le répertoire `examples/` de cette intégration, vous trouverez des exempl
 
 ---
 
-## ✨ Les 6 Catégories d'Entités (v5.4.3)
+## ✨ Les 6 Catégories d'Entités (v5.4.4)
 
 Toutes les entités créées dans Home Assistant sont automatiquement organisées et rangées selon 6 thématiques claires :
 
@@ -81,7 +81,7 @@ Toutes les entités créées dans Home Assistant sont automatiquement organisée
 - 🚨 **Dernière Alerte**
 - 🔀 **Source des données** (*Cloud API* ou *Bluetooth BLE*)
 - 📡 **Signal BLE & Statut BLE** (RSSI en dBm)
-- ℹ️ **Version de l'intégration** (`5.4.3`)
+- ℹ️ **Version de l'intégration** (`5.4.4`)
 
 ---
 
@@ -121,6 +121,9 @@ Un service personnalisé est disponible dans Home Assistant sous **Outils de dé
 ---
 
 ## 📜 Historique des Versions (Changelog)
+
+### v5.4.4
+- 🛠️ **Nouvelle Action (Service)** : Ajout de l'action `flipr_pool.dump_entities` qui permet d'exporter la liste de toutes vos entités Flipr dans un fichier `flipr_card_list.json` pour vous aider à les copier/coller plus facilement lors de la configuration de votre carte Lovelace !
 
 ### v5.4.3
 - 🛠️ **Correctif d'état de Pompe (unknown)** : L'API Flipr a secrètement modifié ses clés de données (`behavior` au lieu de `Mode`, et `stateEquipment` au lieu de `Status`). Le parsing a été mis à jour, les interrupteurs ne reviennent plus à "off" après 2 secondes !

@@ -43,3 +43,6 @@ update_dimensions:
 
 dump_hub_debug:
   fields: {}
+
+dump_entities:
+  fields: {}

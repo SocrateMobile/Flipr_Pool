@@ -914,12 +914,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         _LOGGER.info("Diagnostic Hub terminé. Sauvegardé dans %s", out_path)
 
+    async def handle_dump_entities(call):
+        """Service pour lister toutes les entités de l'intégration (facilite Lovelace)."""
+        from homeassistant.helpers import entity_registry as er
+        registry = er.async_get(hass)
+        entities_list = []
+        
+        for entry_id in hass.data.get(DOMAIN, {}):
+            entries = er.async_entries_for_config_entry(registry, entry_id)
+            for e in entries:
+                entities_list.append({
+                    "entity_id": e.entity_id,
+                    "name": e.name or e.original_name
+                })
+                
+        out_path = hass.config.path("flipr_card_list.json")
+        try:
+            import json
+            def _write():
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump({"entities": entities_list}, f, indent=2, ensure_ascii=False)
+            await hass.async_add_executor_job(_write)
+            _LOGGER.info("Liste des entités Flipr sauvegardée dans %s", out_path)
+        except Exception as e:
+            _LOGGER.error("Erreur sauvegarde dump_entities: %s", e)
+
     if not hass.services.has_service(DOMAIN, "force_cloud_sync"):
         hass.services.async_register(DOMAIN, "force_cloud_sync", handle_force_cloud_sync)
     if not hass.services.has_service(DOMAIN, "update_dimensions"):
         hass.services.async_register(DOMAIN, "update_dimensions", handle_update_dimensions)
     if not hass.services.has_service(DOMAIN, "dump_hub_debug"):
         hass.services.async_register(DOMAIN, "dump_hub_debug", handle_dump_hub_debug)
+    if not hass.services.has_service(DOMAIN, "dump_entities"):
+        hass.services.async_register(DOMAIN, "dump_entities", handle_dump_entities)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
