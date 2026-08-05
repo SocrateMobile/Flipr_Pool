@@ -70,7 +70,17 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
         await self._async_set_pump_state(False)
 
     async def _async_set_pump_state(self, state: bool) -> None:
-        hub_id = getattr(self.coordinator, "hub_id", None) or self.coordinator.flipr_id
+        hub_id = getattr(self.coordinator, "hub_id", None)
+        if not hub_id and self.coordinator.data:
+            hub_id = self.coordinator.data.get("hub_id")
+            
+        if not hub_id:
+            if self.coordinator.flipr_id.startswith("CA") or self.coordinator.flipr_id.startswith("G"):
+                hub_id = self.coordinator.flipr_id
+            else:
+                _LOGGER.error("Impossible de commander la pompe: ID du Hub inconnu pour l'appareil %s.", self.coordinator.flipr_id)
+                return
+        
         api_client = getattr(self.coordinator, "api_client", None)
         
         if not api_client:
