@@ -219,16 +219,16 @@ custom_fields:
                 <div style="position: relative; width: 100px; height: 100px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
                   <svg width="100" height="100" viewBox="0 0 100 100">
                     <defs>
-                      <linearGradient id="phGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <linearGradient id="phGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="100">
                         <stop offset="0%" stop-color="#10b981" />
-                        <stop offset="8%" stop-color="#10b981" />
-                        <stop offset="15%" stop-color="#eab308" />
-                        <stop offset="45%" stop-color="#eab308" />
-                        <stop offset="55%" stop-color="#ef4444" />
+                        <stop offset="15%" stop-color="#10b981" />
+                        <stop offset="20%" stop-color="#eab308" />
+                        <stop offset="46%" stop-color="#eab308" />
+                        <stop offset="52%" stop-color="#ef4444" />
                         <stop offset="100%" stop-color="#ef4444" />
                       </linearGradient>
                     </defs>
-                    <circle transform="rotate(135 50 50)" cx="50" cy="50" r="42" stroke="url(#phGrad)" stroke-width="8" stroke-dasharray="198 264" stroke-linecap="round" fill="none" opacity="0.9" />
+                    <path d="M 20.3 79.7 A 42 42 0 1 1 79.7 79.7" stroke="url(#phGrad)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9" />
                     <!-- Knob -->
                     <circle cx="${ph_x}" cy="${ph_y}" r="6" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="2" />
                   </svg>
@@ -246,16 +246,16 @@ custom_fields:
                 <div style="position: relative; width: 100px; height: 100px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
                   <svg width="100" height="100" viewBox="0 0 100 100">
                     <defs>
-                      <linearGradient id="rxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <linearGradient id="rxGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="100">
                         <stop offset="0%" stop-color="#10b981" />
-                        <stop offset="9%" stop-color="#10b981" />
-                        <stop offset="19%" stop-color="#eab308" />
+                        <stop offset="16%" stop-color="#10b981" />
+                        <stop offset="22%" stop-color="#eab308" />
                         <stop offset="49%" stop-color="#eab308" />
-                        <stop offset="59%" stop-color="#ef4444" />
+                        <stop offset="55%" stop-color="#ef4444" />
                         <stop offset="100%" stop-color="#ef4444" />
                       </linearGradient>
                     </defs>
-                    <circle transform="rotate(135 50 50)" cx="50" cy="50" r="42" stroke="url(#rxGrad)" stroke-width="8" stroke-dasharray="198 264" stroke-linecap="round" fill="none" opacity="0.9" />
+                    <path d="M 20.3 79.7 A 42 42 0 1 1 79.7 79.7" stroke="url(#rxGrad)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9" />
                     <!-- Knob -->
                     <circle cx="${rx_x}" cy="${rx_y}" r="6" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="2" />
                   </svg>
