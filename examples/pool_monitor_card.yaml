@@ -2,14 +2,16 @@
 # Cette carte nécessite l'installation préalable de "pool-monitor-card" via HACS Frontend.
 # https://github.com/aallinne/pool-monitor-card
 
+# Remplacez le préfixe "jardin_flipr_piscine" par le nom de votre propre pièce/appareil
+# si celui-ci est différent (ex: "salon_flipr_spa", "terrasse_flipr_piscine", etc.)
 type: custom:pool-monitor-card
 title: Ma Piscine
-temperature: sensor.flipr_temperature_eau
-ph: sensor.flipr_ph
-orp: sensor.flipr_redox
-tds: sensor.flipr_conductivite
-chlorine: sensor.flipr_chlore
-filter: switch.flipr_pompe_filtration
+temperature: sensor.jardin_flipr_piscine_temperature_de_l_eau
+ph: sensor.jardin_flipr_piscine_ph
+orp: sensor.jardin_flipr_piscine_potentiel_redox
+tds: sensor.jardin_flipr_piscine_conductivite
+chlorine: sensor.jardin_flipr_piscine_desinfectant_chlore
+filter: switch.jardin_flipr_piscine_pompe_filtration
 
 # Options d'affichage
 show_names: true

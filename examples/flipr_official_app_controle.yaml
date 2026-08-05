@@ -32,12 +32,14 @@ custom_fields:
       const ph_entity_name = Object.keys(states).find(e => e.startsWith('sensor.') && e.includes('flipr') && e.endsWith('_ph'));
       const prefix = ph_entity_name ? ph_entity_name.replace('_ph', '') : 'sensor.flipr';
 
-      const air_temp = states[`${prefix}_temperature_air`] ? states[`${prefix}_temperature_air`].state : '36';
+      const air_temp = states[`${prefix}_temperature_de_l_air`] ? states[`${prefix}_temperature_de_l_air`].state : '36';
       const uv_index = states[`${prefix}_indice_uv`] ? states[`${prefix}_indice_uv`].state : '0';
-      const water_temp = states[`${prefix}_temperature_eau`] ? states[`${prefix}_temperature_eau`].state : '29';
+      const water_temp = states[`${prefix}_temperature_de_l_eau`] ? states[`${prefix}_temperature_de_l_eau`].state : '29';
       const ph_val = states[`${prefix}_ph`] ? states[`${prefix}_ph`].state : '7.1';
-      const ph_status = states[`${prefix}_statut_ph`] ? states[`${prefix}_statut_ph`].state : 'Parfait';
-      const cl_status = states[`${prefix}_statut_chlore`] ? states[`${prefix}_statut_chlore`].state : 'Parfait';
+      const ph_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_ph'));
+      const ph_status = (ph_status_entity && states[ph_status_entity]) ? states[ph_status_entity].state : 'Parfait';
+      const cl_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_chlore'));
+      const cl_status = (cl_status_entity && states[cl_status_entity]) ? states[cl_status_entity].state : 'Parfait';
       const last_measure = states[`${prefix}_derniere_mesure`] ? states[`${prefix}_derniere_mesure`].state : 'mar. 04/08 01:20';
       
       const pump_entity = Object.keys(states).find(e => e.startsWith('switch.') && (e.includes('pompe_filtration') || e.includes('pump_filtration')));

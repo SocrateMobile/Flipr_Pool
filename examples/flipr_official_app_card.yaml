@@ -28,16 +28,22 @@ styles:
 custom_fields:
   app_container: |
     [[[
-      const air_temp = states['sensor.flipr_temperature_air'] ? states['sensor.flipr_temperature_air'].state : '26';
-      const uv_index = states['sensor.flipr_indice_uv'] ? states['sensor.flipr_indice_uv'].state : '0';
-      const water_temp = states['sensor.flipr_temperature_eau'] ? states['sensor.flipr_temperature_eau'].state : '29';
-      const ph_val = states['sensor.flipr_ph'] ? states['sensor.flipr_ph'].state : '7.1';
-      const ph_status = states['sensor.flipr_statut_ph'] ? states['sensor.flipr_statut_ph'].state : 'Parfait';
-      const cl_val = states['sensor.flipr_chlore'] ? states['sensor.flipr_chlore'].state : '0.6';
-      const cl_status = states['sensor.flipr_statut_chlore'] ? states['sensor.flipr_statut_chlore'].state : 'Parfait';
-      const last_measure = states['sensor.flipr_derniere_mesure'] ? states['sensor.flipr_derniere_mesure'].state : 'En direct';
-      const water_state = states['sensor.flipr_etat_de_l_eau'] ? states['sensor.flipr_etat_de_l_eau'].state : 'Tout est parfait, bravo !';
-      const redox_val = states['sensor.flipr_redox'] ? states['sensor.flipr_redox'].state : '545';
+      // Détection automatique du préfixe des entités Flipr
+      const ph_entity_name = Object.keys(states).find(e => e.startsWith('sensor.') && e.includes('flipr') && e.endsWith('_ph'));
+      const prefix = ph_entity_name ? ph_entity_name.replace('_ph', '') : 'sensor.flipr';
+      const ph_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_ph'));
+      const cl_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_chlore'));
+
+      const air_temp = states[`${prefix}_temperature_de_l_air`] ? states[`${prefix}_temperature_de_l_air`].state : '26';
+      const uv_index = states[`${prefix}_indice_uv`] ? states[`${prefix}_indice_uv`].state : '0';
+      const water_temp = states[`${prefix}_temperature_de_l_eau`] ? states[`${prefix}_temperature_de_l_eau`].state : '29';
+      const ph_val = states[`${prefix}_ph`] ? states[`${prefix}_ph`].state : '7.1';
+      const ph_status = ph_status_entity && states[ph_status_entity] ? states[ph_status_entity].state : 'Parfait';
+      const cl_val = states[`${prefix}_desinfectant_chlore`] ? states[`${prefix}_desinfectant_chlore`].state : '0.6';
+      const cl_status = cl_status_entity && states[cl_status_entity] ? states[cl_status_entity].state : 'Parfait';
+      const last_measure = states[`${prefix}_derniere_mesure`] ? states[`${prefix}_derniere_mesure`].state : 'En direct';
+      const water_state = states[`${prefix}_etat_de_l_eau`] ? states[`${prefix}_etat_de_l_eau`].state : 'Tout est parfait, bravo !';
+      const redox_val = states[`${prefix}_potentiel_redox`] ? states[`${prefix}_potentiel_redox`].state : '545';
       
       return `
         <div style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
