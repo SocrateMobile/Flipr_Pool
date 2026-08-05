@@ -10,6 +10,7 @@ Spécification API :
   - Hub pompe        : POST /hub/{hubId}/Manual/True|False  (nécessite mode=manual au préalable)
 """
 
+import asyncio
 import logging
 import aiohttp
 from datetime import datetime, timezone, timedelta
@@ -238,12 +239,16 @@ class FliprApiClient:
         except Exception as e:
             _LOGGER.warning("Échec GET /NewResume : %s", e)
 
+        await asyncio.sleep(2)  # Anti rate-limit
+
         # ── 2. ShortTerm (météo) ──
         shortterm_url = f"{API_BASE_URL}/modules/{flipr_id}/shortterm"
         try:
             data["module_shortterm"] = await self._request("GET", shortterm_url)
         except Exception:
             pass
+
+        await asyncio.sleep(2)  # Anti rate-limit
 
         # ── 3. Résolution place_id / hub_id & Récupération des modules ──
         try:
@@ -255,6 +260,9 @@ class FliprApiClient:
                         discovered_hub_id = str(mod.get("Serial") or mod.get("Id") or "")
                         if not discovered_hub_id or discovered_hub_id == flipr_id:
                             continue  # Ne pas tester le Flipr lui-même
+                        
+                        # Pause anti rate-limit avant chaque test de découverte
+                        await asyncio.sleep(3)
                         
                         # Test de l'endpoint d'état pour confirmer si c'est un Hub
                         try:
@@ -272,6 +280,8 @@ class FliprApiClient:
                             _LOGGER.warning("Erreur test Hub pour %s: %s", discovered_hub_id, e)
         except Exception as e:
             _LOGGER.debug("Erreur interrogation /modules : %s", e)
+
+        await asyncio.sleep(2)  # Anti rate-limit
 
         if not place_id or not hub_id:
             try:
@@ -295,6 +305,8 @@ class FliprApiClient:
                             break
             except Exception:
                 pass
+
+        await asyncio.sleep(2)  # Anti rate-limit
 
         # ── 4. Hub State : GET /hub/{hubId}/state ──
         if hub_id and not data.get("hub_state"):
