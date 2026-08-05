@@ -1,7 +1,7 @@
 """Constants for the Flipr Pool Control integration."""
 
 DOMAIN = "flipr_pool"
-VERSION = "5.1.1"
+VERSION = "5.1.2"
 API_BASE_URL = "https://apis.goflipr.com"
 
 # ── Configuration de traitement ────────────────────────────
@@ -13,6 +13,9 @@ PH_PLUS_DOSE       = 150.0   # g par m³ par unité pH (granulés carbonate)
 CHLORINE_TARGET    = 2.0     # mg/L idéal
 CHLORINE_SHOCK_TARGET = 5.0  # mg/L cible pour traitement choc
 CHLORINE_DOSE      = 1.5     # g de produit par m³ par mg/L (chlore choc 70%)
+
+TAC_TARGET         = 120.0   # mg/L ou ppm (alcalinité idéale cible)
+TAC_PLUS_DOSE      = 1.8     # g de TAC+ (bicarbonate) par m³ par mg/L (ppm)
 
 PUMP_MIN_HOURS     = 4.0
 PUMP_MAX_HOURS     = 24.0

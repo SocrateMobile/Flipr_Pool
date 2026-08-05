@@ -9,7 +9,8 @@ from .const import (
     PH_MINUS_DOSE,
     PH_PLUS_DOSE,
     CHLORINE_TARGET,
-    CHLORINE_SHOCK_TARGET
+    CHLORINE_SHOCK_TARGET,
+    TAC_TARGET,
 )
 
 
@@ -58,6 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         ("active_chlorine", "active_chlorine", "mg/L",  None,                          "mdi:chemical-weapon", None),
         ("dose_ph_minus",   "dose_ph_minus",   "g",     None,                          "mdi:minus-circle-outline", None),
         ("dose_ph_plus",    "dose_ph_plus",    "g",     None,                          "mdi:plus-circle-outline", None),
+        ("dose_tac_plus",   "dose_tac_plus",   "g",     None,                          "mdi:plus-box-outline", None),
         ("dose_cl_maint",   "dose_cl_maint",   "g",     None,                          "mdi:water-plus", None),
         ("dose_cl_shock",   "dose_cl_shock",   "g",     None,                          "mdi:flash", None),
         ("pump_hours",      "pump_hours",      "h",     None,                          "mdi:pump", None),
@@ -131,6 +133,9 @@ class FliprFullSensor(CoordinatorEntity, SensorEntity):
         elif self._data_key == "dose_ph_plus":
             attrs["Cible"] = PH_TARGET
             attrs["Note"] = "Calculé sur base de granulés (150g/m³/unité pH)"
+        elif self._data_key == "dose_tac_plus":
+            attrs["Cible"] = f"{TAC_TARGET} mg/L (12°f)"
+            attrs["Note"] = "Calculé sur base de Bicarbonate de sodium (1.8g/m³/ppm)"
         elif self._data_key == "dose_cl_maint":
             attrs["Cible"] = f"{CHLORINE_TARGET} mg/L"
             attrs["Usage"] = "Maintien du taux idéal"

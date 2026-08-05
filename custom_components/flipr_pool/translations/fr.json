@@ -212,6 +212,9 @@
       "dose_ph_plus": {
         "name": "Dose pH+"
       },
+      "dose_tac_plus": {
+        "name": "Dose TAC+ (Bicarbonate)"
+      },
       "dose_cl_maint": {
         "name": "Dose Chlore (Entretien)"
       },

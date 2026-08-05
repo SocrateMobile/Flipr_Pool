@@ -166,6 +166,9 @@
       "dose_ph_plus": {
         "name": "pH+ Dose"
       },
+      "dose_tac_plus": {
+        "name": "TAC+ Dose"
+      },
       "dose_cl_maint": {
         "name": "Chlorine Dose (Maintenance)"
       },

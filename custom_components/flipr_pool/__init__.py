@@ -29,6 +29,8 @@ from .const import (
     CHLORINE_TARGET,
     CHLORINE_SHOCK_TARGET,
     CHLORINE_DOSE,
+    TAC_TARGET,
+    TAC_PLUS_DOSE,
     PUMP_MIN_HOURS,
     PUMP_MAX_HOURS,
     PLACES_URL,
@@ -439,8 +441,14 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     else:
         pump_hours = None
 
-    # ── Chimie avancée (LSI, pH équilibre, Chlore Actif) ────
+    # ── Chimie avancée (LSI, pH équilibre, Chlore Actif & Dose TAC+) ────
     tac, th, cya, tds = _get_water_params(entry)
+
+    if tac is not None and pool_volume_m3 > 0:
+        tac_diff = TAC_TARGET - tac
+        dose_tac_plus = round(tac_diff * pool_volume_m3 * TAC_PLUS_DOSE) if tac_diff > 0 else 0
+    else:
+        dose_tac_plus = None
 
     lsi = compute_isl(water_temp, ph_val, tac, th, tds)
     if lsi is None:
@@ -513,6 +521,7 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         "active_chlorine":     active_cl,
         "dose_ph_minus":       dose_ph_minus,
         "dose_ph_plus":        dose_ph_plus,
+        "dose_tac_plus":       dose_tac_plus,
         "dose_cl_maint":       dose_cl_maint,
         "dose_cl_shock":       dose_cl_shock,
         "pump_hours":          pump_hours,
