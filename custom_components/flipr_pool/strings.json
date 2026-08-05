@@ -193,6 +193,15 @@
       "firmware_version": {
         "name": "Firmware Version"
       },
+      "sigfox_status": {
+        "name": "Sigfox Network Status"
+      },
+      "resets_counter": {
+        "name": "Reboot Counter"
+      },
+      "last_resume_call": {
+        "name": "Last Cloud Contact"
+      },
       "last_alert": {
         "name": "Last Alert"
       },

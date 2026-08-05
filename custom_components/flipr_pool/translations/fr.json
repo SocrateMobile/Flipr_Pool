@@ -239,6 +239,15 @@
       "firmware_version": {
         "name": "Version du Firmware"
       },
+      "sigfox_status": {
+        "name": "Statut réseau Sigfox"
+      },
+      "resets_counter": {
+        "name": "Compteur de redémarrages"
+      },
+      "last_resume_call": {
+        "name": "Dernier contact Cloud"
+      },
       "last_alert": {
         "name": "Dernière Alerte"
       },

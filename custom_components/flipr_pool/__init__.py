@@ -409,9 +409,30 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
 
     # ── Appareil & Statut Matériel ───────────────────────────
     need_calib = flipr_sec.get("NeedCalib") if isinstance(flipr_sec.get("NeedCalib"), bool) else False
-    commercial_type = flipr_sec.get("CommercialType") or flipr_sec.get("commercialType")
+    
+    ct_raw = flipr_sec.get("CommercialType") or flipr_sec.get("commercialType") or m.get("CommercialType") or m.get("commercialType")
+    if isinstance(ct_raw, dict):
+        commercial_type = ct_raw.get("Value") or ct_raw.get("value")
+    else:
+        commercial_type = ct_raw
+
     firmware_version = str(flipr_sec.get("ModuleSoftwareVersion") or flipr_sec.get("moduleSoftwareVersion") or "") or None
     subscription_valid = sub_sec.get("IsValid") if isinstance(sub_sec.get("IsValid"), bool) else None
+    if subscription_valid is None:
+        subscription_valid = m.get("IsSubscriptionValid") if isinstance(m.get("IsSubscriptionValid"), bool) else None
+
+    sigfox_status = _first_not_none(
+        m.get("SigfoxStatus"), m.get("sigfoxStatus"),
+        flipr_sec.get("SigfoxStatus"), flipr_sec.get("sigfoxStatus")
+    )
+    resets_counter = _first_not_none(
+        m.get("ResetsCounter"), m.get("resetsCounter"),
+        flipr_sec.get("ResetsCounter"), flipr_sec.get("resetsCounter")
+    )
+    last_resume_call = _first_not_none(
+        m.get("LastResumeCallUtc"), m.get("lastResumeCallUtc"),
+        m.get("LastMeasureDateTime"), m.get("lastMeasureDateTime")
+    )
 
     # ── Durée de pompage & Conseil ──────────────────────────
     water_temp_raw = m.get("Temperature") or m.get("temperature")
@@ -535,6 +556,9 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         "subscription_valid":  subscription_valid,
         "commercial_type":     commercial_type,
         "firmware_version":    firmware_version,
+        "sigfox_status":       sigfox_status,
+        "resets_counter":      resets_counter,
+        "last_resume_call":    last_resume_call,
         "thresholds":          thresholds,
         "last_alert":          last_alert,
         "data_source":         data_source,
@@ -630,6 +654,9 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 m["thresholds_raw"] = data_raw.get("thresholds", {})
 
                 data = _compute_pool_data(m, s, self.config_entry, data_source="cloud")
+                hub_id = data_raw.get("hub_id")
+                data["hub_id"] = hub_id
+                self.hub_id = hub_id
                 hub_state = data_raw.get("hub_state", {})
                 data["hub_mode"] = hub_state.get("Mode")
                 data["hub_state"] = hub_state.get("Status")

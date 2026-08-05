@@ -219,10 +219,7 @@ class FliprApiClient:
         Flux :
           1. GET /modules/{id}/NewResume  (données capteur, nœud Current)
           2. GET /modules/{id}/shortterm  (météo, état de l'eau)
-          3. Résolution place_id / hub_id via GET /place si nécessaire
-          4. GET /hub/{hubId}/state       (état pompe + mode)
-          5. GET /place/{placeId}/allAlerts
-          6. GET /modules/{id}/Thresholds
+          3. Résolution place_id / hub_id & Récupération des modules
         """
         data: dict[str, Any] = {
             "module_last_measure": None,
@@ -248,7 +245,25 @@ class FliprApiClient:
         except Exception:
             pass
 
-        # ── 3. Résolution place_id / hub_id ──
+        # ── 3. Résolution place_id / hub_id & Récupération des modules ──
+        try:
+            modules_list = await self._request("GET", MODULES_URL)
+            if isinstance(modules_list, list):
+                data["raw_modules"] = modules_list
+                for mod in modules_list:
+                    mtype = mod.get("ModuleType_Id")
+                    ctype = str((mod.get("CommercialType") or {}).get("Value") if isinstance(mod.get("CommercialType"), dict) else mod.get("CommercialType") or "").lower()
+                    # ModuleType_Id == 3 est le Flipr Control / Hub!
+                    if mtype in (3, 4) or "control" in ctype or "hub" in ctype:
+                        discovered_hub_id = str(mod.get("Serial") or mod.get("Id") or "")
+                        if discovered_hub_id:
+                            hub_id = discovered_hub_id
+                            data["hub_id"] = hub_id
+                            _LOGGER.info("Flipr Hub identifié via /modules: %s (ModuleType_Id=%s)", hub_id, mtype)
+                            break
+        except Exception as e:
+            _LOGGER.debug("Erreur interrogation /modules : %s", e)
+
         if not place_id or not hub_id:
             try:
                 places = await self._request("GET", PLACES_URL)
@@ -274,23 +289,36 @@ class FliprApiClient:
 
         # ── 4. Hub State : GET /hub/{hubId}/state ──
         if hub_id:
-            hub_state_url = f"{API_BASE_URL}/hub/{hub_id}/state"
-            try:
-                hub_resp = await self._request("GET", hub_state_url)
-                if isinstance(hub_resp, dict):
-                    behavior = hub_resp.get("behavior", "auto")
-                    if isinstance(behavior, str):
-                        mode_str = behavior.lower()
-                    else:
-                        mode_str = {1: "manual", 2: "planning"}.get(behavior, "auto")
+            for hub_url in [
+                f"{API_BASE_URL}/hub/{hub_id}/state",
+                f"{API_BASE_URL}/hub/{hub_id}",
+                f"{API_BASE_URL}/modules/{hub_id}/equipment",
+            ]:
+                try:
+                    hub_resp = await self._request("GET", hub_url)
+                    if isinstance(hub_resp, dict):
+                        behavior = hub_resp.get("behavior", hub_resp.get("Behavior", "auto"))
+                        if isinstance(behavior, str):
+                            mode_str = behavior.lower()
+                        else:
+                            mode_str = {1: "manual", 2: "planning"}.get(behavior, "auto")
 
-                    pump_on = bool(hub_resp.get("stateEquipment", False))
-                    data["hub_state"] = {
-                        "Mode": mode_str,
-                        "Status": "on" if pump_on else "off",
-                    }
-            except Exception as e:
-                _LOGGER.debug("Erreur Hub /hub/%s/state : %s", hub_id, e)
+                        pump_on = bool(
+                            hub_resp.get("stateEquipment")
+                            or hub_resp.get("StateEquipment")
+                            or hub_resp.get("state") == "on"
+                            or hub_resp.get("State") == "on"
+                            or hub_resp.get("status") == "on"
+                            or hub_resp.get("Status") == "on"
+                        )
+                        data["hub_state"] = {
+                            "Mode": mode_str,
+                            "Status": "on" if pump_on else "off",
+                        }
+                        _LOGGER.debug("Flipr Hub %s state: Mode=%s, Status=%s", hub_id, mode_str, pump_on)
+                        break
+                except Exception as e:
+                    _LOGGER.debug("Essai URL Hub %s échoué : %s", hub_url, e)
 
         # ── 5. Alertes ──
         if place_id:
@@ -321,9 +349,16 @@ class FliprApiClient:
         if mode not in ("auto", "manual", "planning"):
             raise ValueError(f"Mode Hub invalide : {mode!r}. Attendu : auto, manual, planning.")
 
-        url = f"{API_BASE_URL}/hub/{hub_id}/mode/{mode}"
-        await self._request("PUT", url)
-        _LOGGER.info("Hub %s : mode changé en '%s'", hub_id, mode)
+        for url in [
+            f"{API_BASE_URL}/hub/{hub_id}/mode/{mode}",
+            f"{API_BASE_URL}/hub/{hub_id}/Mode/{mode}",
+        ]:
+            try:
+                await self._request("PUT", url)
+                _LOGGER.info("Hub %s : mode changé en '%s'", hub_id, mode)
+                return
+            except Exception as e:
+                _LOGGER.debug("Échec PUT mode %s: %s", url, e)
 
     async def set_hub_pump(self, hub_id: str, state: bool) -> None:
         """Allume/éteint la pompe du Hub.
@@ -336,13 +371,26 @@ class FliprApiClient:
           2. POST /hub/{hubId}/Manual/True|False
         """
         # 1. Forcer le mode manual
-        await self.set_hub_mode(hub_id, "manual")
+        try:
+            await self.set_hub_mode(hub_id, "manual")
+        except Exception as e:
+            _LOGGER.warning("Avertissement passage en mode manual pour Hub %s: %s", hub_id, e)
 
         # 2. Commander la pompe
         state_str = "True" if state else "False"
-        url = f"{API_BASE_URL}/hub/{hub_id}/Manual/{state_str}"
-        await self._request("POST", url)
-        _LOGGER.info("Hub %s : pompe → %s", hub_id, "ON" if state else "OFF")
+        for url in [
+            f"{API_BASE_URL}/hub/{hub_id}/Manual/{state_str}",
+            f"{API_BASE_URL}/hub/{hub_id}/manual/{state_str.lower()}",
+            f"{API_BASE_URL}/hub/{hub_id}/state/{state_str.lower()}",
+        ]:
+            try:
+                await self._request("POST", url)
+                _LOGGER.info("Hub %s : pompe → %s via %s", hub_id, "ON" if state else "OFF", url)
+                return
+            except Exception as e:
+                _LOGGER.debug("Échec POST pump %s: %s", url, e)
+
+        raise FliprApiError(f"Impossible de commander la pompe du Hub {hub_id}.")
 
     async def get_hub_state(self, hub_id: str) -> dict[str, Any]:
         """Récupère l'état actuel du Hub : GET /hub/{hubId}/state"""
