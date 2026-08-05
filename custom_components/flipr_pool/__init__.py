@@ -34,6 +34,8 @@ from .const import (
     PUMP_MIN_HOURS,
     PUMP_MAX_HOURS,
     PLACES_URL,
+    MODULES_URL,
+    API_BASE_URL,
     ALERTS_URL,
     THRESHOLDS_URL,
     CONF_TAC, CONF_TH, CONF_CYA, CONF_TDS,
@@ -802,6 +804,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("Dump Hub Debug impossible : client API non configuré.")
             return
 
+        # Réinitialiser temporairement le rate-limit pour le diagnostic
+        api_client._blocked_until = None
+        api_client._retry_count = 0
+
         _LOGGER.info("Démarrage du diagnostic Hub Flipr...")
         debug_info = {}
         try:
@@ -816,27 +822,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as e:
             debug_info["modules_error"] = str(e)
 
-        hubs = []
+        target_ids = set()
         if isinstance(debug_info.get("place"), list):
             for p in debug_info["place"]:
                 for h in (p.get("Hubs") or p.get("hubs") or []):
-                    hubs.append(h)
+                    hid = h.get("Serial") or h.get("Id")
+                    if hid: target_ids.add(str(hid))
+                for m_item in (p.get("Modules") or p.get("modules") or []):
+                    mid = m_item.get("Serial") or m_item.get("Id")
+                    if mid: target_ids.add(str(mid))
 
-        debug_info["detected_hubs"] = hubs
+        if isinstance(debug_info.get("modules"), list):
+            for m_item in debug_info["modules"]:
+                mid = m_item.get("Serial") or m_item.get("Id")
+                if mid: target_ids.add(str(mid))
+
+        if flipr_id:
+            target_ids.add(str(flipr_id))
+
+        debug_info["target_ids_tested"] = list(target_ids)
         debug_info["hub_endpoints"] = {}
 
-        for h in hubs:
-            hid = str(h.get("Serial") or h.get("Id") or "")
-            if not hid:
-                continue
+        for hid in target_ids:
             hub_res = {}
             for ep_name, ep_url in [
                 ("state", f"{API_BASE_URL}/hub/{hid}/state"),
                 ("info", f"{API_BASE_URL}/hub/{hid}"),
                 ("status", f"{API_BASE_URL}/hub/{hid}/status"),
                 ("mode", f"{API_BASE_URL}/hub/{hid}/mode"),
-                ("module_hub", f"{API_BASE_URL}/modules/{flipr_id}/hub"),
-                ("module_equipment", f"{API_BASE_URL}/modules/{flipr_id}/equipment"),
+                ("module_hub", f"{API_BASE_URL}/modules/{hid}/hub"),
+                ("module_equipment", f"{API_BASE_URL}/modules/{hid}/equipment"),
+                ("place_hub", f"{API_BASE_URL}/place/{hid}/hub"),
             ]:
                 try:
                     r = await api_client._request("GET", ep_url)
