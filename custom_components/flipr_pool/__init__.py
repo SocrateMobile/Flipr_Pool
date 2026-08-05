@@ -230,10 +230,41 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     else:
         dose_cl_maint = dose_cl_shock = None
 
-    # ── Météo (Weather) ─────────────────────────────────────
+    # ── Météo & Prévisions ──────────────────────────────────
     weather = m.get("Weather") or m.get("weather") or {}
     if not isinstance(weather, dict):
         weather = {}
+
+    weather_next_5h = m.get("WeatherNext5Hours") or m.get("weatherNext5Hours") or []
+    if not isinstance(weather_next_5h, list):
+        weather_next_5h = []
+
+    weather_next_3d = m.get("WeatherNext3Days") or m.get("weatherNext3Days") or []
+    if not isinstance(weather_next_3d, list):
+        weather_next_3d = []
+
+    hourly_forecast = m.get("HourlyForecast") or m.get("hourlyForecast") or []
+    if not isinstance(hourly_forecast, list):
+        hourly_forecast = []
+
+    daily_forecast = m.get("DailyForecast") or m.get("dailyForecast") or []
+    if not isinstance(daily_forecast, list):
+        daily_forecast = []
+
+    weather_last_week = m.get("WeatherLastWeek") or m.get("weatherLastWeek") or {}
+    if not isinstance(weather_last_week, dict):
+        weather_last_week = {}
+    day_units = weather_last_week.get("ListWeatherOneDayUnit") or weather_last_week.get("listWeatherOneDayUnit") or []
+    if not isinstance(day_units, list):
+        day_units = []
+
+    flipr_sec = m.get("fliprSection") or m.get("flipr_section") or {}
+    if not isinstance(flipr_sec, dict):
+        flipr_sec = {}
+
+    sub_sec = m.get("Subscription") or m.get("subscription") or {}
+    if not isinstance(sub_sec, dict):
+        sub_sec = {}
 
     def _first_not_none(*args):
         for arg in args:
@@ -273,6 +304,18 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         except (ValueError, TypeError):
             air_temp = None
 
+    air_temp_next_hour = weather.get("NextHourTemperature") or weather.get("nextHourTemperature")
+    if air_temp_next_hour is not None:
+        try:
+            air_temp_next_hour = float(air_temp_next_hour)
+        except (ValueError, TypeError):
+            air_temp_next_hour = None
+
+    cloud_cover_raw = weather.get("CloudCover") or weather.get("cloudCover")
+    cloud_cover = round(float(cloud_cover_raw) * 100, 1) if cloud_cover_raw is not None else None
+
+    weather_icon = weather.get("CurrentWeatherIcon") or weather.get("currentWeatherIcon")
+
     # ── Indice UV ───────────────────────────────────────────
     uv_index = _first_not_none(
         weather.get("UvIndex"), weather.get("uvIndex"), weather.get("UV"), weather.get("uv"),
@@ -283,6 +326,88 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
             uv_index = float(uv_index)
         except (ValueError, TypeError):
             uv_index = None
+
+    # ── Prévisions Météo ─────────────────────────────────────
+    wind_speed = None
+    rain_probability = None
+    if len(weather_next_5h) > 0 and isinstance(weather_next_5h[0], dict):
+        w0 = weather_next_5h[0]
+        ws_raw = w0.get("WindSpeed") or w0.get("windSpeed")
+        if ws_raw is not None:
+            try:
+                wind_speed = round(float(ws_raw), 1)
+            except (ValueError, TypeError):
+                wind_speed = None
+
+        precip_raw = w0.get("PrecipitationProbability") or w0.get("precipitationProbability")
+        if precip_raw is not None:
+            try:
+                rain_probability = round(float(precip_raw) * 100, 1)
+            except (ValueError, TypeError):
+                rain_probability = None
+
+    air_temp_max_today = None
+    air_temp_min_today = None
+    if len(weather_next_3d) > 0 and isinstance(weather_next_3d[0], dict):
+        d0 = weather_next_3d[0]
+        tmax_raw = d0.get("TempMax") or d0.get("tempMax")
+        tmin_raw = d0.get("TempMin") or d0.get("tempMin")
+        if tmax_raw is not None:
+            try:
+                air_temp_max_today = round(float(tmax_raw), 1)
+            except (ValueError, TypeError):
+                air_temp_max_today = None
+        if tmin_raw is not None:
+            try:
+                air_temp_min_today = round(float(tmin_raw), 1)
+            except (ValueError, TypeError):
+                air_temp_min_today = None
+
+    # ── Prévisions Température Eau ───────────────────────────
+    water_temp_forecast_1h = None
+    if len(hourly_forecast) > 0 and isinstance(hourly_forecast[0], dict):
+        wt_1h_raw = hourly_forecast[0].get("Temperature") or hourly_forecast[0].get("temperature")
+        if wt_1h_raw is not None:
+            try:
+                water_temp_forecast_1h = round(float(wt_1h_raw), 1)
+            except (ValueError, TypeError):
+                water_temp_forecast_1h = None
+
+    water_temp_forecast_tomorrow = None
+    if len(daily_forecast) > 1 and isinstance(daily_forecast[1], dict):
+        wt_tom_raw = daily_forecast[1].get("Temperature") or daily_forecast[1].get("temperature")
+        if wt_tom_raw is not None:
+            try:
+                water_temp_forecast_tomorrow = round(float(wt_tom_raw), 1)
+            except (ValueError, TypeError):
+                water_temp_forecast_tomorrow = None
+
+    # ── Moyennes Hier ───────────────────────────────────────
+    ph_avg_yesterday = None
+    redox_avg_yesterday = None
+    water_temp_avg_yesterday = None
+    for unit in reversed(day_units):
+        if isinstance(unit, dict):
+            ph_u = unit.get("moyPH") or unit.get("MoyPH")
+            rx_u = unit.get("moyRX") or unit.get("MoyRX")
+            wt_u = unit.get("WaterTemperature") or unit.get("waterTemperature")
+            if ph_u is not None or rx_u is not None or wt_u is not None:
+                if ph_u is not None:
+                    try: ph_avg_yesterday = round(float(ph_u), 2)
+                    except (ValueError, TypeError): pass
+                if rx_u is not None:
+                    try: redox_avg_yesterday = round(float(rx_u), 1)
+                    except (ValueError, TypeError): pass
+                if wt_u is not None:
+                    try: water_temp_avg_yesterday = round(float(wt_u), 1)
+                    except (ValueError, TypeError): pass
+                break
+
+    # ── Appareil & Statut Matériel ───────────────────────────
+    need_calib = flipr_sec.get("NeedCalib") if isinstance(flipr_sec.get("NeedCalib"), bool) else False
+    commercial_type = flipr_sec.get("CommercialType") or flipr_sec.get("commercialType")
+    firmware_version = str(flipr_sec.get("ModuleSoftwareVersion") or flipr_sec.get("moduleSoftwareVersion") or "") or None
+    subscription_valid = sub_sec.get("IsValid") if isinstance(sub_sec.get("IsValid"), bool) else None
 
     # ── Durée de pompage & Conseil ──────────────────────────
     water_temp_raw = m.get("Temperature") or m.get("temperature")
@@ -351,36 +476,56 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
             )
 
     return {
+        # ── 1. Mesures Instantanées ─────────────────────────
         "temperature":         water_temp,
         "ph":                  ph_val,
         "ph_status":           ph_status,
         "ph_simple":           "OK" if ph_status == "OK" else "KO",
         "redox":               redox_val,
-        "battery":             battery_val,
-        "conductivity":        cond_val,
-        "uv_index":            uv_index,
-        "air_temp":            air_temp,
-        "water_state":         water_state,
         "chlorine":            cl_val,
         "chlorine_status":     cl_status,
         "chlorine_simple":     "OK" if cl_status == "OK" else "KO",
+        "conductivity":        cond_val,
+        "water_state":         water_state,
         "last_update":         last_update,
-        "pool_volume":         pool_volume_l,
+        # ── 2. Météo & Extérieur ────────────────────────────
+        "air_temp":            air_temp,
+        "air_temp_next_hour":  air_temp_next_hour,
+        "uv_index":            uv_index,
+        "cloud_cover":         cloud_cover,
+        "weather_icon":        weather_icon,
+        # ── 3. Prévisions Météo ─────────────────────────────
+        "wind_speed":          wind_speed,
+        "rain_probability":    rain_probability,
+        "air_temp_max_today":  air_temp_max_today,
+        "air_temp_min_today":  air_temp_min_today,
+        # ── 4. Prévisions Température Eau ───────────────────
+        "water_temp_forecast_1h":       water_temp_forecast_1h,
+        "water_temp_forecast_tomorrow": water_temp_forecast_tomorrow,
+        # ── 5. Moyennes & Chimie ────────────────────────────
+        "ph_avg_yesterday":             ph_avg_yesterday,
+        "redox_avg_yesterday":          redox_avg_yesterday,
+        "water_temp_avg_yesterday":     water_temp_avg_yesterday,
+        "lsi":                 lsi,
+        "lsi_status":          lsi_status,
+        "ph_equilibre":        ph_equilibre,
+        "free_chlorine":       free_cl,
+        "active_chlorine":     active_cl,
         "dose_ph_minus":       dose_ph_minus,
         "dose_ph_plus":        dose_ph_plus,
         "dose_cl_maint":       dose_cl_maint,
         "dose_cl_shock":       dose_cl_shock,
         "pump_hours":          pump_hours,
         "conseil_filtration":  conseil_filtration,
+        "pool_volume":         pool_volume_l,
+        # ── 6. Appareil & Statut ─────────────────────────────
+        "battery":             battery_val,
+        "need_calib":          need_calib,
+        "subscription_valid":  subscription_valid,
+        "commercial_type":     commercial_type,
+        "firmware_version":    firmware_version,
         "thresholds":          thresholds,
         "last_alert":          last_alert,
-        # ── Chimie avancée ─────────────────────────────────
-        "lsi":                 lsi,
-        "lsi_status":          lsi_status,
-        "ph_equilibre":        ph_equilibre,
-        "free_chlorine":       free_cl,
-        "active_chlorine":     active_cl,
-        # ── Métadonnées source ─────────────────────────────
         "data_source":         data_source,
         "version":             VERSION,
     }

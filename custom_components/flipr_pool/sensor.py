@@ -20,37 +20,59 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     sensors_config = [
         # (translation_key, data_key, unit, device_class, icon, category)
-        # ── Mesures capteur ────────────────────────────────────
+
+        # ── 1. 💧 Mesures Instantanées de la Piscine ──────────
         ("temperature",     "temperature",     "°C",    SensorDeviceClass.TEMPERATURE, "mdi:thermometer", None),
         ("ph",              "ph",              "pH",    None,                          "mdi:ph", None),
         ("redox",           "redox",           "mV",    None,                          "mdi:flask-outline", None),
-        ("battery",         "battery",         "%",     SensorDeviceClass.BATTERY,     "mdi:battery", EntityCategory.DIAGNOSTIC),
-        ("conductivity",    "conductivity",    "µS/cm", None,                          "mdi:lightning-bolt", None),
-        ("uv_index",        "uv_index",        "UV",    None,                          "mdi:sun-wireless", None),
-        ("air_temp",        "air_temp",        "°C",    SensorDeviceClass.TEMPERATURE, "mdi:thermometer-lines", None),
-        ("water_state",     "water_state",     None,    None,                          "mdi:pool", None),
         ("chlorine",        "chlorine",        "mg/L",  None,                          "mdi:water-check", None),
+        ("conductivity",    "conductivity",    "µS/cm", None,                          "mdi:lightning-bolt", None),
+        ("water_state",     "water_state",     None,    None,                          "mdi:pool", None),
         ("last_update",     "last_update",     None,    SensorDeviceClass.TIMESTAMP,   "mdi:clock-outline", EntityCategory.DIAGNOSTIC),
-        # ── Calculés (v2.0) ────────────────────────────────────
-        ("pool_volume",     "pool_volume",     "L",     None,                          "mdi:pool", EntityCategory.DIAGNOSTIC),
+
+        # ── 2. 🌤️ Météo & Conditions Extérieures ────────────
+        ("air_temp",            "air_temp",            "°C",  SensorDeviceClass.TEMPERATURE, "mdi:thermometer-lines", None),
+        ("air_temp_next_hour",  "air_temp_next_hour",  "°C",  SensorDeviceClass.TEMPERATURE, "mdi:thermometer-chevron-up", None),
+        ("uv_index",            "uv_index",            "UV",  None,                          "mdi:sun-wireless", None),
+        ("cloud_cover",         "cloud_cover",         "%",   None,                          "mdi:weather-cloudy", None),
+        ("weather_icon",        "weather_icon",        None,  None,                          "mdi:weather-partly-cloudy", None),
+
+        # ── 3. 🔮 Prévisions Météo ───────────────────────────
+        ("wind_speed",          "wind_speed",          "km/h",None,                          "mdi:weather-windy", None),
+        ("rain_probability",    "rain_probability",    "%",   None,                          "mdi:weather-rainy", None),
+        ("air_temp_max_today",  "air_temp_max_today",  "°C",  SensorDeviceClass.TEMPERATURE, "mdi:thermometer-high", None),
+        ("air_temp_min_today",  "air_temp_min_today",  "°C",  SensorDeviceClass.TEMPERATURE, "mdi:thermometer-low", None),
+
+        # ── 4. 📈 Prévisions de Température de l'Eau ─────────
+        ("water_temp_forecast_1h",       "water_temp_forecast_1h",       "°C", SensorDeviceClass.TEMPERATURE, "mdi:waves-arrow-up", None),
+        ("water_temp_forecast_tomorrow", "water_temp_forecast_tomorrow", "°C", SensorDeviceClass.TEMPERATURE, "mdi:calendar-clock", None),
+
+        # ── 5. 📜 Moyennes & Calculs Chimie ──────────────────
+        ("ph_avg_yesterday",             "ph_avg_yesterday",             "pH",   None,                          "mdi:chart-line", None),
+        ("redox_avg_yesterday",          "redox_avg_yesterday",          "mV",   None,                          "mdi:chart-timeline-variant", None),
+        ("water_temp_avg_yesterday",     "water_temp_avg_yesterday",     "°C",   SensorDeviceClass.TEMPERATURE, "mdi:thermometer-auto", None),
+        ("lsi",             "lsi",             None,    None,                          "mdi:water-percent", None),
+        ("lsi_status",      "lsi_status",      None,    None,                          "mdi:water-check", None),
+        ("ph_equilibre",    "ph_equilibre",    "pH",    None,                          "mdi:water-opacity", None),
+        ("free_chlorine",   "free_chlorine",   "mg/L",  None,                          "mdi:water-check", None),
+        ("active_chlorine", "active_chlorine", "mg/L",  None,                          "mdi:chemical-weapon", None),
         ("dose_ph_minus",   "dose_ph_minus",   "g",     None,                          "mdi:minus-circle-outline", None),
         ("dose_ph_plus",    "dose_ph_plus",    "g",     None,                          "mdi:plus-circle-outline", None),
         ("dose_cl_maint",   "dose_cl_maint",   "g",     None,                          "mdi:water-plus", None),
         ("dose_cl_shock",   "dose_cl_shock",   "g",     None,                          "mdi:flash", None),
         ("pump_hours",      "pump_hours",      "h",     None,                          "mdi:pump", None),
         ("conseil_filtration", "conseil_filtration", None,  None,                          "mdi:information-outline", None),
-        ("last_alert",      "last_alert",      None,    None,                          "mdi:alert-circle-outline", None),
-        # ── Chimie avancée (LSI & Chlore Actif) ───────────────
-        ("lsi",             "lsi",             None,    None,                          "mdi:water-percent", None),
-        ("lsi_status",      "lsi_status",      None,    None,                          "mdi:water-check", None),
-        ("ph_equilibre",    "ph_equilibre",    "pH",    None,                          "mdi:water-opacity", None),
-        ("free_chlorine",   "free_chlorine",   "mg/L",  None,                          "mdi:water-check", None),
-        ("active_chlorine", "active_chlorine", "mg/L",  None,                          "mdi:chemical-weapon", None),
-        # ── Double Coordinateur ────────────────────────────────
-        ("data_source",     "data_source",     None,    None,                          "mdi:swap-horizontal", EntityCategory.DIAGNOSTIC),
-        ("ble_rssi",        "ble_rssi",        "dBm",   None,                          "mdi:bluetooth-connect", EntityCategory.DIAGNOSTIC),
-        ("ble_status",      "ble_status",      None,    None,                          "mdi:bluetooth-settings", EntityCategory.DIAGNOSTIC),
-        ("version",         "version",         None,    None,                          "mdi:information-outline", EntityCategory.DIAGNOSTIC),
+        ("pool_volume",     "pool_volume",     "L",     None,                          "mdi:pool", EntityCategory.DIAGNOSTIC),
+
+        # ── 6. ⚙️ Appareil & Statut Matériel ──────────────────
+        ("battery",          "battery",          "%",     SensorDeviceClass.BATTERY,     "mdi:battery", EntityCategory.DIAGNOSTIC),
+        ("commercial_type",  "commercial_type",  None,    None,                          "mdi:chip", EntityCategory.DIAGNOSTIC),
+        ("firmware_version", "firmware_version", None,    None,                          "mdi:numeric", EntityCategory.DIAGNOSTIC),
+        ("last_alert",       "last_alert",       None,    None,                          "mdi:alert-circle-outline", None),
+        ("data_source",      "data_source",      None,    None,                          "mdi:swap-horizontal", EntityCategory.DIAGNOSTIC),
+        ("ble_rssi",         "ble_rssi",         "dBm",   None,                          "mdi:bluetooth-connect", EntityCategory.DIAGNOSTIC),
+        ("ble_status",       "ble_status",       None,    None,                          "mdi:bluetooth-settings", EntityCategory.DIAGNOSTIC),
+        ("version",          "version",          None,    None,                          "mdi:information-outline", EntityCategory.DIAGNOSTIC),
     ]
 
     entities = [FliprFullSensor(coordinator, flipr_id, *config) for config in sensors_config]

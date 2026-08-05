@@ -113,6 +113,20 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "ph_status": {
+        "name": "Statut pH"
+      },
+      "chlorine_status": {
+        "name": "Statut Chlore"
+      },
+      "need_calib": {
+        "name": "Étalonnage des sondes requis"
+      },
+      "subscription_valid": {
+        "name": "Abonnement Flipr"
+      }
+    },
     "sensor": {
       "temperature": {
         "name": "Température de l'eau"
@@ -120,44 +134,77 @@
       "ph": {
         "name": "pH"
       },
-      "ph_status": {
-        "name": "Statut pH"
-      },
-      "ph_simple": {
-        "name": "pH (OK / KO)"
-      },
       "redox": {
-        "name": "Redox"
+        "name": "Potentiel Redox"
       },
-      "battery": {
-        "name": "Batterie"
+      "chlorine": {
+        "name": "Désinfectant (Chlore)"
       },
       "conductivity": {
         "name": "Conductivité"
       },
-      "uv_index": {
-        "name": "Indice UV"
-      },
-      "air_temp": {
-        "name": "Température de l'air"
-      },
       "water_state": {
         "name": "État de l'eau"
-      },
-      "chlorine": {
-        "name": "Chlore"
-      },
-      "chlorine_status": {
-        "name": "Statut Chlore"
-      },
-      "chlorine_simple": {
-        "name": "Chlore (OK / KO)"
       },
       "last_update": {
         "name": "Dernière mesure"
       },
-      "pool_volume": {
-        "name": "Volume de la piscine"
+      "air_temp": {
+        "name": "Température de l'air"
+      },
+      "air_temp_next_hour": {
+        "name": "Température de l'air (+1h)"
+      },
+      "uv_index": {
+        "name": "Indice UV"
+      },
+      "cloud_cover": {
+        "name": "Couverture nuageuse"
+      },
+      "weather_icon": {
+        "name": "Météo actuelle"
+      },
+      "wind_speed": {
+        "name": "Vitesse du vent"
+      },
+      "rain_probability": {
+        "name": "Probabilité de pluie"
+      },
+      "air_temp_max_today": {
+        "name": "Température air Max (Aujourd'hui)"
+      },
+      "air_temp_min_today": {
+        "name": "Température air Min (Aujourd'hui)"
+      },
+      "water_temp_forecast_1h": {
+        "name": "Température eau prévue (+1h)"
+      },
+      "water_temp_forecast_tomorrow": {
+        "name": "Température eau prévue (Demain)"
+      },
+      "ph_avg_yesterday": {
+        "name": "pH moyen (Récent)"
+      },
+      "redox_avg_yesterday": {
+        "name": "Redox moyen (Récent)"
+      },
+      "water_temp_avg_yesterday": {
+        "name": "Température eau moyenne (Récente)"
+      },
+      "lsi": {
+        "name": "Indice LSI"
+      },
+      "lsi_status": {
+        "name": "Statut de l'eau (LSI)"
+      },
+      "ph_equilibre": {
+        "name": "pH d'Équilibre"
+      },
+      "free_chlorine": {
+        "name": "Chlore Libre Est."
+      },
+      "active_chlorine": {
+        "name": "Chlore Actif (HOCl)"
       },
       "dose_ph_minus": {
         "name": "Dose pH-"
@@ -177,26 +224,23 @@
       "conseil_filtration": {
         "name": "Conseil Filtration"
       },
+      "pool_volume": {
+        "name": "Volume de la piscine"
+      },
+      "battery": {
+        "name": "Niveau de Batterie"
+      },
+      "commercial_type": {
+        "name": "Modèle Flipr"
+      },
+      "firmware_version": {
+        "name": "Version du Firmware"
+      },
       "last_alert": {
         "name": "Dernière Alerte"
       },
-      "lsi": {
-        "name": "Indice LSI"
-      },
-      "lsi_status": {
-        "name": "Statut de l'eau (LSI)"
-      },
-      "ph_equilibre": {
-        "name": "pH d'Équilibre"
-      },
-      "free_chlorine": {
-        "name": "Chlore Libre Est."
-      },
-      "active_chlorine": {
-        "name": "Chlore Actif (HOCl)"
-      },
       "data_source": {
-        "name": "Source Active"
+        "name": "Source des données"
       },
       "ble_rssi": {
         "name": "Signal BLE"
