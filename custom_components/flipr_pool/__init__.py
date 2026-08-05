@@ -160,7 +160,10 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     def _is_ok(status_val):
         if not isinstance(status_val, str):
             return False
-        return status_val.lower() in ["ok", "perfect", "good", "excellent", "none", "parfait", "bon"]
+        return status_val.lower() in [
+            "ok", "perfect", "good", "excellent", "none", "parfait", "bon",
+            "medium", "mediumlow", "mediumhigh", "optimal", "correct"
+        ]
 
     def _compute_status(sector, msg, val):
         if _is_ok(sector) or _is_ok(msg):
@@ -252,6 +255,7 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
 
     if air_temp is None:
         air_temp = _first_not_none(
+            weather.get("CurrentTemperature"), weather.get("currentTemperature"),
             weather.get("AirTemperature"), weather.get("airTemperature"),
             weather.get("AirTemp"), weather.get("airTemp"),
             weather.get("Temperature"), weather.get("temperature")
