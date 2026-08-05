@@ -1,0 +1,211 @@
+# ==============================================================================
+# CARTE LOVELACE "FLIPR OFFICIAL APP UI" - VUE ANALYSE
+# ==============================================================================
+# Carte personnalisée imitant l'application officielle Flipr (Vue Analyse)
+# Prérequis : custom:button-card (via HACS)
+# ==============================================================================
+
+type: custom:button-card
+show_name: false
+show_icon: false
+show_state: false
+styles:
+  card:
+    - padding: 0px
+    - margin: 0px
+    - border-radius: 28px
+    - overflow: hidden
+    - background: "#eef4f8"
+    - box-shadow: "0 10px 30px rgba(0,0,0,0.3)"
+    - width: 100%
+  custom_fields:
+    app_container:
+      - width: 100%
+      - padding: 0px
+
+custom_fields:
+  app_container: |
+    [[[
+      const air_temp = states['sensor.flipr_temperature_air'] ? states['sensor.flipr_temperature_air'].state : '36';
+      const uv_index = states['sensor.flipr_indice_uv'] ? states['sensor.flipr_indice_uv'].state : '0';
+      const water_temp = states['sensor.flipr_temperature_eau'] ? states['sensor.flipr_temperature_eau'].state : '29';
+      const ph_val = states['sensor.flipr_ph'] ? states['sensor.flipr_ph'].state : '7.1';
+      const ph_status = states['sensor.flipr_statut_ph'] ? states['sensor.flipr_statut_ph'].state : 'Parfait';
+      const cl_status = states['sensor.flipr_statut_chlore'] ? states['sensor.flipr_statut_chlore'].state : 'Parfait';
+      const last_measure = states['sensor.flipr_derniere_mesure'] ? states['sensor.flipr_derniere_mesure'].state : 'mar. 04/08 01:20';
+      const redox_val = states['sensor.flipr_redox'] ? states['sensor.flipr_redox'].state : '545';
+      
+      return `
+        <div style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+          
+          <!-- EN-TÊTE & SELECTIONS -->
+          <div style="padding: 16px 18px 8px 18px; text-align: center;">
+            <div style="font-size: 15px; font-weight: 500; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              Rochegude - Rochegude <span style="font-size: 10px; color: #64748b;">▼</span>
+            </div>
+            
+            <div style="display: flex; background: #94a3b8; border-radius: 14px; padding: 2px; width: 100%; box-sizing: border-box;">
+              <!-- Analyse Actif -->
+              <div style="flex: 1; padding: 8px 12px; background: #1e293b; color: white; border-radius: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                <span style="font-size: 16px;">💧</span> Analyse
+              </div>
+              <!-- Contrôle Inactif -->
+              <div style="flex: 1; padding: 8px 12px; color: white; border-radius: 12px; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span style="font-size: 16px;">🔲</span> Contrôle
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION AIR & METEO -->
+          <div style="padding: 12px 18px 14px 18px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span style="font-size: 18px; color: #64748b; font-weight: 400;">air</span>
+                <span style="font-size: 42px; font-weight: 700; color: #1e293b; letter-spacing: -1px;">${air_temp}°C</span>
+                <span style="color: #0284c7; font-weight: 700; font-size: 16px;">↘</span>
+              </div>
+              
+              <div style="height: 30px; width: 1px; background: #cbd5e1;"></div>
+
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <div style="font-size: 16px; color: #475569;">☀️ <span style="font-size: 12px; color: #94a3b8; font-weight: 800;">&gt;</span> ☁️</div>
+                <div style="border: 1.5px solid #64748b; border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 700; color: #334155;">
+                  UV ${uv_index}
+                </div>
+              </div>
+            </div>
+
+            <!-- MIX POMPE + METEO -->
+            <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+              
+              <!-- BLOC POMPE (Gauche) -->
+              <div style="flex: 1; background: white; border-radius: 16px; padding: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 14px rgba(0,0,0,0.03);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="font-size: 26px;">⚙️</div> <!-- Remplacer par l'icone pompe -->
+                  <div style="font-size: 10px; font-weight: 600; color: #475569; line-height: 1.2;">Pompe À Fi...</div>
+                </div>
+                <div style="background: #22c55e; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; box-shadow: 0 2px 8px rgba(34,197,94,0.4);">
+                  ⏻
+                </div>
+              </div>
+
+              <!-- BLOC METEO (Droite) -->
+              <div style="flex: 1; background: white; border-radius: 16px; padding: 10px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,0.03);">
+                <div style="font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; text-align: center; margin-bottom: 4px;">Probabilité dans les 5h</div>
+                <div style="display: flex; justify-content: space-around; align-items: center;">
+                  <div style="text-align: center;">
+                    <div style="font-size: 16px; color: #94a3b8;">🌧️</div>
+                    <div style="font-size: 11px; font-weight: 700; color: #475569;">0%</div>
+                  </div>
+                  <div style="height: 24px; width: 1px; background: #e2e8f0;"></div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 16px; color: #94a3b8;">💨</div>
+                    <div style="font-size: 11px; font-weight: 700; color: #475569;">9.7km/h</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- DERNIERE MESURE -->
+            <div style="background: white; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 14px rgba(0,0,0,0.03);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="background: #ff2d75; color: white; width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                  📡
+                </div>
+                <div>
+                  <div style="font-size: 14px; font-weight: 700; color: #0f172a;">Dernière Mesure</div>
+                  <div style="font-size: 12px; color: #64748b; font-weight: 400; margin-top: 1px;">${last_measure}</div>
+                </div>
+              </div>
+              <div style="background: #f1f5f9; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #64748b;">
+                ⚙️
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION BASSE DEGRADÉ (Eau, Jauges) -->
+          <div style="background: linear-gradient(170deg, #10b981 0%, #0284c7 40%, #1e3a8a 100%); border-top-left-radius: 34px; border-top-right-radius: 34px; padding: 24px 20px 16px 20px; color: white; display: flex; flex-direction: column; gap: 20px;">
+            
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: baseline; gap: 10px;">
+                <span style="font-size: 22px; font-weight: 400; opacity: 0.9;">eau</span>
+                <span style="font-size: 52px; font-weight: 700; letter-spacing: -1.5px;">${water_temp}°C</span>
+              </div>
+              <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid rgba(255,255,255,0.3);">
+                🔗
+              </div>
+            </div>
+
+            <!-- Jauges -->
+            <div style="display: flex; justify-content: space-around; align-items: flex-end; margin-bottom: 10px;">
+              
+              <!-- JAUGE pH -->
+              <div style="text-align: center; flex: 1;">
+                <div style="position: relative; width: 120px; height: 120px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                  <svg width="120" height="120" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
+                    <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" />
+                    <!-- Arc de progression -->
+                    <circle cx="50" cy="50" r="42" stroke="#ffffff" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="180" stroke-linecap="round" fill="none" />
+                  </svg>
+                  <!-- Cercle blanc à la fin de l'arc (approx) -->
+                  <div style="position: absolute; top: 12px; left: 24px; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
+                  
+                  <div style="position: absolute; font-size: 32px; font-weight: 600;">${ph_val}</div>
+                </div>
+                <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">pH</div>
+                <div style="display: inline-block; margin-top: 10px; padding: 6px 20px; border: 1.5px solid white; border-radius: 20px; font-size: 13px; font-weight: 600; background: transparent;">
+                  👍 ${ph_status}
+                </div>
+              </div>
+
+              <!-- JAUGE CHLORE (Speedometer officiel Flipr) -->
+              <div style="text-align: center; flex: 1;">
+                <div style="position: relative; width: 120px; height: 120px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                  <svg width="120" height="120" viewBox="0 0 100 100">
+                    <!-- Arc clair (zone parfaite) -->
+                    <path d="M 75 25 A 38 38 0 0 1 85 70" stroke="rgba(255,255,255,0.4)" stroke-width="12" fill="none" stroke-linecap="round" />
+                    <!-- Petites graduations -->
+                    <path d="M 85 45 L 90 45 M 82 55 L 87 57 M 78 65 L 82 68 M 82 35 L 87 33 M 78 25 L 82 22" stroke="white" stroke-width="1.5" stroke-linecap="round" />
+                    <!-- Aiguille (Tiret épais foncé) orientée selon la valeur. 
+                         Pour l'instant statique (horizontale). -->
+                    <line x1="20" y1="50" x2="65" y2="52" stroke="#1e293b" stroke-width="7" stroke-linecap="round" transform="rotate(-5, 40, 50)" />
+                  </svg>
+                </div>
+                <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">Chlore</div>
+                <div style="display: inline-block; margin-top: 10px; padding: 6px 20px; border: 1.5px solid white; border-radius: 20px; font-size: 13px; font-weight: 600; background: transparent;">
+                  👍 ${cl_status}
+                </div>
+              </div>
+
+            </div>
+
+            <!-- BANNIERES BOTTOM -->
+            <div style="background: rgba(0,0,0,0.3); color: white; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; margin-top: 10px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="border: 2px solid white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">!</span> 
+                Mesure ancienne
+              </div>
+              <div style="text-decoration: underline; opacity: 0.9;">En savoir plus</div>
+            </div>
+
+            <!-- PIED DE PAGE -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 10px 0 10px; font-size: 11px; font-weight: 500;">
+              <div style="text-align: center;">
+                <div style="font-size: 20px; margin-bottom: 2px; opacity: 0.9;">〰️</div>
+                <div style="opacity: 0.9;">Menu</div>
+              </div>
+              <div style="text-align: center; border: 1.5px solid white; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                🦈
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 20px; margin-bottom: 2px; opacity: 0.9;">🪣</div>
+                <div style="opacity: 0.9;">Flipr Store</div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      `;
+    ]]]
