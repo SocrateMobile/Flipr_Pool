@@ -70,7 +70,212 @@
   "entity": {
     "sensor": {
       "version": {
-        "name": "Integration Version"
+        "name": "Integrationsversion"
+      },
+      "temperature": {
+        "name": "Wassertemperatur"
+      },
+      "ph": {
+        "name": "pH"
+      },
+      "redox": {
+        "name": "Redox-Potential"
+      },
+      "chlorine": {
+        "name": "Desinfektionsmittel (Chlor)"
+      },
+      "conductivity": {
+        "name": "Leitfähigkeit"
+      },
+      "water_state": {
+        "name": "Wasserzustand"
+      },
+      "last_update": {
+        "name": "Letzte Messung"
+      },
+      "air_temp": {
+        "name": "Lufttemperatur"
+      },
+      "air_temp_next_hour": {
+        "name": "Lufttemperatur (+1h)"
+      },
+      "uv_index": {
+        "name": "UV-Index"
+      },
+      "cloud_cover": {
+        "name": "Bewölkung"
+      },
+      "weather_icon": {
+        "name": "Aktuelles Wetter"
+      },
+      "wind_speed": {
+        "name": "Windgeschwindigkeit"
+      },
+      "rain_probability": {
+        "name": "Regenwahrscheinlichkeit"
+      },
+      "air_temp_max_today": {
+        "name": "Max. Lufttemperatur (Heute)"
+      },
+      "air_temp_min_today": {
+        "name": "Min. Lufttemperatur (Heute)"
+      },
+      "water_temp_forecast_1h": {
+        "name": "Wassertemperatur-Prognose (+1h)"
+      },
+      "water_temp_forecast_tomorrow": {
+        "name": "Wassertemperatur-Prognose (Morgen)"
+      },
+      "ph_avg_yesterday": {
+        "name": "Durchschnitts-pH (Kürzlich)"
+      },
+      "redox_avg_yesterday": {
+        "name": "Durchschnitts-Redox (Kürzlich)"
+      },
+      "water_temp_avg_yesterday": {
+        "name": "Durchschnitts-Wassertemp (Kürzlich)"
+      },
+      "lsi": {
+        "name": "LSI-Index"
+      },
+      "lsi_status": {
+        "name": "Wasserstatus (LSI)"
+      },
+      "ph_equilibre": {
+        "name": "Gleichgewichts-pH"
+      },
+      "free_chlorine": {
+        "name": "Geschätztes freies Chlor"
+      },
+      "active_chlorine": {
+        "name": "Aktives Chlor (HOCl)"
+      },
+      "dose_ph_minus": {
+        "name": "pH- Dosis"
+      },
+      "dose_ph_plus": {
+        "name": "pH+ Dosis"
+      },
+      "dose_tac_plus": {
+        "name": "TAC+ Dosis (Bicarbonat)"
+      },
+      "dose_cl_maint": {
+        "name": "Chlordosis (Wartung)"
+      },
+      "dose_cl_shock": {
+        "name": "Chlordosis (Schock)"
+      },
+      "pump_hours": {
+        "name": "Filterdauer"
+      },
+      "conseil_filtration": {
+        "name": "Filterempfehlung"
+      },
+      "pool_volume": {
+        "name": "Poolvolumen"
+      },
+      "battery": {
+        "name": "Batteriestand"
+      },
+      "commercial_type": {
+        "name": "Flipr-Modell"
+      },
+      "firmware_version": {
+        "name": "Firmware-Version"
+      },
+      "last_alert": {
+        "name": "Letzte Warnung"
+      },
+      "data_source": {
+        "name": "Datenquelle"
+      },
+      "ble_rssi": {
+        "name": "BLE-Signal"
+      },
+      "ble_status": {
+        "name": "BLE-Status"
+      }
+    },
+    "binary_sensor": {
+      "ph_status": {
+        "name": "pH-Status"
+      },
+      "chlorine_status": {
+        "name": "Chlor-Status"
+      },
+      "need_calib": {
+        "name": "Sondenkalibrierung erforderlich"
+      },
+      "subscription_valid": {
+        "name": "Flipr-Abonnement"
+      }
+    },
+    "switch": {
+      "pump_filtration": {
+        "name": "Filterpumpe"
+      },
+      "ble_scan": {
+        "name": "BLE-Scanner"
+      }
+    },
+    "button": {
+      "force_refresh": {
+        "name": "Cloud-Aktualisierung erzwingen"
+      }
+    },
+    "select": {
+      "mode_filtration": {
+        "name": "Filtermodus",
+        "state": {
+          "auto": "Auto",
+          "manual": "Manuell",
+          "off": "Aus",
+          "planning": "Zeitplan"
+        }
+      }
+    },
+    "number": {
+      "target_ph": {
+        "name": "Ziel-pH"
+      },
+      "target_ph_min": {
+        "name": "Min-pH"
+      },
+      "target_ph_max": {
+        "name": "Max-pH"
+      },
+      "target_chlorine": {
+        "name": "Ziel-Chlor"
+      },
+      "target_chlorine_min": {
+        "name": "Min-Chlor"
+      },
+      "target_chlorine_max": {
+        "name": "Max-Chlor"
+      },
+      "pool_length": {
+        "name": "Poollänge"
+      },
+      "pool_width": {
+        "name": "Poolbreite"
+      },
+      "pool_depth": {
+        "name": "Durchschnittstiefe"
+      },
+      "pool_volume": {
+        "name": "Volumen"
+      },
+      "param_tac": {
+        "name": "Alkalinität (TAC)"
+      },
+      "param_th": {
+        "name": "Härte (TH)"
+      },
+      "param_cya": {
+        "name": "Stabilisator (CYA)"
+      },
+      "param_tds": {
+        "name": "Gelöste Stoffe (TDS)"
       }
     }
   }

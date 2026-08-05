@@ -64,19 +64,16 @@
   "entity": {
     "sensor": {
       "temperature": {
-        "name": "Water temperature"
+        "name": "Water Temperature"
       },
       "ph": {
         "name": "pH"
       },
-      "ph_status": {
-        "name": "pH Status"
-      },
       "redox": {
-        "name": "Redox"
+        "name": "Redox Potential"
       },
       "battery": {
-        "name": "Battery"
+        "name": "Battery Level"
       },
       "conductivity": {
         "name": "Conductivity"
@@ -85,22 +82,19 @@
         "name": "UV Index"
       },
       "air_temp": {
-        "name": "Air temperature"
+        "name": "Air Temperature"
       },
       "water_state": {
-        "name": "Water state"
+        "name": "Water State"
       },
       "chlorine": {
-        "name": "Chlorine"
-      },
-      "chlorine_status": {
-        "name": "Chlorine Status"
+        "name": "Disinfectant (Chlorine)"
       },
       "last_update": {
-        "name": "Last measurement"
+        "name": "Last Measurement"
       },
       "pool_volume": {
-        "name": "Pool volume"
+        "name": "Pool Volume"
       },
       "dose_ph_minus": {
         "name": "pH- Dose"
@@ -139,7 +133,7 @@
         "name": "Active Chlorine (HOCl)"
       },
       "data_source": {
-        "name": "Active Source"
+        "name": "Data Source"
       },
       "ble_rssi": {
         "name": "BLE Signal"
@@ -149,6 +143,51 @@
       },
       "version": {
         "name": "Integration Version"
+      },
+      "air_temp_next_hour": {
+        "name": "Air Temperature (+1h)"
+      },
+      "cloud_cover": {
+        "name": "Cloud Cover"
+      },
+      "weather_icon": {
+        "name": "Current Weather"
+      },
+      "wind_speed": {
+        "name": "Wind Speed"
+      },
+      "rain_probability": {
+        "name": "Rain Probability"
+      },
+      "air_temp_max_today": {
+        "name": "Max Air Temp (Today)"
+      },
+      "air_temp_min_today": {
+        "name": "Min Air Temp (Today)"
+      },
+      "water_temp_forecast_1h": {
+        "name": "Forecast Water Temp (+1h)"
+      },
+      "water_temp_forecast_tomorrow": {
+        "name": "Forecast Water Temp (Tomorrow)"
+      },
+      "ph_avg_yesterday": {
+        "name": "Avg pH (Recent)"
+      },
+      "redox_avg_yesterday": {
+        "name": "Avg Redox (Recent)"
+      },
+      "water_temp_avg_yesterday": {
+        "name": "Avg Water Temp (Recent)"
+      },
+      "dose_tac_plus": {
+        "name": "TAC+ Dose (Bicarbonate)"
+      },
+      "commercial_type": {
+        "name": "Flipr Model"
+      },
+      "firmware_version": {
+        "name": "Firmware Version"
       }
     },
     "switch": {
@@ -177,16 +216,16 @@
     },
     "number": {
       "target_ph_min": {
-        "name": "Target pH (Min)"
+        "name": "Min pH"
       },
       "target_ph_max": {
-        "name": "Target pH (Max)"
+        "name": "Max pH"
       },
       "target_chlorine_min": {
-        "name": "Target Chlorine (Min)"
+        "name": "Min Chlorine"
       },
       "target_chlorine_max": {
-        "name": "Target Chlorine (Max)"
+        "name": "Max Chlorine"
       },
       "pool_length": {
         "name": "Pool Length"
@@ -211,6 +250,26 @@
       },
       "param_tds": {
         "name": "Total Dissolved Solids (TDS)"
+      },
+      "target_ph": {
+        "name": "Target pH"
+      },
+      "target_chlorine": {
+        "name": "Target Chlorine"
+      }
+    },
+    "binary_sensor": {
+      "ph_status": {
+        "name": "pH Status"
+      },
+      "chlorine_status": {
+        "name": "Chlorine Status"
+      },
+      "need_calib": {
+        "name": "Probe Calibration Required"
+      },
+      "subscription_valid": {
+        "name": "Flipr Subscription"
       }
     }
   },

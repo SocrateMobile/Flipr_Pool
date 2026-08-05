@@ -69,14 +69,11 @@
       "ph": {
         "name": "pH"
       },
-      "ph_status": {
-        "name": "Estado del pH"
-      },
       "redox": {
-        "name": "Redox"
+        "name": "Potencial Redox"
       },
       "battery": {
-        "name": "Batería"
+        "name": "Nivel de batería"
       },
       "conductivity": {
         "name": "Conductividad"
@@ -91,10 +88,7 @@
         "name": "Estado del agua"
       },
       "chlorine": {
-        "name": "Cloro"
-      },
-      "chlorine_status": {
-        "name": "Estado del cloro"
+        "name": "Desinfectante (Cloro)"
       },
       "last_update": {
         "name": "Última medición"
@@ -115,19 +109,19 @@
         "name": "Dosis Cloro (Choque)"
       },
       "pump_hours": {
-        "name": "Duración de Filtración"
+        "name": "Duración de filtración"
       },
       "conseil_filtration": {
-        "name": "Consejo de Filtración"
+        "name": "Consejo de filtración"
       },
       "last_alert": {
-        "name": "Última Alerta"
+        "name": "Última alerta"
       },
       "lsi": {
         "name": "Índice LSI"
       },
       "lsi_status": {
-        "name": "Estado del Agua (LSI)"
+        "name": "Estado del agua (LSI)"
       },
       "ph_equilibre": {
         "name": "pH de Equilibrio"
@@ -139,7 +133,7 @@
         "name": "Cloro Activo (HOCl)"
       },
       "data_source": {
-        "name": "Fuente Activa"
+        "name": "Fuente de datos"
       },
       "ble_rssi": {
         "name": "Señal BLE"
@@ -148,12 +142,57 @@
         "name": "Estado BLE"
       },
       "version": {
-        "name": "Integration Version"
+        "name": "Versión de la integración"
+      },
+      "air_temp_next_hour": {
+        "name": "Temperatura del aire (+1h)"
+      },
+      "cloud_cover": {
+        "name": "Cobertura de nubes"
+      },
+      "weather_icon": {
+        "name": "Clima actual"
+      },
+      "wind_speed": {
+        "name": "Velocidad del viento"
+      },
+      "rain_probability": {
+        "name": "Probabilidad de lluvia"
+      },
+      "air_temp_max_today": {
+        "name": "Temp máx del aire (Hoy)"
+      },
+      "air_temp_min_today": {
+        "name": "Temp mín del aire (Hoy)"
+      },
+      "water_temp_forecast_1h": {
+        "name": "Temp agua prevista (+1h)"
+      },
+      "water_temp_forecast_tomorrow": {
+        "name": "Temp agua prevista (Mañana)"
+      },
+      "ph_avg_yesterday": {
+        "name": "pH medio (Reciente)"
+      },
+      "redox_avg_yesterday": {
+        "name": "Redox medio (Reciente)"
+      },
+      "water_temp_avg_yesterday": {
+        "name": "Temp agua media (Reciente)"
+      },
+      "dose_tac_plus": {
+        "name": "Dosis TAC+ (Bicarbonato)"
+      },
+      "commercial_type": {
+        "name": "Modelo Flipr"
+      },
+      "firmware_version": {
+        "name": "Versión de Firmware"
       }
     },
     "switch": {
       "pump_filtration": {
-        "name": "Bomba de Filtración"
+        "name": "Bomba de filtración"
       },
       "ble_scan": {
         "name": "Escáner BLE"
@@ -161,12 +200,12 @@
     },
     "button": {
       "force_refresh": {
-        "name": "Forzar Actualización Nube"
+        "name": "Forzar actualización Cloud"
       }
     },
     "select": {
       "mode_filtration": {
-        "name": "Modo de Filtración",
+        "name": "Modo de filtración",
         "state": {
           "auto": "Auto",
           "manual": "Manual",
@@ -183,10 +222,10 @@
         "name": "Cloro Objetivo"
       },
       "pool_length": {
-        "name": "Largo de la piscina"
+        "name": "Longitud piscina"
       },
       "pool_width": {
-        "name": "Ancho de la piscina"
+        "name": "Anchura piscina"
       },
       "pool_depth": {
         "name": "Profundidad media"
@@ -201,10 +240,36 @@
         "name": "Dureza (TH)"
       },
       "param_cya": {
-        "name": "Ácido Cianúrico (CYA)"
+        "name": "Estabilizante (CYA)"
       },
       "param_tds": {
         "name": "Sólidos Disueltos (TDS)"
+      },
+      "target_ph_min": {
+        "name": "pH Mín"
+      },
+      "target_ph_max": {
+        "name": "pH Máx"
+      },
+      "target_chlorine_min": {
+        "name": "Cloro Mín"
+      },
+      "target_chlorine_max": {
+        "name": "Cloro Máx"
+      }
+    },
+    "binary_sensor": {
+      "ph_status": {
+        "name": "Estado del pH"
+      },
+      "chlorine_status": {
+        "name": "Estado del cloro"
+      },
+      "need_calib": {
+        "name": "Calibración de sondas requerida"
+      },
+      "subscription_valid": {
+        "name": "Suscripción Flipr"
       }
     }
   },

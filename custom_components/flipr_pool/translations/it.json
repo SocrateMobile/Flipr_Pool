@@ -64,19 +64,16 @@
   "entity": {
     "sensor": {
       "temperature": {
-        "name": "Temperatura dell'acqua"
+        "name": "Temperatura acqua"
       },
       "ph": {
         "name": "pH"
       },
-      "ph_status": {
-        "name": "Stato pH"
-      },
       "redox": {
-        "name": "Redox"
+        "name": "Potenziale Redox"
       },
       "battery": {
-        "name": "Batteria"
+        "name": "Livello batteria"
       },
       "conductivity": {
         "name": "Conduttività"
@@ -85,28 +82,25 @@
         "name": "Indice UV"
       },
       "air_temp": {
-        "name": "Temperatura dell'aria"
+        "name": "Temperatura aria"
       },
       "water_state": {
-        "name": "Stato dell'acqua"
+        "name": "Stato acqua"
       },
       "chlorine": {
-        "name": "Cloro"
-      },
-      "chlorine_status": {
-        "name": "Stato Cloro"
+        "name": "Disinfettante (Cloro)"
       },
       "last_update": {
         "name": "Ultima misurazione"
       },
       "pool_volume": {
-        "name": "Volume della piscina"
+        "name": "Volume piscina"
       },
       "dose_ph_minus": {
         "name": "Dose pH-"
       },
       "dose_ph_plus": {
-        "name": "Dose pH+"
+        "name": "Dosis pH+"
       },
       "dose_cl_maint": {
         "name": "Dose Cloro (Mantenimento)"
@@ -115,31 +109,31 @@
         "name": "Dose Cloro (Shock)"
       },
       "pump_hours": {
-        "name": "Durata Filtrazione"
+        "name": "Durata filtrazione"
       },
       "conseil_filtration": {
-        "name": "Consiglio di Filtrazione"
+        "name": "Consiglio filtrazione"
       },
       "last_alert": {
-        "name": "Ultimo Avviso"
+        "name": "Ultimo allarme"
       },
       "lsi": {
         "name": "Indice LSI"
       },
       "lsi_status": {
-        "name": "Stato dell'Acqua (LSI)"
+        "name": "Stato acqua (LSI)"
       },
       "ph_equilibre": {
         "name": "pH di Equilibrio"
       },
       "free_chlorine": {
-        "name": "Cloro Libero Est."
+        "name": "Cloro Libero Stimato"
       },
       "active_chlorine": {
         "name": "Cloro Attivo (HOCl)"
       },
       "data_source": {
-        "name": "Fonte Attiva"
+        "name": "Sorgente dati"
       },
       "ble_rssi": {
         "name": "Segnale BLE"
@@ -148,12 +142,57 @@
         "name": "Stato BLE"
       },
       "version": {
-        "name": "Integration Version"
+        "name": "Versione integrazione"
+      },
+      "air_temp_next_hour": {
+        "name": "Temperatura aria (+1h)"
+      },
+      "cloud_cover": {
+        "name": "Copertura nuvolosa"
+      },
+      "weather_icon": {
+        "name": "Meteo attuale"
+      },
+      "wind_speed": {
+        "name": "Velocità del vento"
+      },
+      "rain_probability": {
+        "name": "Probabilità di pioggia"
+      },
+      "air_temp_max_today": {
+        "name": "Temp max aria (Oggi)"
+      },
+      "air_temp_min_today": {
+        "name": "Temp min aria (Oggi)"
+      },
+      "water_temp_forecast_1h": {
+        "name": "Temp acqua prevista (+1h)"
+      },
+      "water_temp_forecast_tomorrow": {
+        "name": "Temp acqua prevista (Domani)"
+      },
+      "ph_avg_yesterday": {
+        "name": "pH medio (Recente)"
+      },
+      "redox_avg_yesterday": {
+        "name": "Redox medio (Recente)"
+      },
+      "water_temp_avg_yesterday": {
+        "name": "Temp acqua media (Recente)"
+      },
+      "dose_tac_plus": {
+        "name": "Dose TAC+ (Bicarbonato)"
+      },
+      "commercial_type": {
+        "name": "Modello Flipr"
+      },
+      "firmware_version": {
+        "name": "Versione Firmware"
       }
     },
     "switch": {
       "pump_filtration": {
-        "name": "Pompa di Filtrazione"
+        "name": "Pompa filtrazione"
       },
       "ble_scan": {
         "name": "Scanner BLE"
@@ -161,12 +200,12 @@
     },
     "button": {
       "force_refresh": {
-        "name": "Forza Aggiornamento Cloud"
+        "name": "Forza aggiornamento Cloud"
       }
     },
     "select": {
       "mode_filtration": {
-        "name": "Modalità Filtrazione",
+        "name": "Modalità filtrazione",
         "state": {
           "auto": "Auto",
           "manual": "Manuale",
@@ -183,10 +222,10 @@
         "name": "Cloro Obiettivo"
       },
       "pool_length": {
-        "name": "Lunghezza della piscina"
+        "name": "Lunghezza piscina"
       },
       "pool_width": {
-        "name": "Larghezza della piscina"
+        "name": "Larghezza piscina"
       },
       "pool_depth": {
         "name": "Profondità media"
@@ -201,10 +240,36 @@
         "name": "Durezza (TH)"
       },
       "param_cya": {
-        "name": "Acido Cianurico (CYA)"
+        "name": "Stabilizzante (CYA)"
       },
       "param_tds": {
-        "name": "Solidi Disciolti Totali (TDS)"
+        "name": "Solidi Dissolti (TDS)"
+      },
+      "target_ph_min": {
+        "name": "pH Min"
+      },
+      "target_ph_max": {
+        "name": "pH Max"
+      },
+      "target_chlorine_min": {
+        "name": "Cloro Min"
+      },
+      "target_chlorine_max": {
+        "name": "Cloro Max"
+      }
+    },
+    "binary_sensor": {
+      "ph_status": {
+        "name": "Stato pH"
+      },
+      "chlorine_status": {
+        "name": "Stato cloro"
+      },
+      "need_calib": {
+        "name": "Calibrazione sonde richiesta"
+      },
+      "subscription_valid": {
+        "name": "Abbonamento Flipr"
       }
     }
   },

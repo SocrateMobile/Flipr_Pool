@@ -265,7 +265,7 @@
     },
     "button": {
       "force_refresh": {
-        "name": "Forcer Actualisation Cloud"
+        "name": "Forcer rafraîchissement Cloud"
       }
     },
     "select": {
@@ -281,28 +281,28 @@
     },
     "number": {
       "target_ph_min": {
-        "name": "Cible pH (Min)"
+        "name": "pH Min"
       },
       "target_ph_max": {
-        "name": "Cible pH (Max)"
+        "name": "pH Max"
       },
       "target_chlorine_min": {
-        "name": "Cible Chlore (Min)"
+        "name": "Chlore Min"
       },
       "target_chlorine_max": {
-        "name": "Cible Chlore (Max)"
+        "name": "Chlore Max"
       },
       "pool_length": {
-        "name": "Longueur du bassin"
+        "name": "Longueur Piscine"
       },
       "pool_width": {
-        "name": "Largeur du bassin"
+        "name": "Largeur Piscine"
       },
       "pool_depth": {
-        "name": "Profondeur moyenne"
+        "name": "Profondeur Moyenne"
       },
       "pool_volume": {
-        "name": "Volume"
+        "name": "Volume Piscine"
       },
       "param_tac": {
         "name": "Alcalinité (TAC)"
@@ -311,18 +311,16 @@
         "name": "Dureté (TH)"
       },
       "param_cya": {
-        "name": "Acide Cyanurique (CYA)"
+        "name": "Stabilisant (CYA)"
       },
       "param_tds": {
-        "name": "Solides Dissous Totaux (TDS)"
-      }
-    },
-    "binary_sensor": {
-      "ph_status": {
-        "name": "Statut pH"
+        "name": "Solides Dissous (TDS)"
       },
-      "chlorine_status": {
-        "name": "Statut Chlore"
+      "target_ph": {
+        "name": "pH Cible"
+      },
+      "target_chlorine": {
+        "name": "Chlore Cible"
       }
     }
   },
