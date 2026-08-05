@@ -130,9 +130,9 @@ custom_fields:
           <div style="background: linear-gradient(170deg, #10b981 0%, #0284c7 40%, #1e3a8a 100%); border-top-left-radius: 34px; border-top-right-radius: 34px; padding: 24px 20px 16px 20px; color: white; display: flex; flex-direction: column; gap: 20px; flex-grow: 1; justify-content: space-between;">
             
             <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div style="display: flex; align-items: baseline; gap: 10px;">
-                <span style="font-size: 22px; font-weight: 400; opacity: 0.9;">eau</span>
-                <span style="font-size: 52px; font-weight: 700; letter-spacing: -1.5px;">${water_temp}°C</span>
+              <div style="display: flex; align-items: baseline; gap: 8px;">
+                <span style="font-size: 18px; font-weight: 400; opacity: 0.9;">eau</span>
+                <span style="font-size: 42px; font-weight: 700; letter-spacing: -1px;">${water_temp}°C</span>
               </div>
               <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid rgba(255,255,255,0.3);">
                 🔗
@@ -144,37 +144,37 @@ custom_fields:
               
               <!-- JAUGE pH -->
               <div style="text-align: center; flex: 1;">
-                <div style="position: relative; width: 120px; height: 120px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                  <svg width="120" height="120" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
+                <div style="position: relative; width: 100px; height: 100px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                  <svg width="100" height="100" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
                     <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" />
                     <!-- Arc de progression -->
                     <circle cx="50" cy="50" r="42" stroke="#ffffff" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="180" stroke-linecap="round" fill="none" />
                   </svg>
                   <!-- Cercle blanc à la fin de l'arc (approx) -->
-                  <div style="position: absolute; top: 12px; left: 24px; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
+                  <div style="position: absolute; top: 10px; left: 20px; width: 12px; height: 12px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
                   
-                  <div style="position: absolute; font-size: 32px; font-weight: 600;">${ph_val}</div>
+                  <div style="position: absolute; font-size: 26px; font-weight: 600;">${ph_val}</div>
                 </div>
                 <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">pH</div>
-                <div style="display: inline-block; margin-top: 10px; padding: 6px 20px; border: 1.5px solid white; border-radius: 20px; font-size: 13px; font-weight: 600; background: transparent;">
+                <div style="display: inline-block; margin-top: 10px; padding: 6px 16px; border: 1.5px solid white; border-radius: 20px; font-size: 12px; font-weight: 600; background: transparent; white-space: nowrap;">
                   👍 ${ph_status}
                 </div>
               </div>
 
               <!-- JAUGE CHLORE -->
               <div style="text-align: center; flex: 1;">
-                <div style="position: relative; width: 120px; height: 120px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                  <svg width="120" height="120" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
+                <div style="position: relative; width: 100px; height: 100px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                  <svg width="100" height="100" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
                     <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" />
                     <!-- Arc de progression -->
                     <circle cx="50" cy="50" r="42" stroke="#ffffff" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="180" stroke-linecap="round" fill="none" />
                   </svg>
-                  <div style="position: absolute; top: 12px; left: 24px; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
+                  <div style="position: absolute; top: 10px; left: 20px; width: 12px; height: 12px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
                   
-                  <div style="position: absolute; font-size: 28px; font-weight: 600;">${redox_val}</div>
+                  <div style="position: absolute; font-size: 22px; font-weight: 600;">${redox_val}</div>
                 </div>
                 <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">Chlore</div>
-                <div style="display: inline-block; margin-top: 10px; padding: 6px 20px; border: 1.5px solid white; border-radius: 20px; font-size: 13px; font-weight: 600; background: transparent;">
+                <div style="display: inline-block; margin-top: 10px; padding: 6px 16px; border: 1.5px solid white; border-radius: 20px; font-size: 12px; font-weight: 600; background: transparent; white-space: nowrap;">
                   👍 ${cl_status}
                 </div>
               </div>
