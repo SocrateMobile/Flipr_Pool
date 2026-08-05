@@ -1,18 +1,27 @@
-# Flipr Pool Control pour Home Assistant (v5.3.0)
+# Flipr Pool Control pour Home Assistant (v5.4.0)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.3.0-blue)
+![Version](https://img.shields.io/badge/version-5.4.0-blue)
 
 Intégration universelle et complète pour Home Assistant dédiée aux analyseurs de piscine et spas **Flipr** (AnalysR, Start, Start Max) et aux boîtiers de contrôle de pompe **Flipr Hub / Control**.
 
 Elle combine les données du **Cloud GoFlipr** et du **Bluetooth Low Energy (BLE) local** avec fusion automatique en temps réel, calculs chimiques avancés (LSI, HOCl, Doses pH/Chlore/TAC) et gestion intelligente du Hub.
 
-Et... dans le répertoire "exemple" vous avez une card Flipr Like pour Home Assistant, qui reprend le look de l'application officielle, pour afficher vos données en live.
+---
+
+## 🎨 Cartes de Dashboard Lovelace (Dossier `examples`)
+
+Dans le répertoire `examples/` de cette intégration, vous trouverez des exemples prêts à l'emploi pour recréer l'interface de l'application officielle Flipr directement dans votre Dashboard Home Assistant !
+
+- **`flipr_official_app_analyse.yaml`** : Une carte détaillée type jauge affichant vos couleurs cibles pour le pH et le Chlore, les températures et des conseils d'entretien dynamiques.
+- **`flipr_official_app_controle.yaml`** : Une carte reprenant le même design mais axée sur le pilotage manuel de la pompe via le Flipr Hub.
+
+**Note :** Le code de ces cartes utilise `custom:button-card`. Pour l'utiliser, il vous suffit de copier/coller le code YAML dans votre tableau de bord. La carte s'adaptera automatiquement au nom de votre entité Flipr (grâce à un préfixe dynamique).
 
 ---
 
-## ✨ Les 6 Catégories d'Entités (v5.3.0)
+## ✨ Les 6 Catégories d'Entités (v5.4.0)
 
 Toutes les entités créées dans Home Assistant sont automatiquement organisées et rangées selon 6 thématiques claires :
 
@@ -72,7 +81,7 @@ Toutes les entités créées dans Home Assistant sont automatiquement organisée
 - 🚨 **Dernière Alerte**
 - 🔀 **Source des données** (*Cloud API* ou *Bluetooth BLE*)
 - 📡 **Signal BLE & Statut BLE** (RSSI en dBm)
-- ℹ️ **Version de l'intégration** (`5.3.0`)
+- ℹ️ **Version de l'intégration** (`5.4.0`)
 
 ---
 
@@ -112,6 +121,10 @@ Un service personnalisé est disponible dans Home Assistant sous **Outils de dé
 ---
 
 ## 📜 Historique des Versions (Changelog)
+
+### v5.4.0
+- 🛡️ **Fix Rate-limit (429)** : Ajout d'une pause dynamique dans l'outil de diagnostic du Hub (`dump_hub_debug`) pour éviter les blocages API Flipr.
+- 🎨 **Cartes Lovelace** : Intégration de cartes Dashboard premium (type application officielle) avec adaptation automatique au nom de l'entité et couleurs de cibles. Documentation et fichiers disponibles dans `examples/`.
 
 ### v5.3.0
 - 🎯 **Auto-détection du Hub** via `ModuleType_Id = 3` (Flipr Control / Hub).

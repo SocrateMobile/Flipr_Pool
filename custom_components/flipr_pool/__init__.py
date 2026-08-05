@@ -10,6 +10,7 @@ import logging
 from datetime import timedelta, datetime, timezone
 import async_timeout
 import aiohttp
+import asyncio
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
@@ -886,6 +887,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     hub_res[ep_name] = r
                 except Exception as e:
                     hub_res[ep_name] = {"error": str(e)}
+                
+                # Pause pour éviter de déclencher l'erreur "429 Rate Limit" de Flipr
+                await asyncio.sleep(3)
+                
             debug_info["hub_endpoints"][hid] = hub_res
 
         out_path = hass.config.path("flipr_hub_debug.json")
