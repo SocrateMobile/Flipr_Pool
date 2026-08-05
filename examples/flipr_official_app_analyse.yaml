@@ -50,6 +50,7 @@ custom_fields:
       const cl_maint = parseFloat(states['sensor.flipr_dose_cl_maint'] ? states['sensor.flipr_dose_cl_maint'].state : '0') || 0;
 
       // Calcul des positions pour le curseur (Knob)
+      // pH: min 6.4, max 8.0, optimal 7.1-7.4
       const ph_num = parseFloat(ph_val) || 7.2;
       let ph_pct = (ph_num - 6.4) / (8.0 - 6.4);
       ph_pct = Math.max(0, Math.min(1, ph_pct));
@@ -57,8 +58,9 @@ custom_fields:
       const ph_x = 50 + 42 * Math.cos(ph_angle);
       const ph_y = 50 + 42 * Math.sin(ph_angle);
 
-      const rx_num = parseFloat(redox_val) || 650;
-      let rx_pct = (rx_num - 400) / (900 - 400);
+      // Redox: min 465, max 965, optimal 650-780 (centré sur 715)
+      const rx_num = parseFloat(redox_val) || 715;
+      let rx_pct = (rx_num - 465) / (965 - 465);
       rx_pct = Math.max(0, Math.min(1, rx_pct));
       const rx_angle = (135 + rx_pct * 270) * (Math.PI / 180);
       const rx_x = 50 + 42 * Math.cos(rx_angle);
@@ -217,13 +219,16 @@ custom_fields:
                 <div style="position: relative; width: 100px; height: 100px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
                   <svg width="100" height="100" viewBox="0 0 100 100">
                     <defs>
-                      <linearGradient id="gaugeGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-                        <stop offset="0%" stop-color="#ef4444" />
-                        <stop offset="40%" stop-color="#f59e0b" />
-                        <stop offset="80%" stop-color="#10b981" />
+                      <linearGradient id="phGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#10b981" />
+                        <stop offset="8%" stop-color="#10b981" />
+                        <stop offset="15%" stop-color="#eab308" />
+                        <stop offset="45%" stop-color="#eab308" />
+                        <stop offset="55%" stop-color="#ef4444" />
+                        <stop offset="100%" stop-color="#ef4444" />
                       </linearGradient>
                     </defs>
-                    <circle transform="rotate(135 50 50)" cx="50" cy="50" r="42" stroke="url(#gaugeGrad)" stroke-width="8" stroke-dasharray="198 264" stroke-linecap="round" fill="none" opacity="0.9" />
+                    <circle transform="rotate(135 50 50)" cx="50" cy="50" r="42" stroke="url(#phGrad)" stroke-width="8" stroke-dasharray="198 264" stroke-linecap="round" fill="none" opacity="0.9" />
                     <!-- Knob -->
                     <circle cx="${ph_x}" cy="${ph_y}" r="6" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="2" />
                   </svg>
@@ -240,7 +245,17 @@ custom_fields:
               <div style="text-align: center; flex: 1;">
                 <div style="position: relative; width: 100px; height: 100px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
                   <svg width="100" height="100" viewBox="0 0 100 100">
-                    <circle transform="rotate(135 50 50)" cx="50" cy="50" r="42" stroke="url(#gaugeGrad)" stroke-width="8" stroke-dasharray="198 264" stroke-linecap="round" fill="none" opacity="0.9" />
+                    <defs>
+                      <linearGradient id="rxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#10b981" />
+                        <stop offset="9%" stop-color="#10b981" />
+                        <stop offset="19%" stop-color="#eab308" />
+                        <stop offset="49%" stop-color="#eab308" />
+                        <stop offset="59%" stop-color="#ef4444" />
+                        <stop offset="100%" stop-color="#ef4444" />
+                      </linearGradient>
+                    </defs>
+                    <circle transform="rotate(135 50 50)" cx="50" cy="50" r="42" stroke="url(#rxGrad)" stroke-width="8" stroke-dasharray="198 264" stroke-linecap="round" fill="none" opacity="0.9" />
                     <!-- Knob -->
                     <circle cx="${rx_x}" cy="${rx_y}" r="6" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="2" />
                   </svg>
