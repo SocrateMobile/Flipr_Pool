@@ -1,20 +1,22 @@
-# Flipr Pool Control
+# Flipr Pool Control (v5.3.0)
 
-Cette intégration personnalisée pour Home Assistant vous permet de remonter l'ensemble des données de votre analyseur d'eau **Flipr**. 
+Cette intégration personnalisée pour Home Assistant vous permet de remonter l'ensemble des données de votre analyseur d'eau **Flipr** (AnalysR, Start, Start Max) et de piloter votre pompe via le **Flipr Hub / Control**.
 
-Elle est unique car elle propose **3 modes de fonctionnement** :
+ Elle propose **3 modes de fonctionnement** :
 1. **Cloud Exclusif** : Idéal si vous avez l'abonnement Premium ou un Flipr Hub (Wifi).
-2. **Hybride (Cloud + Bluetooth)** : Recommandé ! Récupère l'historique et les alertes via le Cloud, tout en scannant localement (BLE) le Flipr s'il est à portée de votre antenne Bluetooth, offrant des mises à jour gratuites et instantanées.
-3. **Bluetooth Exclusif (Déconseillé)** : Fonctionne de manière 100% locale sans Cloud (perte des algorithmes avancés de Flipr, de l'historique et du Hub).
+2. **Hybride (Cloud + Bluetooth)** : Recommandé ! Récupère l'historique, les prévisions météo et les alertes via le Cloud, tout en scannant localement (BLE) le Flipr s'il est à portée de votre antenne Bluetooth.
+3. **Bluetooth Exclusif** : Fonctionne de manière 100% locale sans Cloud (pour la prise de mesure directe sans abonnement).
 
-## Fonctionnalités
-- ✨ **Capteurs Principaux** : Température de l'eau, pH, Redox, Chlore.
-- 🧪 **Chimie Avancée** : Indice LSI (Équilibre de l'eau), Chlore Libre Estimé, Chlore Actif (HOCl), pH d'équilibre.
-- ⚙️ **Gestion du Hub** : Allumez ou éteignez la filtration (Marche Forcée), changez les modes (Auto, Planning, Manuel).
-- 💊 **Conseils de dosage** : Remonte les recommandations de dosage (pH-, pH+, Chlore Choc) directement dans HA.
-- 🔋 **Diagnostics** : Niveau de batterie, Indice UV, Température de l'air, Force du signal BLE (RSSI).
+## ✨ Fonctionnalités Principales (Organisées en 6 Thèmes)
 
-## Prérequis pour le Bluetooth
-Si vous souhaitez utiliser la fonctionnalité Bluetooth (Hybride ou Local) :
-- Vous devez avoir le composant Bluetooth natif de Home Assistant configuré (Dongle USB, ESP Bluetooth Proxy, etc.).
-- Votre Flipr doit être à portée de l'antenne Bluetooth.
+- 💧 **Mesures Instantanées** : Température de l'eau, pH, Redox, Chlore, Conductivité, État de l'eau, Statuts explicatifs pH/Chlore.
+- 🌤️ **Météo & Prévisions** : Température air actu/prévision, Indice UV, Pluie, Vent, Couverture nuageuse, Prévisions eau (+1h / demain).
+- 🧪 **Chimie Avancée & Dosages** : Indice LSI (Équilibre corrosif/entartrant), pH d'équilibre, Chlore actif HOCl, Calcul des doses pH-, pH+, TAC+ (Bicarbonate de Sodium), Chlore entretien & choc, Durée de filtration calculée.
+- 🔌 **Gestion de la Pompe (Hub)** : Allumez ou éteignez la filtration (Marche Forcée), changez les modes (Auto, Planning, Manuel) avec auto-détection du Hub.
+- ⚙️ **Diagnostics Matériels** : Niveau de batterie, Étalonnage des sondes requis, Abonnement Flipr valide, Statut réseau Sigfox, Compteur de redémarrages, Dernier contact Cloud, RSSI Bluetooth, Version.
+
+---
+
+## 🤝 Crédits
+
+Remerciements chaleureux à **@cnico** (créateur de l'intégration `flipr` initiale) et **@Adrien40** (créateur de l'intégration `flipr_local` BLE) pour leur travail fondateur qui sert d'inspiration à cette version unifiée **Flipr Pool Control**.
