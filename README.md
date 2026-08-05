@@ -8,6 +8,8 @@ Intégration universelle et complète pour Home Assistant dédiée aux analyseur
 
 Elle combine les données du **Cloud GoFlipr** et du **Bluetooth Low Energy (BLE) local** avec fusion automatique en temps réel, calculs chimiques avancés (LSI, HOCl, Doses pH/Chlore/TAC) et gestion intelligente du Hub.
 
+Et... dans le répertoire "exemple" vous avez une card Flipr Like pour Home Assistant, qui reprend le look de l'application officielle, pour afficher vos données en live.
+
 ---
 
 ## ✨ Les 6 Catégories d'Entités (v5.3.0)
