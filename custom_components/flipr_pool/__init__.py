@@ -843,12 +843,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             debug_info["place"] = places
         except Exception as e:
             debug_info["place_error"] = str(e)
+            
+        await asyncio.sleep(3)
 
         try:
             modules = await api_client._request("GET", MODULES_URL)
             debug_info["modules"] = modules
         except Exception as e:
             debug_info["modules_error"] = str(e)
+            
+        await asyncio.sleep(3)
 
         target_ids = set()
         if isinstance(debug_info.get("place"), list):
@@ -868,10 +872,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if flipr_id:
             target_ids.add(str(flipr_id))
 
-        debug_info["target_ids_tested"] = list(target_ids)
+        debug_info["target_ids_tested"] = sorted(list(target_ids), reverse=True)
         debug_info["hub_endpoints"] = {}
+        
+        out_path = hass.config.path("flipr_hub_debug.json")
+        def _write():
+            import json
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(debug_info, f, indent=2, ensure_ascii=False)
 
-        for hid in target_ids:
+        for hid in debug_info["target_ids_tested"]:
             hub_res = {}
             for ep_name, ep_url in [
                 ("state", f"{API_BASE_URL}/hub/{hid}/state"),
@@ -888,21 +898,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 except Exception as e:
                     hub_res[ep_name] = {"error": str(e)}
                 
-                # Pause pour éviter de déclencher l'erreur "429 Rate Limit" de Flipr
-                await asyncio.sleep(3)
+                # Écriture progressive pour ne rien perdre si ça plante
+                debug_info["hub_endpoints"][hid] = hub_res
+                await hass.async_add_executor_job(_write)
                 
-            debug_info["hub_endpoints"][hid] = hub_res
+                # Pause allongée pour éviter l'erreur 429
+                await asyncio.sleep(6)
 
-        out_path = hass.config.path("flipr_hub_debug.json")
-        try:
-            import json
-            def _write():
-                with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump(debug_info, f, indent=2, ensure_ascii=False)
-            await hass.async_add_executor_job(_write)
-            _LOGGER.info("Diagnostic Hub sauvegardé avec succès dans %s", out_path)
-        except Exception as e:
-            _LOGGER.error("Erreur sauvegarde hub debug: %s", e)
+        _LOGGER.info("Diagnostic Hub terminé. Sauvegardé dans %s", out_path)
 
     if not hass.services.has_service(DOMAIN, "force_cloud_sync"):
         hass.services.async_register(DOMAIN, "force_cloud_sync", handle_force_cloud_sync)
