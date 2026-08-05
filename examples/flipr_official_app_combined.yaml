@@ -51,6 +51,21 @@ cards:
           const cl_shock = parseFloat(states['sensor.flipr_dose_cl_shock'] ? states['sensor.flipr_dose_cl_shock'].state : '0') || 0;
           const cl_maint = parseFloat(states['sensor.flipr_dose_cl_maint'] ? states['sensor.flipr_dose_cl_maint'].state : '0') || 0;
     
+          // Calcul des positions pour le curseur (Knob)
+          const ph_num = parseFloat(ph_val) || 7.2;
+          let ph_pct = (ph_num - 6.4) / (8.0 - 6.4);
+          ph_pct = Math.max(0, Math.min(1, ph_pct));
+          const ph_angle = (135 + ph_pct * 270) * (Math.PI / 180);
+          const ph_x = 50 + 42 * Math.cos(ph_angle);
+          const ph_y = 50 + 42 * Math.sin(ph_angle);
+    
+          const rx_num = parseFloat(redox_val) || 650;
+          let rx_pct = (rx_num - 400) / (900 - 400);
+          rx_pct = Math.max(0, Math.min(1, rx_pct));
+          const rx_angle = (135 + rx_pct * 270) * (Math.PI / 180);
+          const rx_x = 50 + 42 * Math.cos(rx_angle);
+          const rx_y = 50 + 42 * Math.sin(rx_angle);
+    
           return `
             <div style="display: flex; flex-direction: column; width: 100%; height: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
               
@@ -202,13 +217,18 @@ cards:
                   <!-- JAUGE pH -->
                   <div style="text-align: center; flex: 1;">
                     <div style="position: relative; width: 100px; height: 100px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                      <svg width="100" height="100" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
-                        <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" />
-                        <!-- Arc de progression -->
-                        <circle cx="50" cy="50" r="42" stroke="#ffffff" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="180" stroke-linecap="round" fill="none" />
+                      <svg width="100" height="100" viewBox="0 0 100 100">
+                        <defs>
+                          <linearGradient id="gaugeGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                            <stop offset="0%" stop-color="#ef4444" />
+                            <stop offset="40%" stop-color="#f59e0b" />
+                            <stop offset="80%" stop-color="#10b981" />
+                          </linearGradient>
+                        </defs>
+                        <circle transform="rotate(135 50 50)" cx="50" cy="50" r="42" stroke="url(#gaugeGrad)" stroke-width="8" stroke-dasharray="198 264" stroke-linecap="round" fill="none" opacity="0.9" />
+                        <!-- Knob -->
+                        <circle cx="${ph_x}" cy="${ph_y}" r="6" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="2" />
                       </svg>
-                      <!-- Cercle blanc à la fin de l'arc (approx) -->
-                      <div style="position: absolute; top: 10px; left: 20px; width: 12px; height: 12px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
                       
                       <div style="position: absolute; font-size: 26px; font-weight: 600;">${ph_val}</div>
                     </div>
@@ -221,12 +241,11 @@ cards:
                   <!-- JAUGE CHLORE -->
                   <div style="text-align: center; flex: 1;">
                     <div style="position: relative; width: 100px; height: 100px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                      <svg width="100" height="100" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
-                        <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" />
-                        <!-- Arc de progression -->
-                        <circle cx="50" cy="50" r="42" stroke="#ffffff" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="180" stroke-linecap="round" fill="none" />
+                      <svg width="100" height="100" viewBox="0 0 100 100">
+                        <circle transform="rotate(135 50 50)" cx="50" cy="50" r="42" stroke="url(#gaugeGrad)" stroke-width="8" stroke-dasharray="198 264" stroke-linecap="round" fill="none" opacity="0.9" />
+                        <!-- Knob -->
+                        <circle cx="${rx_x}" cy="${rx_y}" r="6" fill="#ffffff" stroke="rgba(0,0,0,0.15)" stroke-width="2" />
                       </svg>
-                      <div style="position: absolute; top: 10px; left: 20px; width: 12px; height: 12px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
                       
                       <div style="position: absolute; font-size: 22px; font-weight: 600;">${redox_val}</div>
                     </div>
