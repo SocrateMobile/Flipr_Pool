@@ -159,17 +159,20 @@ custom_fields:
                 </div>
               </div>
 
-              <!-- JAUGE CHLORE (Speedometer officiel Flipr) -->
+              <!-- JAUGE CHLORE (Speedometer) -->
               <div style="text-align: center; flex: 1;">
                 <div style="position: relative; width: 120px; height: 120px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
                   <svg width="120" height="120" viewBox="0 0 100 100">
-                    <!-- Arc clair (zone parfaite) -->
-                    <path d="M 75 25 A 38 38 0 0 1 85 70" stroke="rgba(255,255,255,0.4)" stroke-width="12" fill="none" stroke-linecap="round" />
+                    <!-- Arc principal de fond -->
+                    <path d="M 15 75 A 35 35 0 0 1 85 75" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" stroke-linecap="round" />
+                    <!-- Zone "Parfait" (Arc blanc brillant au milieu) -->
+                    <path d="M 35 48 A 35 35 0 0 1 65 48" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round" />
                     <!-- Petites graduations -->
-                    <path d="M 85 45 L 90 45 M 82 55 L 87 57 M 78 65 L 82 68 M 82 35 L 87 33 M 78 25 L 82 22" stroke="white" stroke-width="1.5" stroke-linecap="round" />
-                    <!-- Aiguille (Tiret épais foncé) orientée selon la valeur. 
-                         Pour l'instant statique (horizontale). -->
-                    <line x1="20" y1="50" x2="65" y2="52" stroke="#1e293b" stroke-width="7" stroke-linecap="round" transform="rotate(-5, 40, 50)" />
+                    <path d="M 15 75 L 20 75 M 32 52 L 36 55 M 50 40 L 50 45 M 68 52 L 64 55 M 85 75 L 80 75" stroke="white" stroke-width="2" stroke-linecap="round" />
+                    <!-- Aiguille foncée -->
+                    <line x1="50" y1="75" x2="50" y2="40" stroke="#1e293b" stroke-width="6" stroke-linecap="round" transform="rotate(10, 50, 75)" />
+                    <!-- Base de l'aiguille -->
+                    <circle cx="50" cy="75" r="5" fill="#1e293b" />
                   </svg>
                 </div>
                 <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">Chlore</div>
