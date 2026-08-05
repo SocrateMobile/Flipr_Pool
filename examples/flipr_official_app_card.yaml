@@ -1,0 +1,188 @@
+# ==============================================================================
+# CARTE LOVELACE "FLIPR OFFICIAL APP UI" (v5.3.0)
+# ==============================================================================
+# Carte personnalisée pour Home Assistant imitant au pixel près l'interface
+# officielle de l'application mobile Flipr.
+#
+# Prérequis recommandés (installables via HACS Frontend) :
+#   - custom:button-card  (ou carte Markdown native)
+#   - custom:card-moder   (facultatif)
+# ==============================================================================
+
+type: custom:button-card
+aspect_ratio: 9/16
+styles:
+  card:
+    - padding: 0px
+    - border-radius: 28px
+    - overflow: hidden
+    - background: "#0f172a"
+    - box-shadow: "0 20px 40px rgba(0,0,0,0.4)"
+    - color: "#ffffff"
+    - font-family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+
+custom_fields:
+  app_container: |
+    [[[
+      const air_temp = states['sensor.flipr_temperature_air'] ? states['sensor.flipr_temperature_air'].state : '26';
+      const uv_index = states['sensor.flipr_indice_uv'] ? states['sensor.flipr_indice_uv'].state : '0';
+      const water_temp = states['sensor.flipr_temperature_eau'] ? states['sensor.flipr_temperature_eau'].state : '29';
+      const ph_val = states['sensor.flipr_ph'] ? states['sensor.flipr_ph'].state : '7.1';
+      const ph_status = states['sensor.flipr_statut_ph'] ? states['sensor.flipr_statut_ph'].state : 'Parfait';
+      const cl_val = states['sensor.flipr_chlore'] ? states['sensor.flipr_chlore'].state : '0.6';
+      const cl_status = states['sensor.flipr_statut_chlore'] ? states['sensor.flipr_statut_chlore'].state : 'Parfait';
+      const last_measure = states['sensor.flipr_derniere_mesure'] ? states['sensor.flipr_derniere_mesure'].state : 'En direct';
+      const water_state = states['sensor.flipr_etat_de_l_eau'] ? states['sensor.flipr_etat_de_l_eau'].state : 'Tout est parfait, bravo !';
+      const redox_val = states['sensor.flipr_redox'] ? states['sensor.flipr_redox'].state : '545';
+      const pump_hours = states['sensor.flipr_duree_filtration'] ? states['sensor.flipr_duree_filtration'].state : '12';
+      const tac_dose = states['sensor.flipr_dose_tac_plus'] ? states['sensor.flipr_dose_tac_plus'].state : '0';
+      
+      return `
+        <div style="display: flex; flex-direction: column; height: 100%; width: 100%; box-sizing: border-box; background: #eef3f8; color: #1e293b;">
+          
+          <!-- 1. BARRE SUPERIEURE & ONGLETS -->
+          <div style="padding: 16px 20px 8px 20px; text-align: center; background: #eef3f8;">
+            <div style="font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              Piscine Rochegude <span style="font-size: 10px;">▼</span>
+            </div>
+            
+            <div style="display: flex; background: #cbd5e1; border-radius: 12px; padding: 3px; max-width: 280px; margin: 0 auto;">
+              <div style="flex: 1; padding: 6px 12px; background: #0f172a; color: white; border-radius: 9px; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                <span>🤿</span> Analyse
+              </div>
+              <div style="flex: 1; padding: 6px 12px; color: #475569; border-radius: 9px; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <span>🔲</span> Contrôle
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. BLOC METEO & TENDANCE (HAUT CLAIR) -->
+          <div style="padding: 10px 20px; background: #eef3f8;">
+            <!-- Air & UV -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span style="font-size: 13px; color: #64748b; font-weight: 500;">air</span>
+                <span style="font-size: 32px; font-weight: 700; color: #0f172a;">${air_temp}°C</span>
+                <span style="color: #0284c7; font-weight: bold;">↘</span>
+              </div>
+              
+              <div style="height: 28px; width: 1px; background: #cbd5e1;"></div>
+
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="font-size: 18px;">☁️ &gt; ☁️</div>
+                <div style="border: 1.5px solid #64748b; border-radius: 16px; padding: 2px 10px; font-size: 11px; font-weight: 700; color: #334155;">
+                  UV ${uv_index}
+                </div>
+              </div>
+            </div>
+
+            <!-- Taux de Redox 7j -->
+            <div style="background: rgba(255,255,255,0.7); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 6px;">Taux de Redox(mV) sur les 7 derniers jours</div>
+              <div style="display: flex; justify-content: space-between; text-align: center;">
+                <div style="flex: 1;"><div style="background: white; border-radius: 6px; padding: 2px; font-size: 9px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;">525 ↗</div><div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">28/07</div></div>
+                <div style="flex: 1;"><div style="background: white; border-radius: 6px; padding: 2px; font-size: 9px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;">572 ↗</div><div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">29/07</div></div>
+                <div style="flex: 1;"><div style="background: white; border-radius: 6px; padding: 2px; font-size: 9px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;">577 ↘</div><div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">30/07</div></div>
+                <div style="flex: 1;"><div style="background: white; border-radius: 6px; padding: 2px; font-size: 9px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;">533 ↗</div><div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">31/07</div></div>
+                <div style="flex: 1;"><div style="background: white; border-radius: 6px; padding: 2px; font-size: 9px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;">537 ↘</div><div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">01/08</div></div>
+                <div style="flex: 1;"><div style="background: white; border-radius: 6px; padding: 2px; font-size: 9px; font-weight: bold; color: #475569; border: 1px solid #e2e8f0;">516 ↘</div><div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">02/08</div></div>
+                <div style="flex: 1;"><div style="background: #0284c7; color: white; border-radius: 6px; padding: 2px; font-size: 9px; font-weight: bold;">${redox_val}</div><div style="font-size: 8px; color: #0284c7; font-weight: bold; margin-top: 2px;">03/08</div></div>
+              </div>
+            </div>
+
+            <!-- CARTE DERNIERE MESURE -->
+            <div style="background: white; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="background: #ff2d75; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 8px rgba(255,45,117,0.3);">
+                  📡
+                </div>
+                <div>
+                  <div style="font-size: 13px; font-weight: 700; color: #0f172a;">Dernière Mesure</div>
+                  <div style="font-size: 11px; color: #64748b;">${last_measure}</div>
+                </div>
+              </div>
+              
+              <div style="background: #f1f5f9; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #64748b;">
+                ⚙️
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. BLOC EAU PISCINE (DEGRADE CYAN-BLEU AVEC VAGUE) -->
+          <div style="flex: 1; background: linear-gradient(175deg, #00d2b4 0%, #0098d4 45%, #1d3557 100%); border-top-left-radius: 36px; border-top-right-radius: 36px; padding: 20px 20px 14px 20px; color: white; display: flex; flex-direction: column; justify-content: space-between; margin-top: 4px; box-shadow: inset 0 2px 10px rgba(255,255,255,0.2);">
+            
+            <!-- Température Eau & Bouton Partage -->
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: baseline; gap: 8px;">
+                <span style="font-size: 16px; font-weight: 500; opacity: 0.9;">eau</span>
+                <span style="font-size: 42px; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,0.15);">${water_temp}°C</span>
+              </div>
+              <div style="background: rgba(255,255,255,0.25); backdrop-filter: blur(8px); border-radius: 10px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                🔗
+              </div>
+            </div>
+
+            <!-- CADRANS GAUGES (pH & CHLORE) -->
+            <div style="display: flex; justify-content: space-around; align-items: center; margin: 10px 0;">
+              
+              <!-- CADRAN pH -->
+              <div style="text-align: center; flex: 1;">
+                <div style="position: relative; width: 110px; height: 110px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                  <!-- Circle SVG Gauge -->
+                  <svg width="110" height="110" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
+                    <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" />
+                    <circle cx="50" cy="50" r="40" stroke="#ffffff" stroke-width="8" stroke-dasharray="251" stroke-dashoffset="60" stroke-linecap="round" fill="none" />
+                  </svg>
+                  <div style="position: absolute; font-size: 26px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${ph_val}</div>
+                </div>
+                <div style="font-size: 13px; font-weight: 600; margin-top: 4px; opacity: 0.9;">pH</div>
+                <div style="display: inline-block; margin-top: 6px; padding: 4px 16px; border: 1.5px solid white; border-radius: 20px; font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);">
+                  👍 ${ph_status}
+                </div>
+              </div>
+
+              <!-- CADRAN CHLORE / REDOX -->
+              <div style="text-align: center; flex: 1;">
+                <div style="position: relative; width: 110px; height: 110px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                  <!-- Speedometer SVG Gauge -->
+                  <svg width="110" height="110" viewBox="0 0 100 100">
+                    <path d="M 20 70 A 38 38 0 1 1 80 70" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none" stroke-linecap="round" />
+                    <path d="M 20 70 A 38 38 0 0 1 70 25" stroke="#ffffff" stroke-width="8" fill="none" stroke-linecap="round" />
+                    <!-- Needle -->
+                    <line x1="50" y1="50" x2="68" y2="30" stroke="#ffffff" stroke-width="4" stroke-linecap="round" />
+                    <circle cx="50" cy="50" r="6" fill="#ffffff" />
+                  </svg>
+                </div>
+                <div style="font-size: 13px; font-weight: 600; margin-top: 4px; opacity: 0.9;">Chlore</div>
+                <div style="display: inline-block; margin-top: 6px; padding: 4px 16px; border: 1.5px solid white; border-radius: 20px; font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);">
+                  👍 ${cl_status}
+                </div>
+              </div>
+
+            </div>
+
+            <!-- BANNIERE DE RESUME BAS -->
+            <div style="background: white; color: #0f172a; border-radius: 18px; padding: 12px 16px; text-align: center; font-size: 13px; font-weight: 700; box-shadow: 0 6px 16px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <span>❤️</span> ${water_state}
+            </div>
+
+            <!-- PIED DE PAGE NAVIGATION NAV -->
+            <div style="display: flex; justify-content: space-around; align-items: center; padding-top: 10px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.15); font-size: 10px; opacity: 0.95;">
+              <div style="text-align: center;">
+                <div style="font-size: 16px;">〰️</div>
+                <div>Menu</div>
+              </div>
+              <div style="text-align: center; background: rgba(255,255,255,0.2); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                🦈
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 16px;">🪣</div>
+                <div>Flipr Store</div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      `;
+    ]]]
