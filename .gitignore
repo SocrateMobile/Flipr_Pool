@@ -21,3 +21,15 @@ ENV/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+token.txt
+test_fliprhub*.py
+my_integration.json
+patch1_integration.json
+expected.txt
+sorted.txt
+new_sha.txt
+pr_sha.txt
+pr.patch
+flipr.zip
+_ha_test/
