@@ -659,8 +659,15 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 data["hub_id"] = hub_id
                 self.hub_id = hub_id
                 hub_state = data_raw.get("hub_state", {})
-                data["hub_mode"] = hub_state.get("Mode")
-                data["hub_state"] = hub_state.get("Status")
+                data["hub_mode"] = hub_state.get("behavior") or hub_state.get("Mode")
+                
+                # L'état peut être dans 'stateEquipment' (int 1/0) ou 'Status'
+                st = hub_state.get("stateEquipment")
+                if st is not None:
+                    data["hub_state"] = "on" if st == 1 else "off"
+                else:
+                    st2 = hub_state.get("Status")
+                    data["hub_state"] = "on" if str(st2).lower() in ("true", "1", "on", "active") else "off"
                 
                 # Conserver les propriétés BLE existantes s'il y en a
                 if self.data:

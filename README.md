@@ -1,8 +1,8 @@
-# Flipr Pool Control pour Home Assistant (v5.4.2)
+# Flipr Pool Control pour Home Assistant (v5.4.3)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.4.2-blue)
+![Version](https://img.shields.io/badge/version-5.4.3-blue)
 
 Intégration universelle et complète pour Home Assistant dédiée aux analyseurs de piscine et spas **Flipr** (AnalysR, Start, Start Max) et aux boîtiers de contrôle de pompe **Flipr Hub / Control**.
 
@@ -21,7 +21,7 @@ Dans le répertoire `examples/` de cette intégration, vous trouverez des exempl
 
 ---
 
-## ✨ Les 6 Catégories d'Entités (v5.4.2)
+## ✨ Les 6 Catégories d'Entités (v5.4.3)
 
 Toutes les entités créées dans Home Assistant sont automatiquement organisées et rangées selon 6 thématiques claires :
 
@@ -81,7 +81,7 @@ Toutes les entités créées dans Home Assistant sont automatiquement organisée
 - 🚨 **Dernière Alerte**
 - 🔀 **Source des données** (*Cloud API* ou *Bluetooth BLE*)
 - 📡 **Signal BLE & Statut BLE** (RSSI en dBm)
-- ℹ️ **Version de l'intégration** (`5.4.2`)
+- ℹ️ **Version de l'intégration** (`5.4.3`)
 
 ---
 
@@ -121,6 +121,9 @@ Un service personnalisé est disponible dans Home Assistant sous **Outils de dé
 ---
 
 ## 📜 Historique des Versions (Changelog)
+
+### v5.4.3
+- 🛠️ **Correctif d'état de Pompe (unknown)** : L'API Flipr a secrètement modifié ses clés de données (`behavior` au lieu de `Mode`, et `stateEquipment` au lieu de `Status`). Le parsing a été mis à jour, les interrupteurs ne reviennent plus à "off" après 2 secondes !
 
 ### v5.4.2
 - 🎯 **Super Découverte Automatique du Hub** : Remplacement de la détection hasardeuse par type d'appareil par un véritable "Ping" silencieux de l'API Flipr (évite les erreurs où Flipr masque le type du Hub). La pompe est désormais garantie de fonctionner !
