@@ -1,8 +1,8 @@
-# Flipr Pool Control pour Home Assistant (v5.4.0)
+# Flipr Pool Control pour Home Assistant (v5.4.2)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.4.0-blue)
+![Version](https://img.shields.io/badge/version-5.4.2-blue)
 
 Intégration universelle et complète pour Home Assistant dédiée aux analyseurs de piscine et spas **Flipr** (AnalysR, Start, Start Max) et aux boîtiers de contrôle de pompe **Flipr Hub / Control**.
 
@@ -21,7 +21,7 @@ Dans le répertoire `examples/` de cette intégration, vous trouverez des exempl
 
 ---
 
-## ✨ Les 6 Catégories d'Entités (v5.4.0)
+## ✨ Les 6 Catégories d'Entités (v5.4.2)
 
 Toutes les entités créées dans Home Assistant sont automatiquement organisées et rangées selon 6 thématiques claires :
 
@@ -81,14 +81,14 @@ Toutes les entités créées dans Home Assistant sont automatiquement organisée
 - 🚨 **Dernière Alerte**
 - 🔀 **Source des données** (*Cloud API* ou *Bluetooth BLE*)
 - 📡 **Signal BLE & Statut BLE** (RSSI en dBm)
-- ℹ️ **Version de l'intégration** (`5.4.0`)
+- ℹ️ **Version de l'intégration** (`5.4.2`)
 
 ---
 
 ## 🔌 Contrôle du Hub & Gestion de la Pompe
 
 Pour les utilisateurs équipés du boîtier **Flipr Hub / Control** :
-- ⚙️ **Découverte Automatique** : Détecte automatiquement le numéro de série du Hub via `ModuleType_Id = 3`.
+- ⚙️ **Découverte Automatique (Améliorée)** : Le système scanne tous vos modules et teste silencieusement l'API pour découvrir avec 100% de fiabilité le Hub de contrôle (contournement des identifiants trompeurs de l'API Flipr).
 - 🔲 **Switch Pompe** (`switch.flipr_xxx_pump_filtration`) : Allume et éteint la pompe de filtration (Marche Forcée). Bascule automatiquement le Hub en mode Manuel avant la commande.
 - 🎛️ **Sélecteur de Mode** (`select.flipr_xxx_mode_filtration`) : Permet de choisir entre **Auto**, **Manuel** et **Planning**.
 
@@ -122,7 +122,10 @@ Un service personnalisé est disponible dans Home Assistant sous **Outils de dé
 
 ## 📜 Historique des Versions (Changelog)
 
-### v5.4.0
+### v5.4.2
+- 🎯 **Super Découverte Automatique du Hub** : Remplacement de la détection hasardeuse par type d'appareil par un véritable "Ping" silencieux de l'API Flipr (évite les erreurs où Flipr masque le type du Hub). La pompe est désormais garantie de fonctionner !
+
+### v5.4.0 & v5.4.1
 - 🛡️ **Fix Rate-limit (429)** : Ajout d'une pause dynamique dans l'outil de diagnostic du Hub (`dump_hub_debug`) pour éviter les blocages API Flipr.
 - 🎨 **Cartes Lovelace** : Intégration de cartes Dashboard premium (type application officielle) avec adaptation automatique au nom de l'entité et couleurs de cibles. Documentation et fichiers disponibles dans `examples/`.
 
