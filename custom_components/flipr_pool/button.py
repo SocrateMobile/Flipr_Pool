@@ -69,15 +69,17 @@ class FliprGenerateCardButton(CoordinatorEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Génère le fichier YAML de la carte."""
         from homeassistant.helpers import entity_registry as er
+        from homeassistant.helpers import device_registry as dr
         from .card_template import COMBINED_CARD_TEMPLATE
         import os
 
         _LOGGER.info("Flipr : Génération de la carte Lovelace demandée")
         
         # 1. Obtenir les entités du device
-        registry = er.async_get(self.hass)
+        ent_reg = er.async_get(self.hass)
+        dev_reg = dr.async_get(self.hass)
         device_id = None
-        for device_entry in self.hass.helpers.device_registry.async_get(self.hass).devices.values():
+        for device_entry in dev_reg.devices.values():
             if (DOMAIN, self.coordinator.flipr_id) in device_entry.identifiers:
                 device_id = device_entry.id
                 break
@@ -86,7 +88,7 @@ class FliprGenerateCardButton(CoordinatorEntity, ButtonEntity):
             _LOGGER.error("Flipr: Impossible de trouver l'appareil pour générer la carte")
             return
 
-        entities = er.async_entries_for_device(registry, device_id, include_disabled_entities=True)
+        entities = er.async_entries_for_device(ent_reg, device_id, include_disabled_entities=True)
         
         # 2. Déduire le préfixe et la pompe
         ph_entity = next((e for e in entities if e.entity_id.endswith("_ph") and e.domain == "sensor"), None)
