@@ -55,6 +55,7 @@ class FliprApiClient:
         self._email = email
         self._password = password
         self._token: str | None = None
+        self._cache: dict[str, tuple[datetime, Any]] = {}
 
     # ═══════════════════════════════════════════════════════════
     #  Authentification OAuth2
@@ -103,6 +104,23 @@ class FliprApiClient:
     # ═══════════════════════════════════════════════════════════
     #  Requête authentifiée générique
     # ═══════════════════════════════════════════════════════════
+
+    async def _cached_get(self, key: str, url: str, ttl_hours: int = 6) -> Any:
+        """Effectue une requête GET avec un cache en mémoire pour éviter le rate-limit."""
+        now = datetime.now(timezone.utc)
+        if key in self._cache:
+            entry_time, data = self._cache[key]
+            if (now - entry_time).total_seconds() < ttl_hours * 3600:
+                return data
+        
+        try:
+            data = await self._request("GET", url)
+            self._cache[key] = (now, data)
+            return data
+        except Exception as e:
+            if key in self._cache:
+                return self._cache[key][1]
+            raise e
 
     async def _request(self, method: str, url: str, **kwargs: Any) -> Any:
         """Effectue une requête authentifiée avec gestion du renouvellement de token."""
@@ -239,20 +257,16 @@ class FliprApiClient:
         except Exception as e:
             _LOGGER.warning("Échec GET /NewResume : %s", e)
 
-        await asyncio.sleep(2)  # Anti rate-limit
-
-        # ── 2. ShortTerm (météo) ──
+        # ── 2. ShortTerm (météo) - en cache 6h ──
         shortterm_url = f"{API_BASE_URL}/modules/{flipr_id}/shortterm"
         try:
-            data["module_shortterm"] = await self._request("GET", shortterm_url)
+            data["module_shortterm"] = await self._cached_get(f"shortterm_{flipr_id}", shortterm_url, ttl_hours=6)
         except Exception:
             pass
 
-        await asyncio.sleep(2)  # Anti rate-limit
-
         # ── 3. Résolution place_id / hub_id & Récupération des modules ──
         try:
-            modules_list = await self._request("GET", MODULES_URL)
+            modules_list = await self._cached_get("modules", MODULES_URL, ttl_hours=24)
             if isinstance(modules_list, list):
                 data["raw_modules"] = modules_list
                 if not hub_id:
@@ -260,9 +274,6 @@ class FliprApiClient:
                         discovered_hub_id = str(mod.get("Serial") or mod.get("Id") or "")
                         if not discovered_hub_id or discovered_hub_id == flipr_id:
                             continue  # Ne pas tester le Flipr lui-même
-                        
-                        # Pause anti rate-limit avant chaque test de découverte
-                        await asyncio.sleep(3)
                         
                         # Test de l'endpoint d'état pour confirmer si c'est un Hub
                         try:
@@ -281,11 +292,9 @@ class FliprApiClient:
         except Exception as e:
             _LOGGER.debug("Erreur interrogation /modules : %s", e)
 
-        await asyncio.sleep(2)  # Anti rate-limit
-
         if not place_id or not hub_id:
             try:
-                places = await self._request("GET", PLACES_URL)
+                places = await self._cached_get("places", PLACES_URL, ttl_hours=24)
                 if isinstance(places, list):
                     for place in places:
                         modules = place.get("Modules") or place.get("modules") or []
@@ -306,8 +315,6 @@ class FliprApiClient:
             except Exception:
                 pass
 
-        await asyncio.sleep(2)  # Anti rate-limit
-
         # ── 4. Hub State : GET /hub/{hubId}/state ──
         if hub_id and not data.get("hub_state"):
             try:
@@ -320,18 +327,18 @@ class FliprApiClient:
             except Exception as e:
                 _LOGGER.debug("Échec GET hub state pour %s : %s", hub_id, e)
 
-        # ── 5. Alertes ──
+        # ── 5. Alertes - en cache 4h ──
         if place_id:
             alert_url = ALERTS_URL.format(api_base=API_BASE_URL, place_id=place_id)
             try:
-                data["alerts"] = await self._request("GET", alert_url)
+                data["alerts"] = await self._cached_get(f"alerts_{place_id}", alert_url, ttl_hours=4)
             except Exception:
                 pass
 
-        # ── 6. Seuils ──
+        # ── 6. Seuils - en cache 24h ──
         threshold_url = THRESHOLDS_URL.format(api_base=API_BASE_URL, flipr_id=flipr_id)
         try:
-            data["thresholds"] = await self._request("GET", threshold_url)
+            data["thresholds"] = await self._cached_get(f"thresholds_{flipr_id}", threshold_url, ttl_hours=24)
         except Exception:
             pass
 
