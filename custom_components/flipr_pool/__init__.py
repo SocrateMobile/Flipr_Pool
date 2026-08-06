@@ -663,15 +663,15 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 m["alerts_raw"] = data_raw.get("alerts", [])
                 m["thresholds_raw"] = data_raw.get("thresholds", {})
 
-                data = _compute_pool_data(m, s, self.config_entry, data_source="cloud")
+                cloud_data = _compute_pool_data(m, s, self.config_entry, data_source="cloud")
                 hub_id = data_raw.get("hub_id") or self.hub_id
-                data["hub_id"] = hub_id
+                cloud_data["hub_id"] = hub_id
                 if hub_id:
                     self.hub_id = hub_id
                 hub_state = data_raw.get("hub_state", {})
                 
                 # Extraction du mode : clés brutes API ou normalisées
-                data["hub_mode"] = (
+                cloud_data["hub_mode"] = (
                     hub_state.get("behavior")
                     or hub_state.get("Behavior")
                     or hub_state.get("Mode")
@@ -684,23 +684,34 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 st_state = hub_state.get("State") or hub_state.get("state")
                 
                 if st_eq is not None:
-                    data["hub_state"] = "on" if (st_eq == 1 or st_eq is True) else "off"
+                    cloud_data["hub_state"] = "on" if (st_eq == 1 or st_eq is True) else "off"
                 elif st_status is not None:
-                    data["hub_state"] = "on" if str(st_status).lower() in ("true", "1", "on", "active") else "off"
+                    cloud_data["hub_state"] = "on" if str(st_status).lower() in ("true", "1", "on", "active") else "off"
                 elif st_state is not None:
-                    data["hub_state"] = "on" if str(st_state).lower() in ("true", "1", "on", "active") else "off"
+                    cloud_data["hub_state"] = "on" if str(st_state).lower() in ("true", "1", "on", "active") else "off"
                 else:
-                    data["hub_state"] = None  # Pas de Hub ou pas de données
+                    cloud_data["hub_state"] = None  # Pas de Hub ou pas de données
                 
-                _LOGGER.debug("Hub state parsed: hub_id=%s, mode=%s, state=%s, raw=%s", hub_id, data['hub_mode'], data['hub_state'], hub_state)
+                _LOGGER.debug("Hub state parsed: hub_id=%s, mode=%s, state=%s, raw=%s", hub_id, cloud_data['hub_mode'], cloud_data['hub_state'], hub_state)
                 
-                # Conserver les propriétés BLE existantes s'il y en a
-                if self.data:
-                    data["ble_rssi"] = self.data.get("ble_rssi")
-                    data["ble_status"] = self.data.get("ble_status")
+                merged = dict(self.data) if self.data else {}
+                
+                cloud_date = _safe_timestamp(cloud_data.get("last_update"))
+                current_date = _safe_timestamp(merged.get("last_update"))
+                
+                if cloud_date and current_date and cloud_date < current_date:
+                    _LOGGER.info("Flipr: Le Cloud (date: %s) est plus ancien que la donnée en mémoire (date: %s). Fusion intelligente.", cloud_date, current_date)
+                    for k, v in cloud_data.items():
+                        if k not in ["temperature", "ph", "ph_status", "ph_simple", "redox", "battery", "conductivity", "chlorine", "chlorine_status", "chlorine_simple", "last_update", "lsi", "lsi_status", "ph_equilibre", "free_chlorine", "active_chlorine", "data_source", "pump_hours", "conseil_filtration", "dose_ph_minus", "dose_ph_plus", "dose_cl_maint", "dose_cl_shock", "dose_tac_plus"]:
+                            merged[k] = v
+                else:
+                    merged = dict(cloud_data)
+                    if self.data:
+                        merged["ble_rssi"] = self.data.get("ble_rssi")
+                        merged["ble_status"] = self.data.get("ble_status")
 
-                self.hass.async_create_task(self._async_save(data))
-                return data
+                self.hass.async_create_task(self._async_save(merged))
+                return merged
         except Exception as err:
             if self.data:
                 _LOGGER.warning("Erreur inattendue Flipr Cloud (%s). Conservation des dernières données.", err)
@@ -723,11 +734,19 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
         
         merged = dict(self.data) if self.data else {}
         
-        # Surcharge le Cloud par le BLE, mais ignore les valeurs "None" du BLE
-        # (car le BLE ne transmet pas l'UV, la météo, etc.)
-        for k, v in ble_data.items():
-            if v is not None:
-                merged[k] = v
+        ble_date = _safe_timestamp(ble_data.get("last_update"))
+        current_date = _safe_timestamp(merged.get("last_update"))
+
+        if ble_date and current_date and ble_date < current_date:
+            _LOGGER.info("Flipr: Le BLE (date: %s) est plus ancien que la donnée en mémoire (date: %s). Ignoré.", ble_date, current_date)
+            merged["ble_rssi"] = ble_data.get("ble_rssi")
+            merged["ble_status"] = ble_data.get("ble_status")
+        else:
+            # Surcharge le Cloud par le BLE, mais ignore les valeurs "None" du BLE
+            # (car le BLE ne transmet pas l'UV, la météo, etc.)
+            for k, v in ble_data.items():
+                if v is not None:
+                    merged[k] = v
         
         self.async_set_updated_data(merged)
         self.hass.async_create_task(self._async_save(merged))
@@ -819,6 +838,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     restored = await store.async_load()
     if restored:
         _LOGGER.debug("Flipr: données restaurées depuis le disque local.")
+        # On reconvertit les dates stockées en isoformat
+        if "last_update" in restored and isinstance(restored["last_update"], str):
+            restored["last_update"] = _safe_timestamp(restored["last_update"])
         coordinator.async_set_updated_data(restored)
 
     # ── Enregistrement ──────────────────────────────────────
