@@ -41,6 +41,9 @@ class FliprApiError(Exception):
 
 class FliprApiClient:
     """Client asynchrone pour l'API REST Flipr utilisant aiohttp."""
+    
+    _global_blocked_until: datetime | None = None
+    _global_retry_count: int = 0
 
     def __init__(
         self,
@@ -52,9 +55,6 @@ class FliprApiClient:
         self._email = email
         self._password = password
         self._token: str | None = None
-        # Backoff exponentiel pour les erreurs 429
-        self._blocked_until: datetime | None = None
-        self._retry_count: int = 0
 
     # ═══════════════════════════════════════════════════════════
     #  Authentification OAuth2
@@ -417,25 +417,25 @@ class FliprApiClient:
 
     def _check_rate_limit(self) -> None:
         """Lève une exception si on est en période de backoff 429."""
-        if self._blocked_until and datetime.now(timezone.utc) < self._blocked_until:
-            remaining = int((self._blocked_until - datetime.now(timezone.utc)).total_seconds() / 60)
+        if FliprApiClient._global_blocked_until and datetime.now(timezone.utc) < FliprApiClient._global_blocked_until:
+            remaining = int((FliprApiClient._global_blocked_until - datetime.now(timezone.utc)).total_seconds() / 60)
             raise FliprApiError(f"Rate-limit actif. Réessayez dans {remaining} min.")
 
     def _apply_rate_limit(self) -> None:
         """Active le backoff exponentiel : 5m, 10m, 20m, 40m…"""
-        self._retry_count += 1
-        minutes = 5 * (2 ** (self._retry_count - 1))
-        self._blocked_until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
-        _LOGGER.warning("Rate-limit Flipr (429). Backoff de %d min (tentative %d).", minutes, self._retry_count)
+        FliprApiClient._global_retry_count += 1
+        minutes = 5 * (2 ** (FliprApiClient._global_retry_count - 1))
+        FliprApiClient._global_blocked_until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+        _LOGGER.warning("Rate-limit Flipr (429). Backoff de %d min (tentative %d).", minutes, FliprApiClient._global_retry_count)
 
     def _reset_rate_limit(self) -> None:
         """Réinitialise le compteur de backoff après un succès."""
-        self._blocked_until = None
-        self._retry_count = 0
+        FliprApiClient._global_blocked_until = None
+        FliprApiClient._global_retry_count = 0
 
     def _backoff_minutes(self) -> int:
         """Retourne le nombre de minutes du backoff actuel."""
-        return 5 * (2 ** (max(0, self._retry_count - 1)))
+        return 5 * (2 ** (max(0, FliprApiClient._global_retry_count - 1)))
 
     @staticmethod
     async def _extract_error(resp: aiohttp.ClientResponse) -> str:
