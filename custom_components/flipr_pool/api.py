@@ -279,7 +279,13 @@ class FliprApiClient:
                         try:
                             state_url = f"{API_BASE_URL}/hub/{discovered_hub_id}/state"
                             hub_state = await self._request("GET", state_url)
-                            if isinstance(hub_state, dict) and hub_state.get("ErrorCode") != "Forbidden" and "is not a HUB" not in str(hub_state.get("ErrorMessage", "")):
+                            if (
+                                isinstance(hub_state, dict) 
+                                and hub_state 
+                                and hub_state.get("ErrorCode") != "Forbidden" 
+                                and "is not a HUB" not in str(hub_state.get("ErrorMessage", ""))
+                                and ("behavior" in hub_state or "stateEquipment" in hub_state)
+                            ):
                                 hub_id = discovered_hub_id
                                 data["hub_id"] = hub_id
                                 data["hub_state"] = hub_state
