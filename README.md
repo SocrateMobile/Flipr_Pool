@@ -1,8 +1,8 @@
-# Flipr Pool Control pour Home Assistant (v5.5.0)
+# Flipr Pool Control pour Home Assistant (v5.6.0)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.5.4-blue)
+![Version](https://img.shields.io/badge/version-5.6.0-blue)
 
 Intégration universelle et complète pour Home Assistant dédiée aux analyseurs de piscine et spas **Flipr** (AnalysR, Start, Start Max) et aux boîtiers de contrôle de pompe **Flipr Hub / Control**.
 
@@ -21,7 +21,7 @@ Dans le répertoire `examples/` de cette intégration, vous trouverez des exempl
 
 ---
 
-## ✨ Les 6 Catégories d'Entités (v5.5.0)
+## ✨ Les 6 Catégories d'Entités (v5.6.0)
 
 Toutes les entités créées dans Home Assistant sont automatiquement organisées et rangées selon 6 thématiques claires :
 
@@ -81,7 +81,7 @@ Toutes les entités créées dans Home Assistant sont automatiquement organisée
 - 🚨 **Dernière Alerte**
 - 🔀 **Source des données** (*Cloud API* ou *Bluetooth BLE*)
 - 📡 **Signal BLE & Statut BLE** (RSSI en dBm)
-- ℹ️ **Version de l'intégration** (`5.5.0`)
+- ℹ️ **Version de l'intégration** (`5.6.0`)
 
 ---
 
@@ -122,7 +122,7 @@ Un service personnalisé est disponible dans Home Assistant sous **Outils de dé
 
 ## 📜 Historique des Versions (Changelog)
 
-### v5.5.0 — Correctif majeur Hub
+### v5.6.0 — Correctif majeur Hub
 - 🔧 **Refonte complète de la chaîne Hub** : 
   - Le `hub_id` découvert est désormais **persisté** dans les options de l'intégration (plus besoin de redécouvrir à chaque redémarrage).
   - Suppression de la double normalisation des données Hub qui causait la perte des clés `behavior` et `stateEquipment`.
