@@ -24,10 +24,10 @@
   ],
   "codeowners": ["@jflavigne"],
   "config_flow": true,
-  "dependencies": ["bluetooth"],
+  "dependencies": ["bluetooth", "frontend", "http"],
   "documentation": "https://github.com/SocrateMobile/flipr_pool",
   "iot_class": "local_polling",
-  "version": "5.6.0",
+  "version": "5.7.0",
   "issue_tracker": "https://github.com/SocrateMobile/flipr_pool/issues",
   "requirements": ["async_timeout", "aiohttp", "bleak>=0.21.1", "bleak-retry-connector>=4.0.0"]
 }
