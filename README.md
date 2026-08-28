@@ -1,12 +1,21 @@
-# Flipr Pool Control pour Home Assistant (v5.6.0)
+# Flipr Pool Control pour Home Assistant (v5.7.0)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.6.0-blue)
+![Version](https://img.shields.io/badge/version-5.7.0-blue)
 
 Intégration universelle et complète pour Home Assistant dédiée aux analyseurs de piscine et spas **Flipr** (AnalysR, Start, Start Max) et aux boîtiers de contrôle de pompe **Flipr Hub / Control**.
 
-Elle combine les données du **Cloud GoFlipr** et du **Bluetooth Low Energy (BLE) local** avec fusion automatique en temps réel, calculs chimiques avancés (LSI, HOCl, Doses pH/Chlore/TAC) et gestion intelligente du Hub.
+Elle combine les données du **Cloud GoFlipr** et du **Bluetooth Low Energy (BLE) local** avec fusion automatique en temps réel, calculs chimiques avancés (LSI, HOCl, Doses pH/Chlore/TAC), gestion intelligente du Hub et un **panneau latéral natif dédié**.
+
+---
+
+## 🚀 Nouveau : Panneau Latéral Intégré (v5.7.0)
+
+Dès l'installation de l'intégration, un nouvel onglet **« Flipr Pool Control »** apparaît automatiquement dans la barre latérale gauche de votre Home Assistant :
+- 📱 **Double Vue Officielle Flipr** : Bascule instantanée entre la vue **Analyse** (jauges pH/Redox, météo, statut eau) et la vue **Contrôle** (gestion pompe, historiques 7 jours, prévisions météo).
+- 💡 **Volet Conseils d'Entretien & Traitements** : Recommandations précises de dosages (pH+, pH-, Chlore choc, Chlore entretien), équilibre de l'eau (LSI/Langelier), et optimisation des heures de filtration.
+- ⚡ **Pilotage interactif** : Marche/Arrêt de la filtration directement depuis le panneau.
 
 ---
 

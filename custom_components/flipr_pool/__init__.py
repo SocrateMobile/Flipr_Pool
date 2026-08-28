@@ -20,6 +20,9 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers import device_registry as dr
 from homeassistant.core import ServiceCall
+from homeassistant.components import frontend
+from homeassistant.components.http import StaticPathConfig
+import os
 
 from .const import (
     DOMAIN,
@@ -995,6 +998,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not hass.services.has_service(DOMAIN, "dump_entities"):
         hass.services.async_register(DOMAIN, "dump_entities", handle_dump_entities)
 
+    # ── Enregistrement du Panneau Latéral Frontend ───────────────
+    frontend_dir = hass.config.path("custom_components/flipr_pool/frontend")
+    if os.path.exists(frontend_dir):
+        if hasattr(hass.http, "async_register_static_paths"):
+            await hass.http.async_register_static_paths([
+                StaticPathConfig("/flipr_pool_panel", frontend_dir, False)
+            ])
+        else:
+            hass.http.register_static_path(
+                "/flipr_pool_panel",
+                frontend_dir,
+                cache_headers=False,
+            )
+
+        try:
+            frontend.async_register_built_in_panel(
+                hass,
+                component_name="custom",
+                sidebar_title="Flipr Pool Control",
+                sidebar_icon="mdi:pool",
+                frontend_url_path="flipr_pool",
+                config={
+                    "_panel_custom": {
+                        "name": "flipr-panel",
+                        "module_url": "/flipr_pool_panel/flipr-panel.js",
+                    }
+                },
+                require_admin=False,
+            )
+        except ValueError:
+            # Panneau déjà enregistré
+            pass
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # ── Premier refresh (Cloud) ──────────────────────────────
@@ -1009,5 +1045,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+        try:
+            frontend.async_remove_panel(hass, "flipr_pool")
+        except Exception:
+            pass
     return unload_ok
