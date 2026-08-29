@@ -1,4 +1,4 @@
-# Flipr Pool Control (v5.7.0)
+# Flipr Pool Control (v5.7.1)
 
 Cette intégration personnalisée pour Home Assistant vous permet de remonter l'ensemble des données de votre analyseur d'eau **Flipr**. 
 

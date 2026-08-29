@@ -1,8 +1,8 @@
-# Flipr Pool Control pour Home Assistant (v5.7.0)
+# Flipr Pool Control pour Home Assistant (v5.7.1)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.7.0-blue)
+![Version](https://img.shields.io/badge/version-5.7.1-blue)
 
 Intégration universelle et complète pour Home Assistant dédiée aux analyseurs de piscine et spas **Flipr** (AnalysR, Start, Start Max) et aux boîtiers de contrôle de pompe **Flipr Hub / Control**.
 

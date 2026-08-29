@@ -28,8 +28,8 @@ class FliprPanel extends HTMLElement {
     this.innerHTML = `
       <style>
         :host {
-          background-color: var(--primary-background-color, #0f172a);
-          color: var(--primary-text-color, #f8fafc);
+          background-color: var(--primary-background-color, #f8fafc);
+          color: var(--primary-text-color, #1e293b);
           display: block;
           height: 100vh;
           overflow-y: auto;
@@ -75,20 +75,20 @@ class FliprPanel extends HTMLElement {
         .flipr-title {
           font-size: 24px;
           font-weight: 700;
-          color: var(--primary-text-color, #f8fafc);
+          color: var(--primary-text-color, #1e293b);
           margin: 0;
         }
 
         .flipr-subtitle {
           font-size: 13px;
-          color: var(--secondary-text-color, #94a3b8);
+          color: var(--secondary-text-color, #64748b);
           margin-top: 2px;
         }
 
         .flipr-refresh-btn {
-          background: var(--card-background-color, #1e293b);
-          border: 1px solid var(--divider-color, rgba(255,255,255,0.1));
-          color: var(--primary-text-color, #f8fafc);
+          background: var(--ha-card-background, var(--card-background-color, #ffffff));
+          border: 1px solid var(--divider-color, rgba(0,0,0,0.12));
+          color: var(--primary-text-color, #1e293b);
           padding: 8px 16px;
           border-radius: 10px;
           cursor: pointer;
@@ -97,6 +97,7 @@ class FliprPanel extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 6px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.04);
           transition: all 0.2s ease;
         }
 
@@ -468,11 +469,12 @@ class FliprPanel extends HTMLElement {
         }
 
         .advice-card {
-          background: var(--card-background-color, #1e293b);
+          background: var(--ha-card-background, var(--card-background-color, #ffffff));
           border-radius: 24px;
           padding: 20px;
-          border: 1px solid var(--divider-color, rgba(255,255,255,0.08));
-          box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+          border: 1px solid var(--divider-color, rgba(0,0,0,0.08));
+          box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+          color: var(--primary-text-color, #1e293b);
         }
 
         .advice-card-header {
@@ -488,7 +490,7 @@ class FliprPanel extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 10px;
-          color: var(--primary-text-color, #f8fafc);
+          color: var(--primary-text-color, #1e293b);
         }
 
         .badge-status-tag {
@@ -499,10 +501,26 @@ class FliprPanel extends HTMLElement {
           text-transform: uppercase;
         }
 
-        .tag-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); }
-        .tag-warn { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.4); }
-        .tag-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
-        .tag-info { background: rgba(2, 132, 199, 0.2); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.4); }
+        .tag-ok { 
+          background: rgba(34, 197, 94, 0.15); 
+          color: #16a34a; 
+          border: 1px solid rgba(34, 197, 94, 0.35); 
+        }
+        .tag-warn { 
+          background: rgba(245, 158, 11, 0.15); 
+          color: #d97706; 
+          border: 1px solid rgba(245, 158, 11, 0.35); 
+        }
+        .tag-danger { 
+          background: rgba(239, 68, 68, 0.15); 
+          color: #dc2626; 
+          border: 1px solid rgba(239, 68, 68, 0.35); 
+        }
+        .tag-info { 
+          background: rgba(2, 132, 199, 0.15); 
+          color: #0284c7; 
+          border: 1px solid rgba(2, 132, 199, 0.35); 
+        }
 
         .advice-metric-row {
           display: grid;
@@ -512,8 +530,8 @@ class FliprPanel extends HTMLElement {
         }
 
         .metric-box {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.06);
+          background: var(--secondary-background-color, rgba(125, 125, 125, 0.05));
+          border: 1px solid var(--divider-color, rgba(125, 125, 125, 0.15));
           border-radius: 14px;
           padding: 12px;
           text-align: center;
@@ -521,31 +539,33 @@ class FliprPanel extends HTMLElement {
 
         .metric-label {
           font-size: 11px;
-          color: var(--secondary-text-color, #94a3b8);
-          font-weight: 500;
+          color: var(--secondary-text-color, #64748b);
+          font-weight: 600;
           margin-bottom: 4px;
         }
 
         .metric-val {
           font-size: 20px;
-          font-weight: 700;
-          color: var(--primary-text-color, #f8fafc);
+          font-weight: 800;
+          color: var(--primary-text-color, #1e293b);
         }
 
         .metric-target {
           font-size: 10px;
-          color: #64748b;
-          margin-top: 2px;
+          color: var(--secondary-text-color, #64748b);
+          font-weight: 500;
+          margin-top: 3px;
         }
 
         .advice-action-box {
-          background: rgba(2, 132, 199, 0.08);
+          background: rgba(2, 132, 199, 0.09);
           border-left: 4px solid #0284c7;
           border-radius: 0 12px 12px 0;
           padding: 12px 14px;
           font-size: 13px;
-          line-height: 1.5;
-          color: #e2e8f0;
+          line-height: 1.55;
+          color: var(--primary-text-color, #1e293b);
+          font-weight: 500;
           display: flex;
           gap: 10px;
           align-items: flex-start;
@@ -557,8 +577,8 @@ class FliprPanel extends HTMLElement {
         }
 
         .dose-highlight {
-          font-weight: 700;
-          color: #38bdf8;
+          font-weight: 800;
+          color: #0284c7;
         }
 
         .lsi-bar-wrapper {
@@ -587,8 +607,19 @@ class FliprPanel extends HTMLElement {
           display: flex;
           justify-content: space-between;
           font-size: 10px;
-          color: #64748b;
+          color: var(--secondary-text-color, #64748b);
+          font-weight: 600;
           margin-top: 4px;
+        }
+
+        /* Support Spécifique Mode Sombre (Dark Theme) */
+        @media (prefers-color-scheme: dark) {
+          .tag-ok { color: #4ade80; }
+          .tag-warn { color: #fbbf24; }
+          .tag-danger { color: #f87171; }
+          .tag-info { color: #38bdf8; }
+          .dose-highlight { color: #38bdf8; }
+          .advice-action-box { background: rgba(2, 132, 199, 0.16); }
         }
       </style>
 
@@ -1076,17 +1107,17 @@ class FliprPanel extends HTMLElement {
         <div class="advice-metric-row">
           <div class="metric-box">
             <div class="metric-label">pH Actuel</div>
-            <div class="metric-val" style="color: #38bdf8;">${d.ph_val}</div>
+            <div class="metric-val" style="color: #0284c7;">${d.ph_val}</div>
             <div class="metric-target">Cible : 7.2 - 7.4</div>
           </div>
           <div class="metric-box">
             <div class="metric-label">Correction pH-</div>
-            <div class="metric-val" style="color: #f87171;">${d.ph_minus_dose}g</div>
+            <div class="metric-val" style="color: #dc2626;">${d.ph_minus_dose}g</div>
             <div class="metric-target">Bisulfate sodique</div>
           </div>
           <div class="metric-box">
             <div class="metric-label">Correction pH+</div>
-            <div class="metric-val" style="color: #60a5fa;">${d.ph_plus_dose}g</div>
+            <div class="metric-val" style="color: #2563eb;">${d.ph_plus_dose}g</div>
             <div class="metric-target">Carbonate sodique</div>
           </div>
         </div>
@@ -1107,17 +1138,17 @@ class FliprPanel extends HTMLElement {
         <div class="advice-metric-row">
           <div class="metric-box">
             <div class="metric-label">Redox (ORP)</div>
-            <div class="metric-val" style="color: #38bdf8;">${d.redox_val} mV</div>
+            <div class="metric-val" style="color: #0284c7;">${d.redox_val} mV</div>
             <div class="metric-target">Cible : 650 - 750 mV</div>
           </div>
           <div class="metric-box">
             <div class="metric-label">Chlore Libre Estimé</div>
-            <div class="metric-val" style="color: #4ade80;">${d.free_cl} ppm</div>
+            <div class="metric-val" style="color: #16a34a;">${d.free_cl} ppm</div>
             <div class="metric-target">Recommandé : 1.0 - 2.0</div>
           </div>
           <div class="metric-box">
             <div class="metric-label">Chlore Actif (HOCl)</div>
-            <div class="metric-val" style="color: #facc15;">${d.active_cl} ppm</div>
+            <div class="metric-val" style="color: #d97706;">${d.active_cl} ppm</div>
             <div class="metric-target">Désinfectant réel</div>
           </div>
         </div>
@@ -1141,7 +1172,7 @@ class FliprPanel extends HTMLElement {
           </div>
           <div class="lsi-labels-row">
             <span>Corrosive (-1.0)</span>
-            <span style="color: #4ade80; font-weight: bold;">Équilibrée (0.0)</span>
+            <span style="color: #16a34a; font-weight: bold;">Équilibrée (0.0)</span>
             <span>Entartrante (+1.0)</span>
           </div>
         </div>
