@@ -717,6 +717,44 @@ class FliprPanel extends HTMLElement {
     };
   }
 
+  _formatDate(dateStr) {
+    if (!dateStr || dateStr === "Aujourd'hui" || dateStr === "Inconnu" || dateStr === "unavailable" || dateStr === "unknown") {
+      return dateStr || "Inconnu";
+    }
+
+    const months = [
+      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ];
+
+    // Regex d'extraction directe (gère ISO 8601 YYYY-MM-DDTHH:MM...)
+    const match = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+    if (match) {
+      const year = match[1];
+      const monthIdx = parseInt(match[2], 10) - 1;
+      const day = parseInt(match[3], 10);
+      const hours = match[4];
+      const minutes = match[5];
+      const monthName = months[monthIdx] || match[2];
+      return `${day} ${monthName} ${year} à ${hours}H${minutes}`;
+    }
+
+    // Fallback avec l'objet Date JavaScript
+    try {
+      const dt = new Date(dateStr);
+      if (!isNaN(dt.getTime())) {
+        const day = dt.getDate();
+        const month = months[dt.getMonth()];
+        const year = dt.getFullYear();
+        const hours = String(dt.getHours()).padStart(2, "0");
+        const minutes = String(dt.getMinutes()).padStart(2, "0");
+        return `${day} ${month} ${year} à ${hours}H${minutes}`;
+      }
+    } catch (e) {}
+
+    return dateStr;
+  }
+
   _updateData() {
     const d = this._extractData();
     const cardEl = this.querySelector("#flipr-card-content");
@@ -724,7 +762,10 @@ class FliprPanel extends HTMLElement {
     const syncTimeEl = this.querySelector("#last-sync-time");
 
     if (syncTimeEl) {
-      syncTimeEl.textContent = `Dernière mesure : ${d.last_measure} • Batterie : ${d.battery}%`;
+      const formattedDate = this._formatDate(d.last_measure);
+      const battNum = parseFloat(d.battery);
+      const battStr = isNaN(battNum) ? `${d.battery}%` : (d.battery.includes('.') ? `${d.battery}%` : `${battNum.toFixed(1)}%`);
+      syncTimeEl.textContent = `Dernière mesure : ${formattedDate} • Batterie : ${battStr}`;
     }
 
     if (cardEl) {
@@ -816,7 +857,7 @@ class FliprPanel extends HTMLElement {
             </div>
             <div>
               <div style="font-size: 14px; font-weight: 700; color: #0f172a;">Dernière Mesure</div>
-              <div style="font-size: 12px; color: #64748b; font-weight: 400; margin-top: 1px;">${d.last_measure}</div>
+              <div style="font-size: 12px; color: #64748b; font-weight: 400; margin-top: 1px;">${this._formatDate(d.last_measure)}</div>
             </div>
           </div>
           <div style="background: #f1f5f9; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #64748b;">

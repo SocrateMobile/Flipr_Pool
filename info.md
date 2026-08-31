@@ -1,4 +1,4 @@
-# Flipr Pool Control (v5.7.2)
+# Flipr Pool Control (v5.7.3)
 
 Cette intégration personnalisée pour Home Assistant vous permet de remonter l'ensemble des données de votre analyseur d'eau **Flipr** (AnalysR, Start, Start Max) et de piloter votre pompe via le **Flipr Hub / Control**.
 

@@ -1,6 +1,6 @@
 # Flipr Pool Control pour Home Assistant
 
-![Version](https://img.shields.io/badge/version-5.7.2-blue)
+![Version](https://img.shields.io/badge/version-5.7.3-blue)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
 
 Cette intégration non officielle pour Home Assistant permet de connecter votre analyseur d'eau **Flipr** et (optionnellement) votre **Flipr Hub**.

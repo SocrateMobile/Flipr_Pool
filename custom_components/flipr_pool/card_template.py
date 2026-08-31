@@ -1,6 +1,6 @@
 """Template de carte Lovelace."""
 
-COMBINED_CARD_TEMPLATE = """type: horizontal-stack
+COMBINED_CARD_TEMPLATE = r"""type: horizontal-stack
 cards:
     # ==============================================================================
     # CARTE LOVELACE "FLIPR OFFICIAL APP UI" - VUE ANALYSE
@@ -44,7 +44,14 @@ cards:
           const ph_status = (ph_status_entity && states[ph_status_entity]) ? states[ph_status_entity].state : 'Parfait';
           const cl_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_chlore'));
           const cl_status = (cl_status_entity && states[cl_status_entity]) ? states[cl_status_entity].state : 'Parfait';
-          const last_measure = states[`${prefix}_derniere_mesure`] ? states[`${prefix}_derniere_mesure`].state : 'mar. 04/08 01:20';
+          const raw_last_measure = states[`${prefix}_derniere_mesure`] ? states[`${prefix}_derniere_mesure`].state : (states[`${prefix}_last_update`] ? states[`${prefix}_last_update`].state : '');
+          let last_measure = raw_last_measure || "Aujourd'hui";
+          const match_date = String(raw_last_measure).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+          if (match_date) {
+            const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+            const mIdx = parseInt(match_date[2], 10) - 1;
+            last_measure = `${parseInt(match_date[3], 10)} ${months[mIdx] || match_date[2]} ${match_date[1]} à ${match_date[4]}H${match_date[5]}`;
+          }
           const redox_val = states[`${prefix}_potentiel_redox`] ? states[`${prefix}_potentiel_redox`].state : '545';
           
           const pump_entity = Object.keys(states).find(e => e.startsWith('switch.') && (e.includes('pompe_filtration') || e.includes('pump_filtration')));
