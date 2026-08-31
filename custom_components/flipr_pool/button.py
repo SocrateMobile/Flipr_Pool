@@ -116,21 +116,27 @@ class FliprGenerateCardButton(CoordinatorEntity, ButtonEntity):
         # Remplacer l'interpolation ${prefix} par le vrai préfixe
         yaml_content = yaml_content.replace("${prefix}", prefix)
 
-        # 4. Écrire le fichier
+        # 4. Écrire le fichier de façon asynchrone (non-bloquante pour l'event loop)
         file_path = self.hass.config.path("flipr_card.yaml")
-        try:
+        full_content = (
+            "# ==============================================================================\n"
+            "# CARTE LOVELACE FLIPR (Générée automatiquement)\n"
+            "# \n"
+            "# Ce code a été généré avec les identifiants exacts de vos capteurs.\n"
+            "# Copiez tout le contenu de ce fichier et collez-le dans une carte\n"
+            "# 'Manuel' ou dans l'éditeur de code de votre tableau de bord Lovelace.\n"
+            "# \n"
+            "# Prérequis : Vous devez installer la carte 'button-card' via HACS.\n"
+            "# ==============================================================================\n\n"
+            f"{yaml_content}"
+        )
+
+        def _write_yaml():
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write("# ==============================================================================\n")
-                f.write("# CARTE LOVELACE FLIPR (Générée automatiquement)\n")
-                f.write("# \n")
-                f.write("# Ce code a été généré avec les identifiants exacts de vos capteurs.\n")
-                f.write("# Copiez tout le contenu de ce fichier et collez-le dans une carte\n")
-                f.write("# 'Manuel' ou dans l'éditeur de code de votre tableau de bord Lovelace.\n")
-                f.write("# \n")
-                f.write("# Prérequis : Vous devez installer la carte 'button-card' via HACS.\n")
-                f.write("# ==============================================================================\n\n")
-                f.write(yaml_content)
-                
+                f.write(full_content)
+
+        try:
+            await self.hass.async_add_executor_job(_write_yaml)
             self.hass.components.persistent_notification.async_create(
                 f"Le code de votre carte Lovelace a été généré avec succès avec le préfixe `{prefix}`.<br><br>Vous le trouverez dans le fichier <b>flipr_card.yaml</b> à la racine de votre dossier de configuration Home Assistant.<br><br>Copiez son contenu dans votre tableau de bord !",
                 title="Flipr : Carte Lovelace Générée 🏊",

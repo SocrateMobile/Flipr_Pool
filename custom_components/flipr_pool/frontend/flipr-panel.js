@@ -670,9 +670,15 @@ class FliprPanel extends HTMLElement {
     );
     const prefix = ph_entity_key ? ph_entity_key.replace("_ph", "") : "sensor.flipr";
 
-    const getVal = (suffix, def = "0") => {
-      const e = states[`${prefix}_${suffix}`];
-      return e ? e.state : def;
+    const getVal = (suffixes, def = "0") => {
+      const list = Array.isArray(suffixes) ? suffixes : [suffixes];
+      for (const suffix of list) {
+        const e = states[`${prefix}_${suffix}`];
+        if (e && e.state !== undefined && e.state !== "unavailable" && e.state !== "unknown") {
+          return e.state;
+        }
+      }
+      return def;
     };
 
     const getFullEntity = (pred) => {
@@ -689,24 +695,24 @@ class FliprPanel extends HTMLElement {
       prefix,
       pump_entity_key,
       pump_state,
-      air_temp: getVal("temperature_de_l_air", "32"),
-      uv_index: getVal("indice_uv", "0"),
-      water_temp: getVal("temperature_de_l_eau", "28"),
+      air_temp: getVal(["temperature_de_l_air", "air_temp", "air_temperature"], "32"),
+      uv_index: getVal(["indice_uv", "uv_index"], "0"),
+      water_temp: getVal(["temperature_de_l_eau", "temperature", "water_temp", "water_temperature"], "28"),
       ph_val: getVal("ph", "7.2"),
-      ph_status: getFullEntity((k) => k.includes("flipr") && k.endsWith("_statut_ph")) || "Parfait",
-      redox_val: getVal("potentiel_redox", "650"),
-      cl_status: getFullEntity((k) => k.includes("flipr") && k.endsWith("_statut_chlore")) || "Parfait",
-      last_measure: getVal("derniere_mesure", "Aujourd'hui"),
-      advice_filtration: getVal("conseil_filtration", "Filtrer 12h / jour"),
-      ph_minus_dose: parseFloat(getVal("dose_ph", "0")) || 0,
-      ph_plus_dose: parseFloat(getVal("dose_ph_2", "0")) || 0,
-      cl_shock_dose: parseFloat(getVal("dose_chlore_choc", "0")) || 0,
-      cl_maint_dose: parseFloat(getVal("dose_chlore_entretien", "0")) || 0,
-      lsi_val: parseFloat(getVal("isl", "0.0")) || 0.0,
-      lsi_status: getFullEntity((k) => k.includes("flipr") && (k.endsWith("_statut_isl") || k.endsWith("_statut_lsi"))) || "Eau équilibrée",
-      free_cl: getVal("chlore_libre", "1.5"),
-      active_cl: getVal("chlore_actif", "0.6"),
-      battery: getVal("batterie", "100"),
+      ph_status: getFullEntity((k) => k.includes("flipr") && (k.endsWith("_statut_ph") || k.endsWith("_ph_status"))) || "Parfait",
+      redox_val: getVal(["potentiel_redox", "redox"], "650"),
+      cl_status: getFullEntity((k) => k.includes("flipr") && (k.endsWith("_statut_chlore") || k.endsWith("_chlorine_status"))) || "Parfait",
+      last_measure: getVal(["derniere_mesure", "last_update", "last_measurement"], "Aujourd'hui"),
+      advice_filtration: getVal(["conseil_filtration", "filtration_advice", "pump_hours"], "Filtrer 12h / jour"),
+      ph_minus_dose: parseFloat(getVal(["dose_ph", "dose_ph_minus", "ph_minus_dose"], "0")) || 0,
+      ph_plus_dose: parseFloat(getVal(["dose_ph_2", "dose_ph_plus", "ph_plus_dose"], "0")) || 0,
+      cl_shock_dose: parseFloat(getVal(["dose_chlore_choc", "dose_cl_shock", "cl_shock_dose"], "0")) || 0,
+      cl_maint_dose: parseFloat(getVal(["dose_chlore_entretien", "dose_cl_maint", "cl_maint_dose"], "0")) || 0,
+      lsi_val: parseFloat(getVal(["isl", "lsi", "indice_lsi"], "0.0")) || 0.0,
+      lsi_status: getFullEntity((k) => k.includes("flipr") && (k.endsWith("_statut_isl") || k.endsWith("_statut_lsi") || k.endsWith("_lsi_status"))) || "Eau équilibrée",
+      free_cl: getVal(["chlore_libre", "free_chlorine"], "1.5"),
+      active_cl: getVal(["chlore_actif", "active_chlorine"], "0.6"),
+      battery: getVal(["batterie", "battery", "battery_level"], "100"),
       pool_name: states[ph_entity_key] ? states[ph_entity_key].attributes?.friendly_name?.split(" ")[0] || "Piscine" : "Piscine",
     };
   }

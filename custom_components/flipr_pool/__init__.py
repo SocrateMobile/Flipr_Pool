@@ -890,8 +890,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return
 
         # Réinitialiser temporairement le rate-limit pour le diagnostic
-        api_client._blocked_until = None
-        api_client._retry_count = 0
+        api_client.reset_rate_limit()
 
         _LOGGER.info("Démarrage du diagnostic Hub Flipr...")
         debug_info = {}
@@ -999,7 +998,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_register(DOMAIN, "dump_entities", handle_dump_entities)
 
     # ── Enregistrement du Panneau Latéral Frontend ───────────────
-    frontend_dir = hass.config.path("custom_components/flipr_pool/frontend")
+    frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
     if os.path.exists(frontend_dir):
         if hasattr(hass.http, "async_register_static_paths"):
             await hass.http.async_register_static_paths([
@@ -1046,8 +1045,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
-        try:
-            frontend.async_remove_panel(hass, "flipr_pool")
-        except Exception:
-            pass
+        # Nettoyage des ressources globales si aucune autre instance n'est active
+        if not hass.data.get(DOMAIN):
+            for service_name in ("force_cloud_sync", "update_dimensions", "dump_hub_debug", "dump_entities"):
+                if hass.services.has_service(DOMAIN, service_name):
+                    hass.services.async_remove(DOMAIN, service_name)
+            try:
+                frontend.async_remove_panel(hass, "flipr_pool")
+            except Exception:
+                pass
     return unload_ok

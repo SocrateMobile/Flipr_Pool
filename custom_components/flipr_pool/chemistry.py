@@ -43,19 +43,22 @@ def compute_ph_equilibrium(
         return None
 
 
-def estimate_free_chlorine(orp: float, ph: float, cya: float = 40.0) -> float | None:
+def estimate_free_chlorine(orp: float | None, ph: float | None, cya: float = 40.0) -> float | None:
+    if orp is None or ph is None:
+        return None
     try:
         if orp < 415.0:
             _LOGGER.debug(
                 "ORP=%.1f mV is below 415 mV — free chlorine estimation unreliable",
                 orp,
             )
-        effective_orp = max(415.0, orp)
-        amplifier = 657 - (51 * ph)
+        effective_orp = max(415.0, float(orp))
+        ph_val = float(ph)
+        amplifier = 657 - (51 * ph_val)
         if amplifier < 0.1:
             amplifier = 0.1
 
-        exponent = (effective_orp - 1065 + (50 * ph)) / amplifier
+        exponent = (effective_orp - 1065 + (50 * ph_val)) / amplifier
         fc_theoretical = math.pow(10, exponent)
 
         cya_factor = max(1.0, float(cya) / 40.0)
@@ -63,7 +66,7 @@ def estimate_free_chlorine(orp: float, ph: float, cya: float = 40.0) -> float | 
 
         return round(max(0.0, min(fc_estimated, 15.0)), 2)
 
-    except (ValueError, OverflowError, ZeroDivisionError) as e:
+    except (ValueError, OverflowError, ZeroDivisionError, TypeError) as e:
         _LOGGER.error("Mathematical error in estimate_free_chlorine: %s", e)
         return None
 

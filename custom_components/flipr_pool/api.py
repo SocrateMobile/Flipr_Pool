@@ -441,10 +441,14 @@ class FliprApiClient:
         FliprApiClient._global_blocked_until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
         _LOGGER.warning("Rate-limit Flipr (429). Backoff de %d min (tentative %d).", minutes, FliprApiClient._global_retry_count)
 
-    def _reset_rate_limit(self) -> None:
-        """Réinitialise le compteur de backoff après un succès."""
+    def reset_rate_limit(self) -> None:
+        """Réinitialise publiquement le compteur de rate-limit (ex: lors d'un diagnostic)."""
         FliprApiClient._global_blocked_until = None
         FliprApiClient._global_retry_count = 0
+
+    def _reset_rate_limit(self) -> None:
+        """Réinitialise le compteur de backoff après un succès."""
+        self.reset_rate_limit()
 
     def _backoff_minutes(self) -> int:
         """Retourne le nombre de minutes du backoff actuel."""

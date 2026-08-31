@@ -23,6 +23,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_BLE_LOCK = asyncio.Lock()
 
 
 class FliprBleError(Exception):
@@ -228,13 +229,12 @@ async def read_flipr_ble(
     except ImportError:
         _LOGGER.debug("bleak-retry-connector non disponible, utilisation de BleakClient direct")
 
-    ble_lock = asyncio.Lock()
     result = {
         "ble_status": "connecting",
         "ble_rssi": None,
     }
 
-    async with ble_lock:
+    async with _BLE_LOCK:
         client = None
         try:
             # Connexion

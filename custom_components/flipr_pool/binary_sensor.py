@@ -20,11 +20,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     entities = [
         # ── 1. 💧 Mesures Instantanées de la Piscine ──────────
-        FliprProblemBinarySensor(coordinator, "ph_simple", "ph_status", "Statut pH"),
-        FliprProblemBinarySensor(coordinator, "chlorine_simple", "chlorine_status", "Statut Chlore"),
+        FliprProblemBinarySensor(coordinator, "ph_simple", "ph_status"),
+        FliprProblemBinarySensor(coordinator, "chlorine_simple", "chlorine_status"),
         # ── 6. ⚙️ Appareil & Statut Matériel ──────────────────
-        FliprBoolBinarySensor(coordinator, "need_calib", "need_calib", "Étalonnage Sondes Requis", BinarySensorDeviceClass.PROBLEM, EntityCategory.DIAGNOSTIC),
-        FliprBoolBinarySensor(coordinator, "subscription_valid", "subscription_valid", "Abonnement Flipr Valide", BinarySensorDeviceClass.PLUG, EntityCategory.DIAGNOSTIC),
+        FliprBoolBinarySensor(coordinator, "need_calib", "need_calib", BinarySensorDeviceClass.PROBLEM, EntityCategory.DIAGNOSTIC, "mdi:wrench-clock"),
+        FliprBoolBinarySensor(coordinator, "subscription_valid", "subscription_valid", None, EntityCategory.DIAGNOSTIC, "mdi:card-account-details-outline"),
     ]
 
     async_add_entities(entities)
@@ -33,13 +33,14 @@ class FliprBoolBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Generic boolean binary sensor."""
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: DataUpdateCoordinator, data_key: str, translation_key: str, default_name: str, device_class: BinarySensorDeviceClass | None = None, category: EntityCategory | None = None) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, data_key: str, translation_key: str, device_class: BinarySensorDeviceClass | None = None, category: EntityCategory | None = None, icon: str | None = None) -> None:
         super().__init__(coordinator)
         self._data_key = data_key
         self._attr_translation_key = translation_key
-        self._attr_name = default_name
         self._attr_device_class = device_class
         self._attr_entity_category = category
+        if icon:
+            self._attr_icon = icon
         self._attr_unique_id = f"flipr_{coordinator.flipr_id}_{translation_key}"
 
     @property
@@ -62,11 +63,10 @@ class FliprProblemBinarySensor(CoordinatorEntity, BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
-    def __init__(self, coordinator: DataUpdateCoordinator, data_key: str, translation_key: str, default_name: str) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, data_key: str, translation_key: str) -> None:
         super().__init__(coordinator)
         self._data_key = data_key
         self._attr_translation_key = translation_key
-        self._attr_name = default_name
         self._attr_unique_id = f"flipr_{coordinator.flipr_id}_{translation_key}"
 
     @property

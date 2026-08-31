@@ -414,6 +414,7 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             return self.async_create_entry(
                 title=f"Flipr ({self._email} — {flipr_id})",
                 data={
+                    "installation_type": self._installation_type,
                     "email": self._email,
                     "password": self._password,
                     "flipr_id": flipr_id,
