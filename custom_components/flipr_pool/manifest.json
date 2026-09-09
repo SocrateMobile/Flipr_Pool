@@ -22,12 +22,12 @@
     {"local_name": "F3F*"},
     {"service_uuid": "0000fee8-0000-1000-8000-00805f9b34fb"}
   ],
-  "codeowners": ["@jflavigne"],
+  "codeowners": ["@SocrateMobile", "@jflavigne"],
   "config_flow": true,
   "dependencies": ["bluetooth", "frontend", "http"],
-  "documentation": "https://github.com/SocrateMobile/flipr_pool",
+  "documentation": "https://github.com/SocrateMobile/Flipr_Pool",
   "iot_class": "local_polling",
   "version": "5.7.3",
-  "issue_tracker": "https://github.com/SocrateMobile/flipr_pool/issues",
+  "issue_tracker": "https://github.com/SocrateMobile/Flipr_Pool/issues",
   "requirements": ["async_timeout", "aiohttp", "bleak>=0.21.1", "bleak-retry-connector>=4.0.0"]
 }
