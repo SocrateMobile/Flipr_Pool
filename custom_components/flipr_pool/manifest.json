@@ -29,5 +29,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/SocrateMobile/Flipr_Pool/issues",
   "requirements": ["async_timeout", "aiohttp", "bleak>=0.21.1", "bleak-retry-connector>=4.0.0"],
-  "version": "5.7.4"
+  "version": "5.7.5"
 }
