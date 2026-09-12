@@ -16,6 +16,12 @@ class FliprPanel extends HTMLElement {
   }
 
   connectedCallback() {
+    if (this._hass && !this._initialized) {
+      this._initialized = true;
+      this._renderLayout();
+      this._updateData();
+    }
+
     this._sidebarInterval = setInterval(() => {
       this._syncSidebarBadge();
     }, 2500);
