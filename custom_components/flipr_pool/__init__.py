@@ -1021,7 +1021,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 config={
                     "_panel_custom": {
                         "name": "flipr-panel",
-                        "module_url": f"/flipr_pool_panel/flipr-panel.js?v={VERSION}",
+                        "module_url": "/flipr_pool_panel/flipr-panel.js",
                     }
                 },
                 require_admin=False,
