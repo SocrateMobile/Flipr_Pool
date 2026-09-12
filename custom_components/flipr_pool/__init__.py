@@ -58,7 +58,7 @@ from .chemistry import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor", "select", "switch", "number", "button", "binary_sensor"]
+PLATFORMS = ["sensor", "select", "switch", "number", "button", "binary_sensor", "update"]
 STORE_VERSION = 1
 
 
@@ -1021,7 +1021,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 config={
                     "_panel_custom": {
                         "name": "flipr-panel",
-                        "module_url": "/flipr_pool_panel/flipr-panel.js",
+                        "module_url": f"/flipr_pool_panel/flipr-panel.js?v={VERSION}",
                     }
                 },
                 require_admin=False,
