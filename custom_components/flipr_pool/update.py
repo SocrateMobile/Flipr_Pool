@@ -78,7 +78,7 @@ async def async_setup_entry(
     )
 
     hass.data.setdefault(DOMAIN, {}).setdefault(entry.entry_id, {})["update_entity"] = update_entity
-    async_add_entities([update_entity], True)
+    async_add_entities([update_entity], False)
 
 
 class FliprPoolUpdateEntity(UpdateEntity):
@@ -183,7 +183,8 @@ class FliprPoolUpdateEntity(UpdateEntity):
                 # Update left sidebar panel badge & icon
                 self._update_sidebar_panel(has_update)
 
-                self.async_write_ha_state()
+                if self.entity_id is not None:
+                    self.async_write_ha_state()
                 _LOGGER.info(
                     "Flipr Pool Control update check: installed=%s, latest=%s, update_available=%s",
                     self._attr_installed_version,
@@ -206,7 +207,12 @@ class FliprPoolUpdateEntity(UpdateEntity):
                 sidebar_title=title,
                 sidebar_icon=icon,
                 frontend_url_path="flipr_pool",
-                config={},
+                config={
+                    "_panel_custom": {
+                        "name": "flipr-panel",
+                        "module_url": "/flipr_pool_panel/flipr-panel.js",
+                    }
+                },
                 require_admin=False,
                 update=True,
             )
@@ -235,7 +241,8 @@ class FliprPoolUpdateEntity(UpdateEntity):
 
         self._attr_in_progress = True
         self._attr_update_percentage = 10
-        self.async_write_ha_state()
+        if self.entity_id is not None:
+            self.async_write_ha_state()
 
         temp_dir = tempfile.mkdtemp(prefix="flipr_pool_update_")
         zip_path = os.path.join(temp_dir, "release.zip")
@@ -254,7 +261,8 @@ class FliprPoolUpdateEntity(UpdateEntity):
                         f.write(chunk)
 
             self._attr_update_percentage = 40
-            self.async_write_ha_state()
+            if self.entity_id is not None:
+                self.async_write_ha_state()
 
             def _do_extract_and_copy() -> None:
                 extract_path = os.path.join(temp_dir, "extracted")
@@ -300,13 +308,15 @@ class FliprPoolUpdateEntity(UpdateEntity):
             await self.hass.async_add_executor_job(_do_extract_and_copy)
 
             self._attr_update_percentage = 90
-            self.async_write_ha_state()
+            if self.entity_id is not None:
+                self.async_write_ha_state()
 
             self._update_sidebar_panel(False)
             self._attr_installed_version = self._attr_latest_version
             self._attr_update_percentage = 100
             self._attr_in_progress = False
-            self.async_write_ha_state()
+            if self.entity_id is not None:
+                self.async_write_ha_state()
 
             _LOGGER.info("Flipr Pool Control update complete! Restarting Home Assistant...")
             await asyncio.sleep(1.5)
@@ -315,7 +325,8 @@ class FliprPoolUpdateEntity(UpdateEntity):
         except Exception as err:
             self._attr_in_progress = False
             self._attr_update_percentage = None
-            self.async_write_ha_state()
+            if self.entity_id is not None:
+                self.async_write_ha_state()
             _LOGGER.error("Flipr Pool Control auto-update failed: %s", err, exc_info=True)
             raise HomeAssistantError(f"Échec de la mise à jour : {err}") from err
         finally:
