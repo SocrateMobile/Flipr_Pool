@@ -2,7 +2,7 @@
 
 DOMAIN = "flipr_pool"
 NAME = "Flipr Pool Control"
-VERSION = "5.7.6"
+VERSION = "5.7.7"
 API_BASE_URL = "https://apis.goflipr.com"
 
 # ── Configuration de traitement ────────────────────────────
