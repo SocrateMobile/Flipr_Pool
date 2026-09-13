@@ -242,10 +242,26 @@ class FliprPoolUpdateEntity(UpdateEntity):
             self._zip_download_url,
         )
 
+
         self._attr_in_progress = True
         self._attr_update_percentage = 10
         if self.entity_id is not None:
             self.async_write_ha_state()
+            
+        # Synergy: DomoLink-BackUp Safety Snapshot before OTA
+        if backup and self.hass.services.has_service("domolink_backup", "create_backup"):
+            _LOGGER.info("Flipr Pool: Déclenchement d'une sauvegarde de sécurité avant la mise à jour (via DomoLink-BackUp).")
+            import datetime
+            try:
+                await self.hass.services.async_call("domolink_backup", "create_backup", {
+                    "name": f"PRE_UPDATE_FLIPR_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    "backup_type": "partial",
+                    "homeassistant": False,
+                    "include_integrations": True
+                }, blocking=False)
+                await asyncio.sleep(2)
+            except Exception as e:
+                _LOGGER.warning("Flipr Pool: Impossible de lancer la sauvegarde pré-update: %s", e)
 
         temp_dir = tempfile.mkdtemp(prefix="flipr_pool_update_")
         zip_path = os.path.join(temp_dir, "release.zip")
@@ -323,7 +339,14 @@ class FliprPoolUpdateEntity(UpdateEntity):
 
             _LOGGER.info("Flipr Pool Control update complete! Restarting Home Assistant...")
             await asyncio.sleep(1.5)
-            await self.hass.services.async_call("homeassistant", "restart")
+            
+            # Synergy: Use Restart-HA if available
+            if self.hass.services.has_service("restart_ha", "start_process"):
+                _LOGGER.info("Flipr Pool: Utilisation de Restart-HA pour le redémarrage (Safe Reboot).")
+                await self.hass.services.async_call("restart_ha", "start_process", {"action": "quick_restart"})
+            else:
+                _LOGGER.info("Flipr Pool: Redémarrage standard Home Assistant.")
+                await self.hass.services.async_call("homeassistant", "restart")
 
         except Exception as err:
             self._attr_in_progress = False
