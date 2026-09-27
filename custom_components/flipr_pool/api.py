@@ -44,6 +44,7 @@ class FliprApiClient:
     
     _global_blocked_until: datetime | None = None
     _global_retry_count: int = 0
+    _global_token: str | None = None
 
     def __init__(
         self,
@@ -54,7 +55,7 @@ class FliprApiClient:
         self._session = session
         self._email = email
         self._password = password
-        self._token: str | None = None
+        self._token: str | None = FliprApiClient._global_token
         self._cache: dict[str, tuple[datetime, Any]] = {}
 
     # ═══════════════════════════════════════════════════════════
@@ -65,6 +66,10 @@ class FliprApiClient:
         """Authentification OAuth2 password-grant. Retourne le access_token."""
         if not self._email or not self._password:
             raise FliprAuthError("Email ou mot de passe manquant.")
+
+        if FliprApiClient._global_token:
+            self._token = FliprApiClient._global_token
+            return self._token
 
         self._check_rate_limit()
 
@@ -87,6 +92,7 @@ class FliprApiClient:
                     if not token:
                         raise FliprAuthError("Réponse d'authentification invalide (token absent).")
                     self._token = token
+                    FliprApiClient._global_token = token
                     self._reset_rate_limit()
                     return self._token
 
@@ -143,6 +149,8 @@ class FliprApiClient:
                 # ── Token expiré → renouvellement unique ──
                 if resp.status == 401:
                     _LOGGER.info("Token Flipr expiré — renouvellement en cours…")
+                    FliprApiClient._global_token = None
+                    self._token = None
                     await self.authenticate()
                     headers["Authorization"] = f"Bearer {self._token}"
                     async with self._session.request(method, url, headers=headers, **kwargs) as retry:
@@ -344,14 +352,16 @@ class FliprApiClient:
                 pass
 
         # ── 4. Hub State : GET /hub/{hubId}/state ──
-        if hub_id and not data.get("hub_state"):
+        if hub_id:
             try:
                 hub_url = f"{API_BASE_URL}/hub/{hub_id}/state"
                 hub_resp = await self._request("GET", hub_url)
-                if isinstance(hub_resp, dict) and "ErrorCode" not in hub_resp:
+                if isinstance(hub_resp, dict) and not hub_resp.get("ErrorCode"):
                     # Passer les données brutes pour que le coordinateur les parse
                     data["hub_state"] = hub_resp
-                    _LOGGER.debug("Flipr Hub %s state brut: %s", hub_id, hub_resp)
+                    _LOGGER.info("Flipr Hub %s state récupéré: %s", hub_id, hub_resp)
+                elif isinstance(hub_resp, dict) and hub_resp.get("ErrorCode"):
+                    _LOGGER.debug("Flipr Hub %s a retourné : %s", hub_id, hub_resp.get("ErrorMessage"))
             except Exception as e:
                 _LOGGER.debug("Échec GET hub state pour %s : %s", hub_id, e)
 
@@ -384,48 +394,16 @@ class FliprApiClient:
         if mode not in ("auto", "manual", "planning"):
             raise ValueError(f"Mode Hub invalide : {mode!r}. Attendu : auto, manual, planning.")
 
-        for url in [
-            f"{API_BASE_URL}/hub/{hub_id}/mode/{mode}",
-            f"{API_BASE_URL}/hub/{hub_id}/Mode/{mode}",
-        ]:
-            try:
-                await self._request("PUT", url)
-                _LOGGER.info("Hub %s : mode changé en '%s'", hub_id, mode)
-                return
-            except Exception as e:
-                _LOGGER.debug("Échec PUT mode %s: %s", url, e)
+        url = f"{API_BASE_URL}/hub/{hub_id}/mode/{mode}"
+        await self._request("PUT", url)
+        _LOGGER.info("Hub %s : mode changé en '%s'", hub_id, mode)
 
     async def set_hub_pump(self, hub_id: str, state: bool) -> None:
-        """Allume/éteint la pompe du Hub.
-
-        IMPORTANT : L'API Flipr exige que le Hub soit en mode 'manual'
-        AVANT de pouvoir commander la pompe.
-
-        Séquence :
-          1. PUT  /hub/{hubId}/mode/manual
-          2. POST /hub/{hubId}/Manual/True|False
-        """
-        # 1. Forcer le mode manual
-        try:
-            await self.set_hub_mode(hub_id, "manual")
-        except Exception as e:
-            _LOGGER.warning("Avertissement passage en mode manual pour Hub %s: %s", hub_id, e)
-
-        # 2. Commander la pompe
+        """Allume/éteint la pompe du Hub en mode manuel."""
         state_str = "True" if state else "False"
-        for url in [
-            f"{API_BASE_URL}/hub/{hub_id}/Manual/{state_str}",
-            f"{API_BASE_URL}/hub/{hub_id}/manual/{state_str.lower()}",
-            f"{API_BASE_URL}/hub/{hub_id}/state/{state_str.lower()}",
-        ]:
-            try:
-                await self._request("POST", url)
-                _LOGGER.info("Hub %s : pompe → %s via %s", hub_id, "ON" if state else "OFF", url)
-                return
-            except Exception as e:
-                _LOGGER.debug("Échec POST pump %s: %s", url, e)
-
-        raise FliprApiError(f"Impossible de commander la pompe du Hub {hub_id}.")
+        url = f"{API_BASE_URL}/hub/{hub_id}/Manual/{state_str}"
+        await self._request("POST", url)
+        _LOGGER.info("Hub %s : pompe → %s via %s", hub_id, "ON" if state else "OFF", url)
 
     async def get_hub_state(self, hub_id: str) -> dict[str, Any]:
         """Récupère l'état actuel du Hub : GET /hub/{hubId}/state"""
@@ -453,15 +431,15 @@ class FliprApiClient:
     def _check_rate_limit(self) -> None:
         """Lève une exception si on est en période de backoff 429."""
         if FliprApiClient._global_blocked_until and datetime.now(timezone.utc) < FliprApiClient._global_blocked_until:
-            remaining = int((FliprApiClient._global_blocked_until - datetime.now(timezone.utc)).total_seconds() / 60)
-            raise FliprApiError(f"Rate-limit actif. Réessayez dans {remaining} min.")
+            remaining = int((FliprApiClient._global_blocked_until - datetime.now(timezone.utc)).total_seconds())
+            raise FliprApiError(f"Rate-limit actif. Réessayez dans {remaining}s.")
 
     def _apply_rate_limit(self) -> None:
-        """Active le backoff exponentiel : 5m, 10m, 20m, 40m…"""
+        """Active le backoff : 60s, puis 120s, max 300s."""
         FliprApiClient._global_retry_count += 1
-        minutes = 5 * (2 ** (FliprApiClient._global_retry_count - 1))
-        FliprApiClient._global_blocked_until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
-        _LOGGER.warning("Rate-limit Flipr (429). Backoff de %d min (tentative %d).", minutes, FliprApiClient._global_retry_count)
+        seconds = min(300, 60 * (2 ** min(3, FliprApiClient._global_retry_count - 1)))
+        FliprApiClient._global_blocked_until = datetime.now(timezone.utc) + timedelta(seconds=seconds)
+        _LOGGER.warning("Rate-limit Flipr (429). Pause de %ds (tentative %d).", seconds, FliprApiClient._global_retry_count)
 
     def reset_rate_limit(self) -> None:
         """Réinitialise publiquement le compteur de rate-limit (ex: lors d'un diagnostic)."""
@@ -474,7 +452,7 @@ class FliprApiClient:
 
     def _backoff_minutes(self) -> int:
         """Retourne le nombre de minutes du backoff actuel."""
-        return 5 * (2 ** (max(0, FliprApiClient._global_retry_count - 1)))
+        return max(1, int((60 * (2 ** min(3, max(0, FliprApiClient._global_retry_count - 1)))) / 60))
 
     @staticmethod
     async def _extract_error(resp: aiohttp.ClientResponse) -> str:

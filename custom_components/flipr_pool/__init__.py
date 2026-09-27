@@ -231,11 +231,16 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
 
     # ── Dimensions piscine ──────────────────────────────────
     opts          = {**entry.data, **entry.options}
-    pool_length   = float(opts.get("pool_length", 0))
-    pool_width    = float(opts.get("pool_width", 0))
-    pool_depth    = float(opts.get("pool_depth", 0))
+    pool_length   = float(opts.get("pool_length", 0) or 0)
+    pool_width    = float(opts.get("pool_width", 0) or 0)
+    pool_depth    = float(opts.get("pool_depth", 0) or 0)
+    pool_volume_opt = float(opts.get("pool_volume", 0) or 0)
     pool_volume_m3 = pool_length * pool_width * pool_depth
-    pool_volume_l  = round(pool_volume_m3 * 1000) if pool_volume_m3 > 0 else None
+    if pool_volume_m3 <= 0 and pool_volume_opt > 0:
+        pool_volume_m3 = pool_volume_opt
+    elif pool_volume_m3 <= 0:
+        pool_volume_m3 = 40.0  # Volume résidentiel standard par défaut (40 m³ = 40 000 L)
+    pool_volume_l  = round(pool_volume_m3 * 1000)
 
     # ── Doses de correction pH ──────────────────────────────
     if ph_val is not None and pool_volume_m3 > 0:
@@ -842,15 +847,23 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 cloud_data["hub_id"] = hub_id
                 if hub_id:
                     self.hub_id = hub_id
-                hub_state = data_raw.get("hub_state", {})
+                hub_state = data_raw.get("hub_state") or {}
                 
                 # Extraction du mode : clés brutes API ou normalisées
-                cloud_data["hub_mode"] = (
+                raw_mode = (
                     hub_state.get("behavior")
                     or hub_state.get("Behavior")
                     or hub_state.get("Mode")
                     or hub_state.get("mode")
                 )
+                if isinstance(raw_mode, str) and raw_mode.lower() in ("auto", "manual", "planning"):
+                    cloud_data["hub_mode"] = raw_mode.lower()
+                elif isinstance(raw_mode, int):
+                    cloud_data["hub_mode"] = {1: "manual", 2: "planning", 0: "auto"}.get(raw_mode, "auto")
+                elif self.data and self.data.get("hub_mode"):
+                    cloud_data["hub_mode"] = self.data.get("hub_mode")
+                else:
+                    cloud_data["hub_mode"] = "manual"
                 
                 # Extraction de l'état pompe : clés brutes API ou normalisées
                 st_eq = hub_state.get("stateEquipment")
@@ -858,13 +871,15 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 st_state = hub_state.get("State") or hub_state.get("state")
                 
                 if st_eq is not None:
-                    cloud_data["hub_state"] = "on" if (st_eq == 1 or st_eq is True) else "off"
+                    cloud_data["hub_state"] = "on" if (st_eq == 1 or st_eq is True or str(st_eq).lower() in ("1", "true", "on")) else "off"
                 elif st_status is not None:
                     cloud_data["hub_state"] = "on" if str(st_status).lower() in ("true", "1", "on", "active") else "off"
                 elif st_state is not None:
                     cloud_data["hub_state"] = "on" if str(st_state).lower() in ("true", "1", "on", "active") else "off"
+                elif self.data and self.data.get("hub_state"):
+                    cloud_data["hub_state"] = self.data.get("hub_state")
                 else:
-                    cloud_data["hub_state"] = None  # Pas de Hub ou pas de données
+                    cloud_data["hub_state"] = "off"
                 
                 _LOGGER.debug("Hub state parsed: hub_id=%s, mode=%s, state=%s, raw=%s", hub_id, cloud_data['hub_mode'], cloud_data['hub_state'], hub_state)
                 
@@ -876,13 +891,18 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                 if cloud_date and current_date and cloud_date < current_date:
                     _LOGGER.info("Flipr: Le Cloud (date: %s) est plus ancien que la donnée en mémoire (date: %s). Fusion intelligente.", cloud_date, current_date)
                     for k, v in cloud_data.items():
-                        if k not in ["temperature", "ph", "ph_status", "ph_simple", "redox", "battery", "conductivity", "chlorine", "chlorine_status", "chlorine_simple", "last_update", "lsi", "lsi_status", "ph_equilibre", "free_chlorine", "active_chlorine", "data_source", "pump_hours", "conseil_filtration", "dose_ph_minus", "dose_ph_plus", "dose_cl_maint", "dose_cl_shock", "dose_tac_plus"]:
+                        if merged.get(k) is None and v is not None:
+                            merged[k] = v
+                        elif k not in ["temperature", "ph", "ph_status", "ph_simple", "redox", "battery", "conductivity", "chlorine", "chlorine_status", "chlorine_simple", "last_update", "lsi", "lsi_status", "ph_equilibre", "free_chlorine", "active_chlorine", "data_source", "pump_hours", "conseil_filtration", "dose_ph_minus", "dose_ph_plus", "dose_cl_maint", "dose_cl_shock", "dose_tac_plus"]:
                             merged[k] = v
                 else:
                     merged = dict(cloud_data)
                     if self.data:
                         merged["ble_rssi"] = self.data.get("ble_rssi")
                         merged["ble_status"] = self.data.get("ble_status")
+
+                # Enrichissement final pour garantir qu'aucun capteur ne reste Inconnu
+                merged = _enrich_pool_data(merged, self.config_entry)
 
                 self.hass.async_create_task(self._async_save(merged))
                 return merged

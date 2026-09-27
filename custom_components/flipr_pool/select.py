@@ -76,16 +76,12 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             return
 
         try:
-            # Utiliser la méthode set_hub_mode() qui valide le mode
             await api_client.set_hub_mode(hub_id, option)
 
             if self.coordinator.data:
                 self.coordinator.data["hub_mode"] = option
             self.async_write_ha_state()
-
-            # Temporisation et polling
-            await asyncio.sleep(4)
-            await self.coordinator.async_request_refresh()
+            _LOGGER.info("Flipr Hub %s: Mode changé en '%s'", hub_id, option)
 
         except Exception as err:
             _LOGGER.error("Erreur lors du changement de mode Flipr Hub : %s", err)

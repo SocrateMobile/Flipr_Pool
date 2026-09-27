@@ -1179,8 +1179,12 @@ class FliprPanel extends HTMLElement {
 
     // Pompe de filtration : switch.flipr_piscine_pompe_de_filtration ou tout switch flipr/pompe/pump
     const pump_entity_key = Object.keys(states).find(
-      (e) => e.startsWith("switch.") && !e.includes("domolink") && (
-        e.includes("flipr_hub") || (prefix && e.startsWith(prefix.replace("sensor.", "switch."))) || e.includes("pompe") || e.includes("pump")
+      (e) => e.startsWith("switch.") && !e.includes("domolink") && !e.includes("scanner") && !e.includes("ble") && (
+        e.includes("pompe_filtration") || e.includes("pump_filtration") || e.includes("pompe") || e.includes("pump") || e.includes("flipr_hub")
+      )
+    ) || Object.keys(states).find(
+      (e) => e.startsWith("switch.") && !e.includes("domolink") && !e.includes("scanner") && !e.includes("ble") && (
+        (prefix && e.startsWith(prefix.replace("sensor.", "switch.")))
       )
     );
     const pump_state = pump_entity_key && states[pump_entity_key] ? states[pump_entity_key].state : "off";
@@ -1188,10 +1192,10 @@ class FliprPanel extends HTMLElement {
     // Mode du Hub : auto, manual, planning
     const select_mode_key = Object.keys(states).find(
       (e) => e.startsWith("select.") && !e.includes("domolink") && (
-        e.includes("flipr") || (prefix && e.startsWith(prefix.replace("sensor.", "select."))) || e.includes("mode_filtration")
+        e.includes("mode_filtration") || (prefix && e.startsWith(prefix.replace("sensor.", "select."))) || e.includes("flipr")
       )
     );
-    const hub_mode = select_mode_key && states[select_mode_key] ? states[select_mode_key].state : "auto";
+    const hub_mode = select_mode_key && states[select_mode_key] && states[select_mode_key].state !== "unknown" ? states[select_mode_key].state : "manual";
 
     // Nom de la piscine / du bassin
     const any_pool_entity = ph_flipr_key || flipr_keys.find(
@@ -1842,6 +1846,9 @@ class FliprPanel extends HTMLElement {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         if (d.pump_entity_key && this._hass) {
+          const isCurrentlyOn = btn.classList.contains("pump-on");
+          btn.classList.toggle("pump-on", !isCurrentlyOn);
+          btn.classList.toggle("pump-off", isCurrentlyOn);
           this._hass.callService("homeassistant", "toggle", {
             entity_id: d.pump_entity_key,
           });
@@ -1851,9 +1858,19 @@ class FliprPanel extends HTMLElement {
 
     // Boutons de mode Flipr Hub (Auto, Manuel, Planning)
     const btnAuto = cardEl.querySelector("#btn-mode-auto");
+    const btnManual = cardEl.querySelector("#btn-mode-manual");
+    const btnPlanning = cardEl.querySelector("#btn-mode-planning");
+
+    const setModeVisual = (mode) => {
+      if (btnAuto) btnAuto.classList.toggle("active", mode === "auto");
+      if (btnManual) btnManual.classList.toggle("active", mode === "manual");
+      if (btnPlanning) btnPlanning.classList.toggle("active", mode === "planning");
+    };
+
     if (btnAuto) {
       btnAuto.addEventListener("click", (e) => {
         e.stopPropagation();
+        setModeVisual("auto");
         if (d.select_mode_key && this._hass) {
           this._hass.callService("select", "select_option", {
             entity_id: d.select_mode_key,
@@ -1863,10 +1880,10 @@ class FliprPanel extends HTMLElement {
       });
     }
 
-    const btnManual = cardEl.querySelector("#btn-mode-manual");
     if (btnManual) {
       btnManual.addEventListener("click", (e) => {
         e.stopPropagation();
+        setModeVisual("manual");
         if (d.select_mode_key && this._hass) {
           this._hass.callService("select", "select_option", {
             entity_id: d.select_mode_key,
@@ -1876,10 +1893,10 @@ class FliprPanel extends HTMLElement {
       });
     }
 
-    const btnPlanning = cardEl.querySelector("#btn-mode-planning");
     if (btnPlanning) {
       btnPlanning.addEventListener("click", (e) => {
         e.stopPropagation();
+        setModeVisual("planning");
         if (d.select_mode_key && this._hass) {
           this._hass.callService("select", "select_option", {
             entity_id: d.select_mode_key,

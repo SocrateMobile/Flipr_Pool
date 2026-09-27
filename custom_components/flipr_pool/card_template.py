@@ -40,10 +40,65 @@ cards:
           const uv_index = states[`${prefix}_indice_uv`] ? states[`${prefix}_indice_uv`].state : '0';
           const water_temp = states[`${prefix}_temperature_de_l_eau`] ? states[`${prefix}_temperature_de_l_eau`].state : '29';
           const ph_val = states[`${prefix}_ph`] ? states[`${prefix}_ph`].state : '7.1';
-          const ph_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_ph'));
-          const ph_status = (ph_status_entity && states[ph_status_entity]) ? states[ph_status_entity].state : 'Parfait';
-          const cl_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_chlore'));
-          const cl_status = (cl_status_entity && states[cl_status_entity]) ? states[cl_status_entity].state : 'Parfait';
+          const ph_num = parseFloat(ph_val);
+          let ph_status = "Idéal";
+          let ph_icon = "👍";
+          let ph_border = "#10b981";
+          if (isNaN(ph_num)) {
+            ph_status = "En attente";
+            ph_icon = "⏳";
+            ph_border = "white";
+          } else if (ph_num >= 7.0 && ph_num <= 7.4) {
+            ph_status = "Idéal";
+            ph_icon = "👍";
+            ph_border = "#10b981";
+          } else if (ph_num > 7.4 && ph_num <= 7.7) {
+            ph_status = "Élevé";
+            ph_icon = "⚠️";
+            ph_border = "#f59e0b";
+          } else if (ph_num > 7.7) {
+            ph_status = "Trop haut";
+            ph_icon = "🚨";
+            ph_border = "#ef4444";
+          } else if (ph_num >= 6.8 && ph_num < 7.0) {
+            ph_status = "Un peu bas";
+            ph_icon = "⚠️";
+            ph_border = "#f59e0b";
+          } else {
+            ph_status = "Trop bas";
+            ph_icon = "🚨";
+            ph_border = "#ef4444";
+          }
+
+          const rx_num = parseFloat(redox_val);
+          let cl_status = "Idéal";
+          let cl_icon = "👍";
+          let cl_border = "#10b981";
+          if (isNaN(rx_num)) {
+            cl_status = "En attente";
+            cl_icon = "⏳";
+            cl_border = "white";
+          } else if (rx_num >= 650 && rx_num <= 750) {
+            cl_status = "Idéal";
+            cl_icon = "👍";
+            cl_border = "#10b981";
+          } else if (rx_num > 750 && rx_num <= 800) {
+            cl_status = "Élevé";
+            cl_icon = "⚠️";
+            cl_border = "#f59e0b";
+          } else if (rx_num > 800) {
+            cl_status = "Surdosage";
+            cl_icon = "🚨";
+            cl_border = "#ef4444";
+          } else if (rx_num >= 580 && rx_num < 650) {
+            cl_status = "Faible";
+            cl_icon = "⚠️";
+            cl_border = "#f59e0b";
+          } else {
+            cl_status = "Insuffisant";
+            cl_icon = "🚨";
+            cl_border = "#ef4444";
+          }
           const raw_last_measure = states[`${prefix}_derniere_mesure`] ? states[`${prefix}_derniere_mesure`].state : (states[`${prefix}_last_update`] ? states[`${prefix}_last_update`].state : '');
           let last_measure = raw_last_measure || "Aujourd'hui";
           const match_date = String(raw_last_measure).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
@@ -253,8 +308,8 @@ cards:
                       <div style="position: absolute; font-size: 26px; font-weight: 600;">${ph_val}</div>
                     </div>
                     <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">pH</div>
-                    <div style="display: inline-block; margin-top: 10px; padding: 6px 16px; border: 1.5px solid white; border-radius: 20px; font-size: 12px; font-weight: 600; background: transparent; white-space: nowrap;">
-                      👍 ${ph_status}
+                    <div style="display: inline-block; margin-top: 10px; padding: 6px 16px; border: 1.5px solid ${ph_border}; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.15); white-space: nowrap;">
+                      ${ph_icon} ${ph_status}
                     </div>
                   </div>
     
@@ -280,8 +335,8 @@ cards:
                       <div style="position: absolute; font-size: 22px; font-weight: 600;">${redox_val}</div>
                     </div>
                     <div style="font-size: 14px; font-weight: 500; margin-top: 10px; opacity: 0.9;">Chlore</div>
-                    <div style="display: inline-block; margin-top: 10px; padding: 6px 16px; border: 1.5px solid white; border-radius: 20px; font-size: 12px; font-weight: 600; background: transparent; white-space: nowrap;">
-                      👍 ${cl_status}
+                    <div style="display: inline-block; margin-top: 10px; padding: 6px 16px; border: 1.5px solid ${cl_border}; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.15); white-space: nowrap;">
+                      ${cl_icon} ${cl_status}
                     </div>
                   </div>
     
@@ -354,10 +409,51 @@ cards:
           const uv_index = states[`${prefix}_indice_uv`] ? states[`${prefix}_indice_uv`].state : '0';
           const water_temp = states[`${prefix}_temperature_de_l_eau`] ? states[`${prefix}_temperature_de_l_eau`].state : '29';
           const ph_val = states[`${prefix}_ph`] ? states[`${prefix}_ph`].state : '7.1';
-          const ph_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_ph'));
-          const ph_status = (ph_status_entity && states[ph_status_entity]) ? states[ph_status_entity].state : 'Parfait';
-          const cl_status_entity = Object.keys(states).find(e => e.includes('flipr') && e.endsWith('_statut_chlore'));
-          const cl_status = (cl_status_entity && states[cl_status_entity]) ? states[cl_status_entity].state : 'Parfait';
+          const ph_num = parseFloat(ph_val);
+          let ph_status = "Idéal";
+          let ph_icon = "👍";
+          if (isNaN(ph_num)) {
+            ph_status = "En attente";
+            ph_icon = "⏳";
+          } else if (ph_num >= 7.0 && ph_num <= 7.4) {
+            ph_status = "Idéal";
+            ph_icon = "👍";
+          } else if (ph_num > 7.4 && ph_num <= 7.7) {
+            ph_status = "Élevé";
+            ph_icon = "⚠️";
+          } else if (ph_num > 7.7) {
+            ph_status = "Trop haut";
+            ph_icon = "🚨";
+          } else if (ph_num >= 6.8 && ph_num < 7.0) {
+            ph_status = "Un peu bas";
+            ph_icon = "⚠️";
+          } else {
+            ph_status = "Trop bas";
+            ph_icon = "🚨";
+          }
+
+          const rx_num = parseFloat(redox_val);
+          let cl_status = "Idéal";
+          let cl_icon = "👍";
+          if (isNaN(rx_num)) {
+            cl_status = "En attente";
+            cl_icon = "⏳";
+          } else if (rx_num >= 650 && rx_num <= 750) {
+            cl_status = "Idéal";
+            cl_icon = "👍";
+          } else if (rx_num > 750 && rx_num <= 800) {
+            cl_status = "Élevé";
+            cl_icon = "⚠️";
+          } else if (rx_num > 800) {
+            cl_status = "Surdosage";
+            cl_icon = "🚨";
+          } else if (rx_num >= 580 && rx_num < 650) {
+            cl_status = "Faible";
+            cl_icon = "⚠️";
+          } else {
+            cl_status = "Insuffisant";
+            cl_icon = "🚨";
+          }
           const last_measure = states[`${prefix}_derniere_mesure`] ? states[`${prefix}_derniere_mesure`].state : 'mar. 04/08 01:20';
           
           const pump_entity = Object.keys(states).find(e => e.startsWith('switch.') && (e.includes('pompe_filtration') || e.includes('pump_filtration')));
@@ -365,6 +461,15 @@ cards:
           const pump_bg = (pump_state === 'on') ? '#22c55e' : '#f1f5f9';
           const pump_color = (pump_state === 'on') ? 'white' : '#94a3b8';
           const pump_shadow = (pump_state === 'on') ? 'box-shadow: 0 2px 10px rgba(34,197,94,0.4);' : '';
+
+          const mode_entity = Object.keys(states).find(e => e.startsWith('select.') && (e.includes('mode_filtration') || e.includes('flipr')));
+          const hub_mode = (mode_entity && states[mode_entity]) ? states[mode_entity].state : 'auto';
+          const auto_bg = (hub_mode === 'auto') ? '#3b82f6' : '#f1f5f9';
+          const auto_color = (hub_mode === 'auto') ? 'white' : '#94a3b8';
+          const plan_bg = (hub_mode === 'planning') ? '#3b82f6' : '#f1f5f9';
+          const plan_color = (hub_mode === 'planning') ? 'white' : '#94a3b8';
+          const man_bg = (hub_mode === 'manual') ? '#3b82f6' : '#f1f5f9';
+          const man_color = (hub_mode === 'manual') ? 'white' : '#94a3b8';
     
           return `
             <div style="display: flex; flex-direction: column; width: 100%; height: 100%; box-sizing: border-box; background: #eef4f8; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
@@ -415,10 +520,10 @@ cards:
                     <div style="font-size: 11px; font-weight: 500; color: #1e293b;">Pompe à filtration</div>
                   </div>
                   <div style="display: flex; gap: 8px;">
-                    <div style="background: #f1f5f9; color: #94a3b8; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;">⚡ᴬ</div>
-                    <div style="background: #f1f5f9; color: #94a3b8; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">⏱️</div>
-                    <div style="background: ${pump_bg}; color: ${pump_color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; ${pump_shadow}">⏻</div>
-                    <div style="background: #f1f5f9; color: #94a3b8; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">⚙️</div>
+                    <div style="background: ${auto_bg}; color: ${auto_color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;" title="Mode Automatique">⚡ᴬ</div>
+                    <div style="background: ${plan_bg}; color: ${plan_color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;" title="Planning">⏱️</div>
+                    <div style="background: ${pump_bg}; color: ${pump_color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; ${pump_shadow}" title="Marche/Arrêt">⏻</div>
+                    <div style="background: ${man_bg}; color: ${man_color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;" title="Mode Manuel">✋</div>
                   </div>
                 </div>
     
@@ -504,12 +609,13 @@ cards:
                   <div style="text-align: center; flex: 1;">
                     <div style="font-size: 15px; font-weight: 400; opacity: 0.9; margin-bottom: 4px;">pH</div>
                     <div style="font-size: 26px; font-weight: 600;">${ph_val}</div>
+                    <div style="font-size: 12px; font-weight: 600; opacity: 0.95;">${ph_icon} ${ph_status}</div>
                   </div>
     
                   <!-- INFO CHLORE -->
                   <div style="text-align: center; flex: 1;">
                     <div style="font-size: 15px; font-weight: 400; opacity: 0.9; margin-bottom: 4px;">Chlore</div>
-                    <div style="font-size: 20px; font-weight: 600;">${cl_status}</div>
+                    <div style="font-size: 20px; font-weight: 600;">${cl_icon} ${cl_status}</div>
                   </div>
                 </div>
     

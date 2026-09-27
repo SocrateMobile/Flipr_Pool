@@ -99,9 +99,11 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
             return
 
         try:
-            # Utiliser la méthode set_hub_pump() qui gère automatiquement :
-            # 1. PUT /hub/{id}/mode/manual  (passage en mode manual)
-            # 2. POST /hub/{id}/Manual/True|False  (commande pompe)
+            # Si le hub n'est pas déjà en mode manual, basculer en mode manual
+            current_mode = (self.coordinator.data or {}).get("hub_mode")
+            if current_mode != "manual":
+                await api_client.set_hub_mode(hub_id, "manual")
+
             await api_client.set_hub_pump(hub_id, state)
 
             # Mise à jour de l'état localement (optimiste)
@@ -110,10 +112,6 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
                 self.coordinator.data["hub_mode"] = "manual"
             self.async_write_ha_state()
             _LOGGER.info("Flipr Hub %s: Pompe changée en %s", hub_id, "ON" if state else "OFF")
-
-            # Temporisation pour permettre à l'API Flipr de se mettre à jour
-            await asyncio.sleep(4)
-            await self.coordinator.async_request_refresh()
 
         except Exception as e:
             _LOGGER.error("Erreur lors du contrôle de la pompe du Hub %s: %s", hub_id, e)
