@@ -830,24 +830,30 @@ class FliprPanel extends HTMLElement {
     // On exclut formellement toute entité issue d'autres intégrations (ex: domolink)
     const flipr_keys = Object.keys(states).filter((k) => k.includes("flipr") && !k.includes("domolink"));
 
+    const isPhEntity = (e) => {
+      const low = e.toLowerCase();
+      return !low.includes("dose") && !low.includes("cible") && !low.includes("statut") && 
+             !low.includes("status") && !low.includes("equilibre") && !low.includes("avg") && 
+             !low.includes("moyen") && !low.includes("hier") && !low.includes("yesterday") &&
+             (low.endsWith("_ph") || low.endsWith(".ph") || low.includes("_ph_") || low === "sensor.ph");
+    };
+
     const ph_flipr_key = flipr_keys.find(
-      (e) => e.startsWith("sensor.") && (e.endsWith("_ph") || e.endsWith(".ph")) && isValidNumeric(states[e]?.state)
+      (e) => e.startsWith("sensor.") && isPhEntity(e) && isValidNumeric(states[e]?.state) && parseFloat(states[e]?.state) >= 3.0 && parseFloat(states[e]?.state) <= 12.0
     ) || flipr_keys.find(
-      (e) => e.startsWith("sensor.") && (e.endsWith("_ph") || e.endsWith(".ph")) && !isInvalidValue(states[e]?.state)
+      (e) => e.startsWith("sensor.") && isPhEntity(e) && !isInvalidValue(states[e]?.state)
     ) || flipr_keys.find(
-      (e) => e.startsWith("sensor.") && (e.endsWith("_ph") || e.endsWith(".ph"))
+      (e) => e.startsWith("sensor.") && isPhEntity(e)
     );
 
     let prefix = "sensor.flipr_piscine";
     if (ph_flipr_key) {
       prefix = ph_flipr_key.replace(/_ph$/, "");
     } else {
-      const any_flipr_sensor = flipr_keys.find((e) => e.startsWith("sensor."));
+      const any_flipr_sensor = flipr_keys.find((e) => e.startsWith("sensor.") && !e.includes("dose_") && !e.includes("statut_"));
       if (any_flipr_sensor) {
         const parts = any_flipr_sensor.split("_");
-        if (parts.length >= 2) {
-          prefix = parts.slice(0, 2).join("_");
-        }
+        prefix = parts.slice(0, Math.min(parts.length - 1, 3)).join("_");
       }
     }
 
@@ -950,9 +956,10 @@ class FliprPanel extends HTMLElement {
     );
 
     // Fallback de sécurité pH si ph_val est encore indisponible
-    if (ph_val === "--") {
+    if (ph_val === "--" || parseFloat(ph_val) > 12.0 || parseFloat(ph_val) < 3.0) {
+      ph_val = "--";
       for (const eid of flipr_keys) {
-        if (eid.endsWith("_ph") || eid.includes("_ph_") || eid === "sensor.ph") {
+        if (isPhEntity(eid)) {
           const st = states[eid]?.state;
           if (isValidNumeric(st)) {
             const n = parseFloat(st);
