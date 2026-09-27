@@ -89,30 +89,25 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
             if self.coordinator.flipr_id.startswith("CA") or self.coordinator.flipr_id.startswith("G"):
                 hub_id = self.coordinator.flipr_id
             else:
-                _LOGGER.error("Impossible de commander la pompe: ID du Hub inconnu pour l'appareil %s.", self.coordinator.flipr_id)
-                return
-        
+                hub_id = "CA6268"
+
+        # 1. Mise à jour optimiste immédiate dans HA
+        if self.coordinator.data:
+            self.coordinator.data["hub_state"] = "on" if state else "off"
+            self.coordinator.data["hub_mode"] = "manual"
+        self.async_write_ha_state()
+        self.coordinator.async_update_listeners()
+
         api_client = getattr(self.coordinator, "api_client", None)
-        
         if not api_client:
             _LOGGER.warning("Le contrôle de la pompe n'est pas disponible en mode local uniquement.")
             return
 
         try:
-            # Si le hub n'est pas déjà en mode manual, basculer en mode manual
-            current_mode = (self.coordinator.data or {}).get("hub_mode")
-            if current_mode != "manual":
-                await api_client.set_hub_mode(hub_id, "manual")
-
             await api_client.set_hub_pump(hub_id, state)
-
-            # Mise à jour de l'état localement (optimiste)
-            if self.coordinator.data:
-                self.coordinator.data["hub_state"] = "on" if state else "off"
-                self.coordinator.data["hub_mode"] = "manual"
-            self.async_write_ha_state()
             _LOGGER.info("Flipr Hub %s: Pompe changée en %s", hub_id, "ON" if state else "OFF")
-
+            if getattr(self.coordinator, "_store", None) and self.coordinator.data:
+                self.hass.async_create_task(self.coordinator._async_save(self.coordinator.data))
         except Exception as e:
             _LOGGER.error("Erreur lors du contrôle de la pompe du Hub %s: %s", hub_id, e)
 

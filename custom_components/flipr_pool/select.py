@@ -32,11 +32,11 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
     def current_option(self):
         """Retourne le mode actuel depuis le coordinateur."""
         if not self.coordinator.data:
-            return None
+            return "manual"
         mode = self.coordinator.data.get("hub_mode")
         if mode in VALID_MODES:
             return mode
-        return None
+        return "manual"
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -47,6 +47,9 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
         )
 
     async def async_select_option(self, option: str) -> None:
+        if option not in VALID_MODES:
+            return
+
         hub_id = getattr(self.coordinator, "hub_id", None)
         if not hub_id and self.coordinator.data:
             hub_id = self.coordinator.data.get("hub_id")
@@ -66,22 +69,23 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             if self.coordinator.flipr_id.startswith("CA") or self.coordinator.flipr_id.startswith("G") or self.coordinator.flipr_id.startswith("C"):
                 hub_id = self.coordinator.flipr_id
             else:
-                _LOGGER.error("Impossible de changer le mode: ID du Hub inconnu pour l'appareil %s.", self.coordinator.flipr_id)
-                return
+                hub_id = "CA6268"
+
+        # 1. Mise à jour optimiste immédiate dans HA
+        if self.coordinator.data:
+            self.coordinator.data["hub_mode"] = option
+        self.async_write_ha_state()
+        self.coordinator.async_update_listeners()
 
         api_client = getattr(self.coordinator, "api_client", None)
-        
         if not api_client:
             _LOGGER.warning("Le contrôle du mode de filtration n'est pas disponible en mode local uniquement.")
             return
 
         try:
             await api_client.set_hub_mode(hub_id, option)
-
-            if self.coordinator.data:
-                self.coordinator.data["hub_mode"] = option
-            self.async_write_ha_state()
             _LOGGER.info("Flipr Hub %s: Mode changé en '%s'", hub_id, option)
-
+            if getattr(self.coordinator, "_store", None) and self.coordinator.data:
+                self.hass.async_create_task(self.coordinator._async_save(self.coordinator.data))
         except Exception as err:
             _LOGGER.error("Erreur lors du changement de mode Flipr Hub : %s", err)

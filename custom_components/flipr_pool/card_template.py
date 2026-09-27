@@ -40,6 +40,7 @@ cards:
           const uv_index = states[`${prefix}_indice_uv`] ? states[`${prefix}_indice_uv`].state : '0';
           const water_temp = states[`${prefix}_temperature_de_l_eau`] ? states[`${prefix}_temperature_de_l_eau`].state : '29';
           const ph_val = states[`${prefix}_ph`] ? states[`${prefix}_ph`].state : '7.1';
+          const redox_val = states[`${prefix}_redox`] ? states[`${prefix}_redox`].state : (states[`${prefix}_potentiel_redox`] ? states[`${prefix}_potentiel_redox`].state : '545');
           const ph_num = parseFloat(ph_val);
           let ph_status = "Idéal";
           let ph_icon = "👍";
@@ -107,7 +108,6 @@ cards:
             const mIdx = parseInt(match_date[2], 10) - 1;
             last_measure = `${parseInt(match_date[3], 10)} ${months[mIdx] || match_date[2]} ${match_date[1]} à ${match_date[4]}H${match_date[5]}`;
           }
-          const redox_val = states[`${prefix}_potentiel_redox`] ? states[`${prefix}_potentiel_redox`].state : '545';
           
           const pump_entity = Object.keys(states).find(e => e.startsWith('switch.') && (e.includes('pompe_filtration') || e.includes('pump_filtration')));
           const pump_state = (pump_entity && states[pump_entity]) ? states[pump_entity].state : 'off';
@@ -409,6 +409,7 @@ cards:
           const uv_index = states[`${prefix}_indice_uv`] ? states[`${prefix}_indice_uv`].state : '0';
           const water_temp = states[`${prefix}_temperature_de_l_eau`] ? states[`${prefix}_temperature_de_l_eau`].state : '29';
           const ph_val = states[`${prefix}_ph`] ? states[`${prefix}_ph`].state : '7.1';
+          const redox_val = states[`${prefix}_redox`] ? states[`${prefix}_redox`].state : (states[`${prefix}_potentiel_redox`] ? states[`${prefix}_potentiel_redox`].state : '545');
           const ph_num = parseFloat(ph_val);
           let ph_status = "Idéal";
           let ph_icon = "👍";

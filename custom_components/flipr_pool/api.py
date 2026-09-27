@@ -128,12 +128,13 @@ class FliprApiClient:
                 return self._cache[key][1]
             raise e
 
-    async def _request(self, method: str, url: str, **kwargs: Any) -> Any:
+    async def _request(self, method: str, url: str, bypass_rate_limit: bool = False, **kwargs: Any) -> Any:
         """Effectue une requête authentifiée avec gestion du renouvellement de token."""
         if not self._token:
             await self.authenticate()
 
-        self._check_rate_limit()
+        if not bypass_rate_limit:
+            self._check_rate_limit()
 
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Bearer {self._token}"
@@ -395,14 +396,14 @@ class FliprApiClient:
             raise ValueError(f"Mode Hub invalide : {mode!r}. Attendu : auto, manual, planning.")
 
         url = f"{API_BASE_URL}/hub/{hub_id}/mode/{mode}"
-        await self._request("PUT", url)
+        await self._request("PUT", url, bypass_rate_limit=True)
         _LOGGER.info("Hub %s : mode changé en '%s'", hub_id, mode)
 
     async def set_hub_pump(self, hub_id: str, state: bool) -> None:
         """Allume/éteint la pompe du Hub en mode manuel."""
         state_str = "True" if state else "False"
         url = f"{API_BASE_URL}/hub/{hub_id}/Manual/{state_str}"
-        await self._request("POST", url)
+        await self._request("POST", url, bypass_rate_limit=True)
         _LOGGER.info("Hub %s : pompe → %s via %s", hub_id, "ON" if state else "OFF", url)
 
     async def get_hub_state(self, hub_id: str) -> dict[str, Any]:

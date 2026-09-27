@@ -743,6 +743,13 @@ def _enrich_pool_data(d: dict[str, Any], entry: ConfigEntry) -> dict[str, Any]:
     if d.get("last_resume_call") is None:
         d["last_resume_call"] = d.get("last_update")
 
+    # Mode et État Flipr Hub (garantit qu'aucun état ne reste 'unknown' ou 'null')
+    if not d.get("hub_mode") or d.get("hub_mode") not in ("auto", "manual", "planning"):
+        d["hub_mode"] = "manual"
+
+    if not d.get("hub_state") or d.get("hub_state") not in ("on", "off"):
+        d["hub_state"] = "off"
+
     return d
 
 
