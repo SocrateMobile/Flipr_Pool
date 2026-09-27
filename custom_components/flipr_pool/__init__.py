@@ -201,9 +201,16 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     cl_status = _compute_status(cl_sector, cl_msg, cl_val)
 
     # ── Horodatage ──────────────────────────────────────────
-    dt_raw = m.get("DateTime")
+    dt_raw = (
+        m.get("DateTime")
+        or m.get("dateTime")
+        or m.get("LastMeasureDateTime")
+        or m.get("lastMeasureDateTime")
+        or m.get("Date")
+        or m.get("date")
+    )
     try:
-        last_update = datetime.fromisoformat(dt_raw.replace("Z", "+00:00")) if dt_raw else None
+        last_update = datetime.fromisoformat(str(dt_raw).replace("Z", "+00:00")) if dt_raw else None
     except (ValueError, AttributeError):
         last_update = None
 
@@ -854,14 +861,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # ── Services Personnalisés ──────────────────────────────
     async def handle_force_cloud_sync(call: ServiceCall):
         device_id = call.data.get("device_id")
-        dev_reg = dr.async_get(hass)
-        device = dev_reg.async_get(device_id)
-        if device:
-            for eid in device.config_entries:
-                if eid in hass.data.get(DOMAIN, {}):
-                    c = hass.data[DOMAIN][eid]["coordinator"]
-                    await c.async_request_refresh()
-                    break
+        if device_id:
+            dev_reg = dr.async_get(hass)
+            device = dev_reg.async_get(device_id)
+            if device:
+                for eid in device.config_entries:
+                    if eid in hass.data.get(DOMAIN, {}):
+                        c = hass.data[DOMAIN][eid]["coordinator"]
+                        await c.async_request_refresh()
+                        return
+
+        # Fallback si pas de device_id ou device non trouvé : on rafraîchit tous les coordinateurs du domaine
+        for entry_data in hass.data.get(DOMAIN, {}).values():
+            if isinstance(entry_data, dict) and "coordinator" in entry_data:
+                c = entry_data["coordinator"]
+                await c.async_request_refresh()
 
     async def handle_update_dimensions(call: ServiceCall):
         device_id = call.data.get("device_id")

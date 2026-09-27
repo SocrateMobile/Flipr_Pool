@@ -773,11 +773,26 @@ class FliprPanel extends HTMLElement {
       </div>
     `;
 
-    this.querySelector("#btn-force-sync").addEventListener("click", () => {
-      if (this._hass) {
-        this._hass.callService("flipr_pool", "force_cloud_sync", {});
-      }
-    });
+    const syncBtn = this.querySelector("#btn-force-sync");
+    if (syncBtn) {
+      syncBtn.addEventListener("click", async () => {
+        if (this._hass) {
+          syncBtn.disabled = true;
+          const origHtml = syncBtn.innerHTML;
+          syncBtn.innerHTML = `<span>⏳</span> Actualisation en cours...`;
+          try {
+            await this._hass.callService("flipr_pool", "force_cloud_sync", {});
+          } catch (e) {
+            console.error("Flipr sync call failed:", e);
+          }
+          setTimeout(() => {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = origHtml;
+            this._updateData(true);
+          }, 3000);
+        }
+      });
+    }
 
     const fliprTitle = this.querySelector(".flipr-title");
     if (fliprTitle) {
@@ -799,56 +814,171 @@ class FliprPanel extends HTMLElement {
     if (!this._hass) return {};
     const states = this._hass.states;
 
-    // Détection automatique du préfixe des entités
-    const ph_entity_key = Object.keys(states).find(
-      (e) => e.startsWith("sensor.") && e.includes("flipr") && e.endsWith("_ph")
-    );
-    const prefix = ph_entity_key ? ph_entity_key.replace("_ph", "") : "sensor.flipr";
+    // Détection universelle et robuste des entités Flipr
+    const getEntityState = (patterns, exclude = []) => {
+      const patList = Array.isArray(patterns) ? patterns : [patterns];
+      const exclList = Array.isArray(exclude) ? exclude : [exclude];
 
-    const getVal = (suffixes, def = "0") => {
-      const list = Array.isArray(suffixes) ? suffixes : [suffixes];
-      for (const suffix of list) {
-        const e = states[`${prefix}_${suffix}`];
-        if (e && e.state !== undefined && e.state !== "unavailable" && e.state !== "unknown") {
-          return e.state;
+      // 1. Chercher d'abord les suffixes stricts sur les entités Flipr/Pool
+      for (const eid of Object.keys(states)) {
+        const lower = eid.toLowerCase();
+        if (!lower.includes("flipr") && !lower.includes("piscine") && !lower.includes("pool")) continue;
+        if (exclList.some((ex) => lower.includes(ex.toLowerCase()))) continue;
+
+        for (const pat of patList) {
+          const patLow = pat.toLowerCase();
+          if (lower.endsWith(`_${patLow}`) || lower.endsWith(`.${patLow}`) || lower === patLow) {
+            const s = states[eid];
+            if (s && s.state !== undefined && s.state !== "unavailable" && s.state !== "unknown") {
+              return s.state;
+            }
+          }
         }
       }
-      return def;
+
+      // 2. Recherche élargie (includes)
+      for (const eid of Object.keys(states)) {
+        const lower = eid.toLowerCase();
+        if (!lower.includes("flipr") && !lower.includes("piscine") && !lower.includes("pool")) continue;
+        if (exclList.some((ex) => lower.includes(ex.toLowerCase()))) continue;
+
+        for (const pat of patList) {
+          const patLow = pat.toLowerCase();
+          if (lower.includes(patLow)) {
+            const s = states[eid];
+            if (s && s.state !== undefined && s.state !== "unavailable" && s.state !== "unknown") {
+              return s.state;
+            }
+          }
+        }
+      }
+      return null;
     };
 
-    const getFullEntity = (pred) => {
-      const k = Object.keys(states).find(pred);
-      return k && states[k] ? states[k].state : null;
-    };
+    // Capteurs spécifiques
+    const water_temp = getEntityState(
+      ["temperature_de_l_eau", "water_temp", "water_temperature", "temp_eau", "temperature"],
+      ["air", "forecast", "yesterday", "max", "min", "moyenne"]
+    ) || "28";
 
+    const air_temp = getEntityState(
+      ["temperature_de_l_air", "air_temp", "air_temperature", "temperature_air"],
+      ["next_hour", "max", "min", "forecast", "eau", "water"]
+    ) || "32";
+
+    const ph_val = getEntityState(
+      ["ph"],
+      ["statut", "status", "dose", "target", "cible", "equilibre", "avg", "yesterday", "min", "max"]
+    ) || "7.2";
+
+    const redox_val = getEntityState(
+      ["potentiel_redox", "redox", "orp"],
+      ["avg", "target", "cible", "status", "statut"]
+    ) || "650";
+
+    const uv_index = getEntityState(
+      ["indice_uv", "uv_index", "uv"]
+    ) || "0";
+
+    const battery = getEntityState(
+      ["niveau_de_batterie", "batterie", "battery_level", "battery"]
+    ) || "100";
+
+    const last_measure = getEntityState(
+      ["derniere_mesure", "derniere_mise_a_jour", "last_update", "last_measurement", "last_resume_call"]
+    ) || "Aujourd'hui";
+
+    const lsi_val = parseFloat(getEntityState(
+      ["indice_de_saturation_lsi", "indice_lsi", "lsi", "isl"],
+      ["statut", "status", "etat"]
+    ) || "0.0") || 0.0;
+
+    const raw_lsi_status = getEntityState(
+      ["etat_de_l_eau_lsi", "statut_de_l_eau_lsi", "statut_lsi", "statut_isl", "lsi_status"]
+    );
+    let lsi_status = "Eau équilibrée";
+    if (raw_lsi_status) {
+      const low = String(raw_lsi_status).toLowerCase();
+      if (low.includes("corr") || low.includes("acide")) lsi_status = "Eau corrosive";
+      else if (low.includes("entart") || low.includes("tartre")) lsi_status = "Eau entartrante";
+      else lsi_status = "Eau équilibrée";
+    }
+
+    const free_cl = getEntityState(
+      ["chlore_libre_est", "chlore_libre_estime", "chlore_libre", "free_chlorine", "desinfectant", "chlorine"],
+      ["actif", "active", "status", "statut", "dose"]
+    ) || "1.5";
+
+    const active_cl = getEntityState(
+      ["chlore_actif_reel_hocl", "chlore_actif_hocl", "chlore_actif", "active_chlorine"]
+    ) || "0.6";
+
+    const ph_minus_dose = parseFloat(getEntityState(
+      ["dose_ph_moins", "dose_ph_minus", "dose_ph"],
+      ["plus", "2"]
+    ) || "0") || 0;
+
+    const ph_plus_dose = parseFloat(getEntityState(
+      ["dose_ph_plus", "dose_ph_2"]
+    ) || "0") || 0;
+
+    const cl_shock_dose = parseFloat(getEntityState(
+      ["dose_chlore_choc", "dose_cl_shock"]
+    ) || "0") || 0;
+
+    const cl_maint_dose = parseFloat(getEntityState(
+      ["dose_chlore_entretien", "dose_cl_maint"]
+    ) || "0") || 0;
+
+    const advice_filtration = getEntityState(
+      ["conseil_filtration", "filtration_advice", "duree_filtration", "pump_hours"]
+    ) || "Filtrer 12h / jour";
+
+    // Statuts binaires convertis en libellés clairs
+    const raw_ph_st = getEntityState(["statut_ph", "ph_status", "ph_simple"]);
+    const ph_status = (!raw_ph_st || raw_ph_st === "off" || String(raw_ph_st).toLowerCase() === "ok" || String(raw_ph_st).toLowerCase() === "parfait")
+      ? "Parfait" : "À corriger";
+
+    const raw_cl_st = getEntityState(["statut_chlore", "chlorine_status", "chlorine_simple"]);
+    const cl_status = (!raw_cl_st || raw_cl_st === "off" || String(raw_cl_st).toLowerCase() === "ok" || String(raw_cl_st).toLowerCase() === "parfait")
+      ? "Parfait" : "À corriger";
+
+    // Pompe de filtration
     const pump_entity_key = Object.keys(states).find(
       (e) => e.startsWith("switch.") && (e.includes("pompe_filtration") || e.includes("pump_filtration") || e.includes("flipr_hub"))
     );
     const pump_state = pump_entity_key && states[pump_entity_key] ? states[pump_entity_key].state : "off";
 
+    // Nom de la piscine
+    const any_pool_entity = Object.keys(states).find(
+      (e) => e.includes("flipr") && (e.endsWith("_ph") || e.endsWith("temperature") || e.includes("piscine"))
+    );
+    const pool_name = any_pool_entity && states[any_pool_entity]?.attributes?.friendly_name
+      ? states[any_pool_entity].attributes.friendly_name.split(" ")[0] || "Piscine"
+      : "Piscine";
+
     return {
-      prefix,
       pump_entity_key,
       pump_state,
-      air_temp: getVal(["temperature_de_l_air", "air_temp", "air_temperature"], "32"),
-      uv_index: getVal(["indice_uv", "uv_index"], "0"),
-      water_temp: getVal(["temperature_de_l_eau", "temperature", "water_temp", "water_temperature"], "28"),
-      ph_val: getVal("ph", "7.2"),
-      ph_status: getFullEntity((k) => k.includes("flipr") && (k.endsWith("_statut_ph") || k.endsWith("_ph_status"))) || "Parfait",
-      redox_val: getVal(["potentiel_redox", "redox"], "650"),
-      cl_status: getFullEntity((k) => k.includes("flipr") && (k.endsWith("_statut_chlore") || k.endsWith("_chlorine_status"))) || "Parfait",
-      last_measure: getVal(["derniere_mesure", "last_update", "last_measurement"], "Aujourd'hui"),
-      advice_filtration: getVal(["conseil_filtration", "filtration_advice", "pump_hours"], "Filtrer 12h / jour"),
-      ph_minus_dose: parseFloat(getVal(["dose_ph", "dose_ph_minus", "ph_minus_dose"], "0")) || 0,
-      ph_plus_dose: parseFloat(getVal(["dose_ph_2", "dose_ph_plus", "ph_plus_dose"], "0")) || 0,
-      cl_shock_dose: parseFloat(getVal(["dose_chlore_choc", "dose_cl_shock", "cl_shock_dose"], "0")) || 0,
-      cl_maint_dose: parseFloat(getVal(["dose_chlore_entretien", "dose_cl_maint", "cl_maint_dose"], "0")) || 0,
-      lsi_val: parseFloat(getVal(["isl", "lsi", "indice_lsi"], "0.0")) || 0.0,
-      lsi_status: getFullEntity((k) => k.includes("flipr") && (k.endsWith("_statut_isl") || k.endsWith("_statut_lsi") || k.endsWith("_lsi_status"))) || "Eau équilibrée",
-      free_cl: getVal(["chlore_libre", "free_chlorine"], "1.5"),
-      active_cl: getVal(["chlore_actif", "active_chlorine"], "0.6"),
-      battery: getVal(["batterie", "battery", "battery_level"], "100"),
-      pool_name: states[ph_entity_key] ? states[ph_entity_key].attributes?.friendly_name?.split(" ")[0] || "Piscine" : "Piscine",
+      air_temp,
+      uv_index,
+      water_temp,
+      ph_val,
+      ph_status,
+      redox_val,
+      cl_status,
+      last_measure,
+      advice_filtration,
+      ph_minus_dose,
+      ph_plus_dose,
+      cl_shock_dose,
+      cl_maint_dose,
+      lsi_val,
+      lsi_status,
+      free_cl,
+      active_cl,
+      battery,
+      pool_name,
     };
   }
 
