@@ -814,61 +814,111 @@ class FliprPanel extends HTMLElement {
     if (!this._hass) return {};
     const states = this._hass.states;
 
-    // 1. Détection automatique du préfixe des entités Flipr
-    // Le capteur pH est créé sous la forme sensor.<prefix>_ph ou sensor.*flipr*ph
-    const ph_entity_key = Object.keys(states).find(
-      (e) => e.startsWith("sensor.") && (e.includes("flipr") || e.includes("piscine")) && (e.endsWith("_ph") || e.endsWith(".ph"))
-    ) || Object.keys(states).find(
-      (e) => e.startsWith("sensor.") && e.endsWith("_ph")
+    const isInvalidValue = (val) => {
+      if (val === undefined || val === null) return true;
+      const s = String(val).trim().toLowerCase();
+      return s === "" || s === "--" || s === "unavailable" || s === "unknown" || s === "indisponible" || s === "données indisponibles" || s === "donnees indisponibles" || s === "none" || s === "null" || s === "nan";
+    };
+
+    const isValidNumeric = (val) => {
+      if (isInvalidValue(val)) return false;
+      const n = parseFloat(String(val).replace(",", "."));
+      return !isNaN(n) && isFinite(n);
+    };
+
+    // 1. Détection stricte et prioritaire des entités Flipr
+    // On exclut formellement toute entité issue d'autres intégrations (ex: domolink)
+    const flipr_keys = Object.keys(states).filter((k) => k.includes("flipr") && !k.includes("domolink"));
+
+    const ph_flipr_key = flipr_keys.find(
+      (e) => e.startsWith("sensor.") && (e.endsWith("_ph") || e.endsWith(".ph")) && isValidNumeric(states[e]?.state)
+    ) || flipr_keys.find(
+      (e) => e.startsWith("sensor.") && (e.endsWith("_ph") || e.endsWith(".ph")) && !isInvalidValue(states[e]?.state)
+    ) || flipr_keys.find(
+      (e) => e.startsWith("sensor.") && (e.endsWith("_ph") || e.endsWith(".ph"))
     );
 
-    const prefix = ph_entity_key ? ph_entity_key.replace(/_ph$/, "") : "sensor.flipr_piscine";
+    let prefix = "sensor.flipr_piscine";
+    if (ph_flipr_key) {
+      prefix = ph_flipr_key.replace(/_ph$/, "");
+    } else {
+      const any_flipr_sensor = flipr_keys.find((e) => e.startsWith("sensor."));
+      if (any_flipr_sensor) {
+        const parts = any_flipr_sensor.split("_");
+        if (parts.length >= 2) {
+          prefix = parts.slice(0, 2).join("_");
+        }
+      }
+    }
 
     // Récupération de la valeur réelle d'une entité
-    const getEntityVal = (suffixes, exclude = [], def = "--") => {
+    const getEntityVal = (suffixes, exclude = [], def = "--", requireNumeric = false) => {
       const sList = Array.isArray(suffixes) ? suffixes : [suffixes];
-      const xList = Array.isArray(exclude) ? exclude : [exclude];
+      const xList = (Array.isArray(exclude) ? exclude : [exclude]).map((x) => x.toLowerCase());
+      xList.push("domolink");
 
-      // Priorité 1 : direct match avec le préfixe
+      const checkState = (st) => {
+        if (isInvalidValue(st)) return false;
+        if (requireNumeric) return isValidNumeric(st);
+        return true;
+      };
+
+      // Priorité 1 : direct match avec le préfixe Flipr
       if (prefix) {
         for (const s of sList) {
           const directId = `${prefix}_${s}`;
           const e = states[directId];
-          if (e && e.state !== undefined && e.state !== "unavailable" && e.state !== "unknown") {
-            return e.state;
+          if (e && checkState(e.state)) {
+            return String(e.state).trim();
           }
         }
       }
 
-      // Priorité 2 : suffixe exact sur toute entité Flipr / Piscine / Pool
-      for (const eid of Object.keys(states)) {
+      // Priorité 2 : suffixe exact sur toute entité Flipr
+      for (const eid of flipr_keys) {
         const lower = eid.toLowerCase();
-        if (!lower.includes("flipr") && !lower.includes("piscine") && !lower.includes("pool")) continue;
-        if (xList.some((ex) => lower.includes(ex.toLowerCase()))) continue;
+        if (xList.some((ex) => lower.includes(ex))) continue;
 
         for (const s of sList) {
           const sLow = s.toLowerCase();
           if (lower.endsWith(`_${sLow}`) || lower.endsWith(`.${sLow}`) || lower === sLow || lower.includes(`_${sLow}_`)) {
             const e = states[eid];
-            if (e && e.state !== undefined && e.state !== "unavailable" && e.state !== "unknown") {
-              return e.state;
+            if (e && checkState(e.state)) {
+              return String(e.state).trim();
             }
           }
         }
       }
 
-      // Priorité 3 : inclusion élargie
-      for (const eid of Object.keys(states)) {
+      // Priorité 3 : inclusion Flipr
+      for (const eid of flipr_keys) {
         const lower = eid.toLowerCase();
-        if (!lower.includes("flipr") && !lower.includes("piscine") && !lower.includes("pool")) continue;
-        if (xList.some((ex) => lower.includes(ex.toLowerCase()))) continue;
+        if (xList.some((ex) => lower.includes(ex))) continue;
 
         for (const s of sList) {
           const sLow = s.toLowerCase();
           if (lower.includes(sLow)) {
             const e = states[eid];
-            if (e && e.state !== undefined && e.state !== "unavailable" && e.state !== "unknown") {
-              return e.state;
+            if (e && checkState(e.state)) {
+              return String(e.state).trim();
+            }
+          }
+        }
+      }
+
+      // Priorité 4 : Fallback si pas de préfixe flipr trouvé mais capteur piscine générique (non-domolink)
+      for (const eid of Object.keys(states)) {
+        const lower = eid.toLowerCase();
+        if (lower.includes("domolink")) continue;
+        if (!lower.includes("piscine") && !lower.includes("pool")) continue;
+        if (xList.some((ex) => lower.includes(ex))) continue;
+
+        for (const s of sList) {
+          const sLow = s.toLowerCase();
+          if (lower.endsWith(`_${sLow}`) || lower.endsWith(`.${sLow}`) || lower === sLow || lower.includes(`_${sLow}_`)) {
+            const e = states[eid];
+            if (e && checkState(e.state)) {
+              return String(e.state).trim();
             }
           }
         }
@@ -880,34 +930,60 @@ class FliprPanel extends HTMLElement {
     // Mesures en direct
     const water_temp = getEntityVal(
       ["temperature_de_l_eau", "water_temperature", "temp_eau", "temperature", "water_temp"],
-      ["air", "forecast", "yesterday", "prevue", "moyenne", "min", "max"]
+      ["air", "forecast", "yesterday", "prevue", "moyenne", "min", "max"],
+      "--",
+      true
     );
 
     const air_temp = getEntityVal(
       ["temperature_de_l_air", "air_temperature", "air_temp", "temperature_air"],
-      ["eau", "water", "1h", "next", "max", "min", "prevue", "forecast"]
+      ["eau", "water", "1h", "next", "max", "min", "prevue", "forecast"],
+      "--",
+      true
     );
 
-    const ph_val = getEntityVal(
+    let ph_val = getEntityVal(
       ["ph"],
-      ["statut", "status", "dose", "target", "cible", "equilibre", "avg", "yesterday", "recente", "moyen"]
+      ["statut", "status", "dose", "target", "cible", "equilibre", "avg", "yesterday", "recente", "moyen"],
+      "--",
+      true
     );
+
+    // Fallback de sécurité pH si ph_val est encore indisponible
+    if (ph_val === "--") {
+      for (const eid of flipr_keys) {
+        if (eid.endsWith("_ph") || eid.includes("_ph_") || eid === "sensor.ph") {
+          const st = states[eid]?.state;
+          if (isValidNumeric(st)) {
+            const n = parseFloat(st);
+            if (n >= 4.0 && n <= 10.5) {
+              ph_val = String(n);
+              break;
+            }
+          }
+        }
+      }
+    }
 
     const redox_val = getEntityVal(
       ["potentiel_redox", "redox_potential", "redox", "orp"],
-      ["statut", "status", "avg", "yesterday", "recente", "moyen", "cible"]
+      ["statut", "status", "avg", "yesterday", "recente", "moyen", "cible"],
+      "--",
+      true
     );
 
     const uv_index = getEntityVal(
       ["indice_uv", "uv_index", "uv"],
       [],
-      "0"
+      "0",
+      true
     );
 
     const battery = getEntityVal(
       ["niveau_de_batterie", "battery_level", "batterie", "battery"],
       [],
-      "--"
+      "--",
+      true
     );
 
     const last_measure = getEntityVal(
@@ -919,7 +995,8 @@ class FliprPanel extends HTMLElement {
     const lsi_val = parseFloat(getEntityVal(
       ["indice_lsi", "lsi_index", "indice_de_saturation_lsi", "lsi", "isl"],
       ["statut", "status", "etat"],
-      "0.0"
+      "0.0",
+      true
     )) || 0.0;
 
     const raw_lsi_status = getEntityVal(
@@ -938,37 +1015,43 @@ class FliprPanel extends HTMLElement {
     const free_cl = getEntityVal(
       ["chlore_libre_est", "est_free_chlorine", "chlore_libre", "free_chlorine", "desinfectant_chlore", "chlorine"],
       ["actif", "active", "status", "statut", "dose"],
-      "--"
+      "--",
+      true
     );
 
     const active_cl = getEntityVal(
       ["chlore_actif_hocl", "active_chlorine_hocl", "chlore_actif", "active_chlorine"],
       [],
-      "--"
+      "--",
+      true
     );
 
     const ph_minus_dose = parseFloat(getEntityVal(
       ["dose_ph", "ph_dose", "dose_ph_minus", "dose_ph_moins"],
       ["plus", "2"],
-      "0"
+      "0",
+      true
     )) || 0;
 
     const ph_plus_dose = parseFloat(getEntityVal(
       ["dose_ph_2", "ph_dose_2", "dose_ph_plus"],
       [],
-      "0"
+      "0",
+      true
     )) || 0;
 
     const cl_shock_dose = parseFloat(getEntityVal(
       ["dose_chlore_choc", "chlorine_dose_shock", "dose_cl_shock"],
       [],
-      "0"
+      "0",
+      true
     )) || 0;
 
     const cl_maint_dose = parseFloat(getEntityVal(
       ["dose_chlore_entretien", "chlorine_dose_maintenance", "dose_cl_maint"],
       [],
-      "0"
+      "0",
+      true
     )) || 0;
 
     const advice_filtration = getEntityVal(
@@ -988,15 +1071,15 @@ class FliprPanel extends HTMLElement {
 
     // Pompe de filtration : switch.flipr_piscine_pompe_de_filtration ou tout switch flipr/pompe/pump
     const pump_entity_key = Object.keys(states).find(
-      (e) => e.startsWith("switch.") && (
-        e.includes("pompe") || e.includes("pump") || e.includes("flipr_hub") || (prefix && e.startsWith(prefix.replace("sensor.", "switch.")))
+      (e) => e.startsWith("switch.") && !e.includes("domolink") && (
+        e.includes("flipr_hub") || (prefix && e.startsWith(prefix.replace("sensor.", "switch."))) || e.includes("pompe") || e.includes("pump")
       )
     );
     const pump_state = pump_entity_key && states[pump_entity_key] ? states[pump_entity_key].state : "off";
 
     // Nom de la piscine / du bassin
-    const any_pool_entity = ph_entity_key || Object.keys(states).find(
-      (e) => e.includes("flipr") && (e.endsWith("_ph") || e.includes("temperature") || e.includes("piscine"))
+    const any_pool_entity = ph_flipr_key || flipr_keys.find(
+      (e) => e.endsWith("_ph") || e.includes("temperature") || e.includes("piscine")
     );
     let pool_name = "Piscine";
     if (any_pool_entity && states[any_pool_entity]?.attributes?.friendly_name) {
@@ -1243,7 +1326,7 @@ class FliprPanel extends HTMLElement {
                 <path d="M 20.3 79.7 A 42 42 0 1 1 79.7 79.7" stroke="url(#phGrad)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9" />
                 <circle cx="${ph_x}" cy="${ph_y}" r="6" fill="#ffffff" stroke="rgba(0,0,0,0.2)" stroke-width="2" />
               </svg>
-              <div class="gauge-center-text">${d.ph_val}</div>
+              <div class="gauge-center-text">${valid_ph ? ph_num.toFixed(1) : "--"}</div>
             </div>
             <div style="font-size: 14px; font-weight: 600; margin-top: 6px;">pH</div>
             <div class="status-pill-badge">👍 ${d.ph_status}</div>
@@ -1341,7 +1424,7 @@ class FliprPanel extends HTMLElement {
             <div class="history-day-item"><div class="history-day-pill">7.8 ↗</div><div class="history-day-date">J-3</div></div>
             <div class="history-day-item"><div class="history-day-pill">7.6 ↘</div><div class="history-day-date">J-2</div></div>
             <div class="history-day-item"><div class="history-day-pill">7.3 ↘</div><div class="history-day-date">Hier</div></div>
-            <div class="history-day-item"><div class="history-day-pill current">${d.ph_val}</div><div class="history-day-date">Auj.</div></div>
+            <div class="history-day-item"><div class="history-day-pill current">${valid_ph ? ph_num.toFixed(1) : "--"}</div><div class="history-day-date">Auj.</div></div>
           </div>
         </div>
 
@@ -1406,7 +1489,7 @@ class FliprPanel extends HTMLElement {
           </div>
           <div style="text-align: center; flex: 1;">
             <div style="font-size: 14px; opacity: 0.9;">pH</div>
-            <div style="font-size: 26px; font-weight: 700;">${d.ph_val}</div>
+            <div style="font-size: 26px; font-weight: 700;">${valid_ph ? ph_num.toFixed(1) : "--"}</div>
           </div>
           <div style="text-align: center; flex: 1;">
             <div style="font-size: 14px; opacity: 0.9;">Chlore</div>
@@ -1450,22 +1533,36 @@ class FliprPanel extends HTMLElement {
       `;
     }
 
-    const ph = parseFloat(d.ph_val) || 7.2;
+    const hasValidPh = !isNaN(parseFloat(d.ph_val)) && isFinite(parseFloat(d.ph_val));
+    const ph = hasValidPh ? parseFloat(d.ph_val) : null;
     const lsi = d.lsi_val;
     const lsi_cursor_pct = Math.max(0, Math.min(100, ((lsi + 1.0) / 2.0) * 100));
 
     let phTagClass = "tag-ok";
     let phActionText = "Le pH de l'eau est dans la zone idéale (7.2 - 7.4). L'action des désinfectants est optimale.";
-    if (ph > 7.5) {
-      phTagClass = "tag-danger";
-      phActionText = `Le pH est trop élevé. L'eau risque d'entartrer les équipements et l'efficacité du chlore chute. ${
-        d.ph_minus_dose > 0 ? `<br>👉 <span class="dose-highlight">Ajoutez ${d.ph_minus_dose}g de réducteur de pH (pH-)</span> dans le bassin filtration en marche.` : ""
-      }`;
-    } else if (ph < 7.1) {
-      phTagClass = "tag-warn";
-      phActionText = `Le pH est trop bas. L'eau est corrosive pour les joints et irritante. ${
-        d.ph_plus_dose > 0 ? `<br>👉 <span class="dose-highlight">Ajoutez ${d.ph_plus_dose}g d'augmentateur de pH (pH+)</span>.` : ""
-      }`;
+    if (hasValidPh) {
+      if (ph > 7.5) {
+        phTagClass = "tag-danger";
+        phActionText = `Le pH est trop élevé (${ph.toFixed(2)}). L'eau risque d'entartrer les équipements et l'efficacité du chlore chute. ${
+          d.ph_minus_dose > 0 ? `<br>👉 <span class="dose-highlight">Ajoutez ${d.ph_minus_dose}g de réducteur de pH (pH-)</span> dans le bassin filtration en marche.` : ""
+        }`;
+      } else if (ph < 7.1) {
+        phTagClass = "tag-warn";
+        phActionText = `Le pH est trop bas (${ph.toFixed(2)}). L'eau est corrosive pour les joints et irritante. ${
+          d.ph_plus_dose > 0 ? `<br>👉 <span class="dose-highlight">Ajoutez ${d.ph_plus_dose}g d'augmentateur de pH (pH+)</span>.` : ""
+        }`;
+      }
+    } else {
+      if (d.ph_minus_dose > 0) {
+        phTagClass = "tag-danger";
+        phActionText = `Le pH nécessite une correction. <br>👉 <span class="dose-highlight">Ajoutez ${d.ph_minus_dose}g de réducteur de pH (pH-)</span> dans le bassin filtration en marche.`;
+      } else if (d.ph_plus_dose > 0) {
+        phTagClass = "tag-warn";
+        phActionText = `Le pH nécessite une correction. <br>👉 <span class="dose-highlight">Ajoutez ${d.ph_plus_dose}g d'augmentateur de pH (pH+)</span>.`;
+      } else {
+        phTagClass = "tag-warn";
+        phActionText = "Mesure du pH en cours de synchronisation avec la sonde Flipr.";
+      }
     }
 
     const rx = parseFloat(d.redox_val) || 650;
@@ -1493,7 +1590,7 @@ class FliprPanel extends HTMLElement {
         <div class="advice-metric-row">
           <div class="metric-box">
             <div class="metric-label">pH Actuel</div>
-            <div class="metric-val" style="color: #0284c7;">${d.ph_val}</div>
+            <div class="metric-val" style="color: #0284c7;">${hasValidPh ? ph.toFixed(2) : "--"}</div>
             <div class="metric-target">Cible : 7.2 - 7.4</div>
           </div>
           <div class="metric-box">

@@ -100,6 +100,21 @@ def _safe_timestamp(dt_val: Any) -> datetime | None:
 #  Calculs de données piscine (communs Cloud & BLE)
 # ═══════════════════════════════════════════════════════════════
 
+def _ci_get(d: dict[str, Any], *keys: str) -> Any:
+    """Recherche insensible à la casse dans un dictionnaire."""
+    if not isinstance(d, dict):
+        return None
+    for k in keys:
+        if k in d and d[k] is not None:
+            return d[k]
+    # Fallback case-insensitive
+    d_ci = {str(k).lower(): v for k, v in d.items()}
+    for k in keys:
+        kl = k.lower()
+        if kl in d_ci and d_ci[kl] is not None:
+            return d_ci[kl]
+    return None
+
 def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_source: str = "cloud") -> dict[str, Any]:
     """Calcule toutes les valeurs dérivées à partir des mesures brutes.
 
@@ -113,22 +128,22 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         m = {**m, **current_dict}
 
     # ── Mesures brutes ───────────────────────────────────────
-    ph_raw      = m.get("PH") or m.get("ph")
-    redox_raw   = m.get("OxydoReductionPotentiel") or m.get("oxydoReductionPotentiel") or m.get("redox")
-    cond_raw    = m.get("Conductivity") or m.get("conductivity")
-    desinf_raw  = m.get("Desinfectant") or m.get("desinfectant") or m.get("chlorine")
+    ph_raw      = _ci_get(m, "PH", "ph", "Ph", "pH")
+    redox_raw   = _ci_get(m, "OxydoReductionPotentiel", "oxydoReductionPotentiel", "redox", "orp", "ORP")
+    cond_raw    = _ci_get(m, "Conductivity", "conductivity")
+    desinf_raw  = _ci_get(m, "Desinfectant", "desinfectant", "chlorine", "Chlorine")
 
     ph_val = ph_raw.get("Value") if isinstance(ph_raw, dict) else ph_raw
     if ph_val is not None:
         try:
-            ph_val = float(ph_val)
+            ph_val = round(float(ph_val), 2)
         except (ValueError, TypeError):
             ph_val = None
 
     redox_val = redox_raw.get("Value") if isinstance(redox_raw, dict) else redox_raw
     if redox_val is not None:
         try:
-            redox_val = float(redox_val)
+            redox_val = round(float(redox_val), 1)
         except (ValueError, TypeError):
             redox_val = None
 
@@ -446,11 +461,11 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
     )
 
     # ── Durée de pompage & Conseil ──────────────────────────
-    water_temp_raw = m.get("Temperature") or m.get("temperature")
+    water_temp_raw = _ci_get(m, "Temperature", "temperature", "temp", "Temp")
     water_temp = water_temp_raw.get("Value") if isinstance(water_temp_raw, dict) else water_temp_raw
     if water_temp is not None:
         try:
-            water_temp = float(water_temp)
+            water_temp = round(float(water_temp), 1)
         except (ValueError, TypeError):
             water_temp = None
     conseil_filtration = None
@@ -667,7 +682,7 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
                     raise UpdateFailed("Aucune mesure (last_measure) reçue du Cloud.")
                 # NewResume imbrique les données dans Current, vérifier les deux niveaux
                 check = m.get("Current", m) if isinstance(m.get("Current"), dict) else m
-                if (check.get("Temperature") is None and check.get("temperature") is None) and (check.get("PH") is None and check.get("ph") is None):
+                if (_ci_get(check, "Temperature", "temperature", "temp") is None) and (_ci_get(check, "PH", "ph", "Ph", "pH") is None):
                     raise UpdateFailed("L'API a retourné des valeurs nulles/vides.")
 
                 m["alerts_raw"] = data_raw.get("alerts", [])
