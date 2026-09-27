@@ -532,7 +532,7 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
                 or first_alert.get("message")
             )
 
-    return {
+    raw_result = {
         # ── 1. Mesures Instantanées ─────────────────────────
         "temperature":         water_temp,
         "ph":                  ph_val,
@@ -590,6 +590,155 @@ def _compute_pool_data(m: dict[str, Any], s: Any, entry: ConfigEntry, data_sourc
         "data_source":         data_source,
         "version":             VERSION,
     }
+    return _enrich_pool_data(raw_result, entry)
+
+
+def _enrich_pool_data(d: dict[str, Any], entry: ConfigEntry) -> dict[str, Any]:
+    """Enrichit et garantit qu'aucun capteur dérivé ou calculé ne reste 'Inconnu'."""
+    if not d:
+        return d
+
+    opts = {**entry.data, **entry.options}
+    pool_length = float(opts.get("pool_length", 0) or 0)
+    pool_width = float(opts.get("pool_width", 0) or 0)
+    pool_depth = float(opts.get("pool_depth", 0) or 0)
+    pool_volume_opt = float(opts.get("pool_volume", 0) or 0)
+
+    pool_volume_m3 = pool_length * pool_width * pool_depth
+    if pool_volume_m3 <= 0 and pool_volume_opt > 0:
+        pool_volume_m3 = pool_volume_opt
+    elif pool_volume_m3 <= 0:
+        pool_volume_m3 = 40.0  # Volume standard résidentiel (40 m³ = 40 000 L)
+
+    d["pool_volume"] = round(pool_volume_m3 * 1000)
+
+    ph_val = d.get("ph")
+    cl_val = d.get("chlorine")
+    redox_val = d.get("redox")
+    water_temp = d.get("temperature")
+
+    # Doses pH
+    if ph_val is not None:
+        ph_diff = ph_val - PH_TARGET
+        if ph_diff > 0.05:
+            d["dose_ph_minus"] = round(ph_diff * pool_volume_m3 * PH_MINUS_DOSE)
+            d["dose_ph_plus"] = 0
+        elif ph_diff < -0.05:
+            d["dose_ph_minus"] = 0
+            d["dose_ph_plus"] = round(abs(ph_diff) * pool_volume_m3 * PH_PLUS_DOSE)
+        else:
+            d["dose_ph_minus"] = 0
+            d["dose_ph_plus"] = 0
+    else:
+        d["dose_ph_minus"] = 0
+        d["dose_ph_plus"] = 0
+
+    # Doses Chlore
+    if cl_val is not None:
+        cl_diff_maint = CHLORINE_TARGET - cl_val
+        cl_diff_shock = CHLORINE_SHOCK_TARGET - cl_val
+        d["dose_cl_maint"] = round(cl_diff_maint * pool_volume_m3 * CHLORINE_DOSE) if cl_diff_maint > 0 else 0
+        d["dose_cl_shock"] = round(cl_diff_shock * pool_volume_m3 * CHLORINE_DOSE) if cl_diff_shock > 0 else 0
+    elif redox_val is not None:
+        if redox_val < 600:
+            d["dose_cl_shock"] = round(pool_volume_m3 * 15)
+            d["dose_cl_maint"] = round(pool_volume_m3 * 5)
+        elif redox_val < 650:
+            d["dose_cl_shock"] = 0
+            d["dose_cl_maint"] = round(pool_volume_m3 * 4)
+        else:
+            d["dose_cl_shock"] = 0
+            d["dose_cl_maint"] = 0
+    else:
+        d["dose_cl_maint"] = 0
+        d["dose_cl_shock"] = 0
+
+    # Dose TAC+
+    tac = float(opts.get("tac", 100.0) or 100.0)
+    if tac is not None and tac < TAC_TARGET:
+        tac_diff = TAC_TARGET - tac
+        d["dose_tac_plus"] = round(tac_diff * pool_volume_m3 * TAC_PLUS_DOSE) if tac_diff > 0 else 0
+    else:
+        d["dose_tac_plus"] = 0
+
+    # Conductivité
+    if d.get("conductivity") is None:
+        d["conductivity"] = 0.0
+
+    # État de l'eau
+    if not d.get("water_state"):
+        lsi_st = d.get("lsi_status")
+        if lsi_st == "corrosive":
+            d["water_state"] = "Eau corrosive"
+        elif lsi_st == "entartrante":
+            d["water_state"] = "Eau entartrante"
+        elif ph_val is not None and (ph_val < 7.0 or ph_val > 7.6):
+            d["water_state"] = "pH déséquilibré"
+        elif redox_val is not None and redox_val < 580:
+            d["water_state"] = "Désinfection insuffisante"
+        elif ph_val is not None:
+            d["water_state"] = "Eau équilibrée"
+        else:
+            d["water_state"] = "En attente d'analyse"
+
+    # Statuts contextuels pH
+    if ph_val is not None:
+        if 7.0 <= ph_val <= 7.4:
+            d["ph_status"] = "OK"
+            d["ph_simple"] = "OK"
+        elif ph_val > 7.4:
+            d["ph_status"] = "pH élevé"
+            d["ph_simple"] = "KO"
+        else:
+            d["ph_status"] = "pH bas"
+            d["ph_simple"] = "KO"
+
+    # Statuts contextuels Chlore / Redox
+    if redox_val is not None:
+        if 650 <= redox_val <= 750:
+            d["chlorine_status"] = "OK"
+            d["chlorine_simple"] = "OK"
+        elif redox_val > 750:
+            d["chlorine_status"] = "Surdosage"
+            d["chlorine_simple"] = "KO"
+        else:
+            d["chlorine_status"] = "Insuffisant"
+            d["chlorine_simple"] = "KO"
+    elif cl_val is not None:
+        if 1.0 <= cl_val <= 3.0:
+            d["chlorine_status"] = "OK"
+            d["chlorine_simple"] = "OK"
+        elif cl_val > 3.0:
+            d["chlorine_status"] = "Surdosage"
+            d["chlorine_simple"] = "KO"
+        else:
+            d["chlorine_status"] = "Insuffisant"
+            d["chlorine_simple"] = "KO"
+
+    # Probabilité pluie
+    if d.get("rain_probability") is None:
+        d["rain_probability"] = 0.0
+
+    # Dernière alerte
+    if not d.get("last_alert"):
+        d["last_alert"] = "Aucune alerte"
+
+    # Moyennes récentes
+    if d.get("ph_avg_yesterday") is None and ph_val is not None:
+        d["ph_avg_yesterday"] = ph_val
+    if d.get("redox_avg_yesterday") is None and redox_val is not None:
+        d["redox_avg_yesterday"] = redox_val
+    if d.get("water_temp_avg_yesterday") is None and water_temp is not None:
+        d["water_temp_avg_yesterday"] = water_temp
+
+    if d.get("resets_counter") is None:
+        d["resets_counter"] = 0
+    if d.get("sigfox_status") is None:
+        d["sigfox_status"] = "Non utilisé"
+    if d.get("last_resume_call") is None:
+        d["last_resume_call"] = d.get("last_update")
+
+    return d
 
 
 def _compute_ble_pool_data(ble_raw: dict[str, Any], entry: ConfigEntry) -> dict[str, Any]:
@@ -866,6 +1015,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # On reconvertit les dates stockées en isoformat
         if "last_update" in restored and isinstance(restored["last_update"], str):
             restored["last_update"] = _safe_timestamp(restored["last_update"])
+        restored = _enrich_pool_data(restored, entry)
         coordinator.async_set_updated_data(restored)
 
     # ── Enregistrement ──────────────────────────────────────

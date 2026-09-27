@@ -544,20 +544,45 @@ class FliprPanel extends HTMLElement {
         }
 
         .status-pill-badge {
-          display: inline-block;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
           margin-top: 8px;
-          padding: 5px 14px;
-          border: 1.5px solid white;
+          padding: 4px 14px;
+          border: 1.5px solid rgba(255, 255, 255, 0.4);
           border-radius: 20px;
           font-size: 12px;
           font-weight: 700;
-          background: transparent;
+          background: rgba(255, 255, 255, 0.15);
+          color: white;
           white-space: nowrap;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         }
 
-        .status-pill-badge.alert {
-          background: rgba(239, 68, 68, 0.3);
+        .status-pill-badge.pill-ok {
+          background: rgba(16, 185, 129, 0.3);
+          border-color: #6ee7b7;
+          color: #ffffff;
+        }
+
+        .status-pill-badge.pill-warn {
+          background: rgba(245, 158, 11, 0.35);
+          border-color: #fcd34d;
+          color: #ffffff;
+        }
+
+        .status-pill-badge.pill-danger {
+          background: rgba(239, 68, 68, 0.4);
           border-color: #fca5a5;
+          color: #ffffff;
+        }
+
+        .status-pill-badge.pill-wait {
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.35);
+          color: #e2e8f0;
         }
 
         .card-footer-nav {
@@ -1067,14 +1092,73 @@ class FliprPanel extends HTMLElement {
       "Filtration automatique"
     );
 
-    // Statuts binaires pH et Chlore
-    const raw_ph_st = getEntityVal(["statut_ph", "ph_status", "ph_simple"], [], null);
-    const ph_status = (!raw_ph_st || raw_ph_st === "off" || String(raw_ph_st).toLowerCase() === "ok" || String(raw_ph_st).toLowerCase() === "parfait")
-      ? "Parfait" : (raw_ph_st === "--" ? "En attente" : "À corriger");
+    // Cibles pH & Chlore (dynamiques si entités cibles configurées)
+    const ph_target_min = parseFloat(getEntityVal(["cible_ph", "target_ph_min", "ph_min"], [], "7.0", true)) || 7.0;
+    const ph_target_max = parseFloat(getEntityVal(["cible_ph_2", "target_ph_max", "ph_max"], [], "7.4", true)) || 7.4;
 
-    const raw_cl_st = getEntityVal(["statut_chlore", "chlorine_status", "chlorine_simple"], [], null);
-    const cl_status = (!raw_cl_st || raw_cl_st === "off" || String(raw_cl_st).toLowerCase() === "ok" || String(raw_cl_st).toLowerCase() === "parfait")
-      ? "Parfait" : (raw_cl_st === "--" ? "En attente" : "À corriger");
+    // Badges pH contextualisés en fonction de la valeur mesurée réelle
+    let ph_status = "Idéal";
+    let ph_badge_icon = "👍";
+    let ph_badge_class = "pill-ok";
+
+    const ph_num = parseFloat(ph_val);
+    if (!isValidNumeric(ph_val) || isNaN(ph_num)) {
+      ph_status = "En attente";
+      ph_badge_icon = "⏳";
+      ph_badge_class = "pill-wait";
+    } else if (ph_num >= ph_target_min && ph_num <= ph_target_max) {
+      ph_status = "Idéal";
+      ph_badge_icon = "👍";
+      ph_badge_class = "pill-ok";
+    } else if (ph_num > ph_target_max && ph_num <= ph_target_max + 0.3) {
+      ph_status = "Élevé";
+      ph_badge_icon = "⚠️";
+      ph_badge_class = "pill-warn";
+    } else if (ph_num > ph_target_max + 0.3) {
+      ph_status = "Trop haut";
+      ph_badge_icon = "🚨";
+      ph_badge_class = "pill-danger";
+    } else if (ph_num >= ph_target_min - 0.3 && ph_num < ph_target_min) {
+      ph_status = "Un peu bas";
+      ph_badge_icon = "⚠️";
+      ph_badge_class = "pill-warn";
+    } else {
+      ph_status = "Trop bas";
+      ph_badge_icon = "🚨";
+      ph_badge_class = "pill-danger";
+    }
+
+    // Badges Chlore / Redox contextualisés en fonction de la valeur mesurée réelle
+    let cl_status = "Idéal";
+    let cl_badge_icon = "👍";
+    let cl_badge_class = "pill-ok";
+
+    const rx_num = parseFloat(redox_val);
+    if (!isValidNumeric(redox_val) || isNaN(rx_num)) {
+      cl_status = "En attente";
+      cl_badge_icon = "⏳";
+      cl_badge_class = "pill-wait";
+    } else if (rx_num >= 650 && rx_num <= 750) {
+      cl_status = "Idéal";
+      cl_badge_icon = "👍";
+      cl_badge_class = "pill-ok";
+    } else if (rx_num > 750 && rx_num <= 800) {
+      cl_status = "Élevé";
+      cl_badge_icon = "⚠️";
+      cl_badge_class = "pill-warn";
+    } else if (rx_num > 800) {
+      cl_status = "Surdosage";
+      cl_badge_icon = "🚨";
+      cl_badge_class = "pill-danger";
+    } else if (rx_num >= 580 && rx_num < 650) {
+      cl_status = "Faible";
+      cl_badge_icon = "⚠️";
+      cl_badge_class = "pill-warn";
+    } else {
+      cl_status = "Insuffisant";
+      cl_badge_icon = "🚨";
+      cl_badge_class = "pill-danger";
+    }
 
     // Pompe de filtration : switch.flipr_piscine_pompe_de_filtration ou tout switch flipr/pompe/pump
     const pump_entity_key = Object.keys(states).find(
@@ -1103,8 +1187,12 @@ class FliprPanel extends HTMLElement {
       water_temp,
       ph_val,
       ph_status,
+      ph_badge_icon,
+      ph_badge_class,
       redox_val,
       cl_status,
+      cl_badge_icon,
+      cl_badge_class,
       last_measure,
       advice_filtration,
       ph_minus_dose,
@@ -1336,7 +1424,7 @@ class FliprPanel extends HTMLElement {
               <div class="gauge-center-text">${valid_ph ? ph_num.toFixed(1) : "--"}</div>
             </div>
             <div style="font-size: 14px; font-weight: 600; margin-top: 6px;">pH</div>
-            <div class="status-pill-badge">👍 ${d.ph_status}</div>
+            <div class="status-pill-badge ${d.ph_badge_class}">${d.ph_badge_icon} ${d.ph_status}</div>
           </div>
 
           <!-- JAUGE CHLORE / REDOX -->
@@ -1356,7 +1444,7 @@ class FliprPanel extends HTMLElement {
               <div class="gauge-center-text">${d.redox_val}</div>
             </div>
             <div style="font-size: 14px; font-weight: 600; margin-top: 6px;">Chlore</div>
-            <div class="status-pill-badge">👍 ${d.cl_status}</div>
+            <div class="status-pill-badge ${d.cl_badge_class}">${d.cl_badge_icon} ${d.cl_status}</div>
           </div>
         </div>
 
