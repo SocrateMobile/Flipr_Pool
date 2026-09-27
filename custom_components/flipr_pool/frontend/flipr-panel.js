@@ -814,150 +814,198 @@ class FliprPanel extends HTMLElement {
     if (!this._hass) return {};
     const states = this._hass.states;
 
-    // Détection universelle et robuste des entités Flipr
-    const getEntityState = (patterns, exclude = []) => {
-      const patList = Array.isArray(patterns) ? patterns : [patterns];
-      const exclList = Array.isArray(exclude) ? exclude : [exclude];
+    // 1. Détection automatique du préfixe des entités Flipr
+    // Le capteur pH est créé sous la forme sensor.<prefix>_ph ou sensor.*flipr*ph
+    const ph_entity_key = Object.keys(states).find(
+      (e) => e.startsWith("sensor.") && (e.includes("flipr") || e.includes("piscine")) && (e.endsWith("_ph") || e.endsWith(".ph"))
+    ) || Object.keys(states).find(
+      (e) => e.startsWith("sensor.") && e.endsWith("_ph")
+    );
 
-      // 1. Chercher d'abord les suffixes stricts sur les entités Flipr/Pool
+    const prefix = ph_entity_key ? ph_entity_key.replace(/_ph$/, "") : "sensor.flipr_piscine";
+
+    // Récupération de la valeur réelle d'une entité
+    const getEntityVal = (suffixes, exclude = [], def = "--") => {
+      const sList = Array.isArray(suffixes) ? suffixes : [suffixes];
+      const xList = Array.isArray(exclude) ? exclude : [exclude];
+
+      // Priorité 1 : direct match avec le préfixe
+      if (prefix) {
+        for (const s of sList) {
+          const directId = `${prefix}_${s}`;
+          const e = states[directId];
+          if (e && e.state !== undefined && e.state !== "unavailable" && e.state !== "unknown") {
+            return e.state;
+          }
+        }
+      }
+
+      // Priorité 2 : suffixe exact sur toute entité Flipr / Piscine / Pool
       for (const eid of Object.keys(states)) {
         const lower = eid.toLowerCase();
         if (!lower.includes("flipr") && !lower.includes("piscine") && !lower.includes("pool")) continue;
-        if (exclList.some((ex) => lower.includes(ex.toLowerCase()))) continue;
+        if (xList.some((ex) => lower.includes(ex.toLowerCase()))) continue;
 
-        for (const pat of patList) {
-          const patLow = pat.toLowerCase();
-          if (lower.endsWith(`_${patLow}`) || lower.endsWith(`.${patLow}`) || lower === patLow) {
-            const s = states[eid];
-            if (s && s.state !== undefined && s.state !== "unavailable" && s.state !== "unknown") {
-              return s.state;
+        for (const s of sList) {
+          const sLow = s.toLowerCase();
+          if (lower.endsWith(`_${sLow}`) || lower.endsWith(`.${sLow}`) || lower === sLow || lower.includes(`_${sLow}_`)) {
+            const e = states[eid];
+            if (e && e.state !== undefined && e.state !== "unavailable" && e.state !== "unknown") {
+              return e.state;
             }
           }
         }
       }
 
-      // 2. Recherche élargie (includes)
+      // Priorité 3 : inclusion élargie
       for (const eid of Object.keys(states)) {
         const lower = eid.toLowerCase();
         if (!lower.includes("flipr") && !lower.includes("piscine") && !lower.includes("pool")) continue;
-        if (exclList.some((ex) => lower.includes(ex.toLowerCase()))) continue;
+        if (xList.some((ex) => lower.includes(ex.toLowerCase()))) continue;
 
-        for (const pat of patList) {
-          const patLow = pat.toLowerCase();
-          if (lower.includes(patLow)) {
-            const s = states[eid];
-            if (s && s.state !== undefined && s.state !== "unavailable" && s.state !== "unknown") {
-              return s.state;
+        for (const s of sList) {
+          const sLow = s.toLowerCase();
+          if (lower.includes(sLow)) {
+            const e = states[eid];
+            if (e && e.state !== undefined && e.state !== "unavailable" && e.state !== "unknown") {
+              return e.state;
             }
           }
         }
       }
-      return null;
+
+      return def;
     };
 
-    // Capteurs spécifiques
-    const water_temp = getEntityState(
-      ["temperature_de_l_eau", "water_temp", "water_temperature", "temp_eau", "temperature"],
-      ["air", "forecast", "yesterday", "max", "min", "moyenne"]
-    ) || "28";
+    // Mesures en direct
+    const water_temp = getEntityVal(
+      ["temperature_de_l_eau", "water_temperature", "temp_eau", "temperature", "water_temp"],
+      ["air", "forecast", "yesterday", "prevue", "moyenne", "min", "max"]
+    );
 
-    const air_temp = getEntityState(
-      ["temperature_de_l_air", "air_temp", "air_temperature", "temperature_air"],
-      ["next_hour", "max", "min", "forecast", "eau", "water"]
-    ) || "32";
+    const air_temp = getEntityVal(
+      ["temperature_de_l_air", "air_temperature", "air_temp", "temperature_air"],
+      ["eau", "water", "1h", "next", "max", "min", "prevue", "forecast"]
+    );
 
-    const ph_val = getEntityState(
+    const ph_val = getEntityVal(
       ["ph"],
-      ["statut", "status", "dose", "target", "cible", "equilibre", "avg", "yesterday", "min", "max"]
-    ) || "7.2";
+      ["statut", "status", "dose", "target", "cible", "equilibre", "avg", "yesterday", "recente", "moyen"]
+    );
 
-    const redox_val = getEntityState(
-      ["potentiel_redox", "redox", "orp"],
-      ["avg", "target", "cible", "status", "statut"]
-    ) || "650";
+    const redox_val = getEntityVal(
+      ["potentiel_redox", "redox_potential", "redox", "orp"],
+      ["statut", "status", "avg", "yesterday", "recente", "moyen", "cible"]
+    );
 
-    const uv_index = getEntityState(
-      ["indice_uv", "uv_index", "uv"]
-    ) || "0";
+    const uv_index = getEntityVal(
+      ["indice_uv", "uv_index", "uv"],
+      [],
+      "0"
+    );
 
-    const battery = getEntityState(
-      ["niveau_de_batterie", "batterie", "battery_level", "battery"]
-    ) || "100";
+    const battery = getEntityVal(
+      ["niveau_de_batterie", "battery_level", "batterie", "battery"],
+      [],
+      "--"
+    );
 
-    const last_measure = getEntityState(
-      ["derniere_mesure", "derniere_mise_a_jour", "last_update", "last_measurement", "last_resume_call"]
-    ) || "Aujourd'hui";
+    const last_measure = getEntityVal(
+      ["derniere_mesure", "last_measurement", "last_update", "derniere_mise_a_jour", "last_resume_call"],
+      [],
+      ""
+    );
 
-    const lsi_val = parseFloat(getEntityState(
-      ["indice_de_saturation_lsi", "indice_lsi", "lsi", "isl"],
-      ["statut", "status", "etat"]
-    ) || "0.0") || 0.0;
+    const lsi_val = parseFloat(getEntityVal(
+      ["indice_lsi", "lsi_index", "indice_de_saturation_lsi", "lsi", "isl"],
+      ["statut", "status", "etat"],
+      "0.0"
+    )) || 0.0;
 
-    const raw_lsi_status = getEntityState(
-      ["etat_de_l_eau_lsi", "statut_de_l_eau_lsi", "statut_lsi", "statut_isl", "lsi_status"]
+    const raw_lsi_status = getEntityVal(
+      ["statut_de_l_eau_lsi", "water_status_lsi", "etat_de_l_eau_lsi", "statut_lsi", "lsi_status"],
+      [],
+      "Eau équilibrée"
     );
     let lsi_status = "Eau équilibrée";
-    if (raw_lsi_status) {
+    if (raw_lsi_status && raw_lsi_status !== "--") {
       const low = String(raw_lsi_status).toLowerCase();
       if (low.includes("corr") || low.includes("acide")) lsi_status = "Eau corrosive";
       else if (low.includes("entart") || low.includes("tartre")) lsi_status = "Eau entartrante";
       else lsi_status = "Eau équilibrée";
     }
 
-    const free_cl = getEntityState(
-      ["chlore_libre_est", "chlore_libre_estime", "chlore_libre", "free_chlorine", "desinfectant", "chlorine"],
-      ["actif", "active", "status", "statut", "dose"]
-    ) || "1.5";
+    const free_cl = getEntityVal(
+      ["chlore_libre_est", "est_free_chlorine", "chlore_libre", "free_chlorine", "desinfectant_chlore", "chlorine"],
+      ["actif", "active", "status", "statut", "dose"],
+      "--"
+    );
 
-    const active_cl = getEntityState(
-      ["chlore_actif_reel_hocl", "chlore_actif_hocl", "chlore_actif", "active_chlorine"]
-    ) || "0.6";
+    const active_cl = getEntityVal(
+      ["chlore_actif_hocl", "active_chlorine_hocl", "chlore_actif", "active_chlorine"],
+      [],
+      "--"
+    );
 
-    const ph_minus_dose = parseFloat(getEntityState(
-      ["dose_ph_moins", "dose_ph_minus", "dose_ph"],
-      ["plus", "2"]
-    ) || "0") || 0;
+    const ph_minus_dose = parseFloat(getEntityVal(
+      ["dose_ph", "ph_dose", "dose_ph_minus", "dose_ph_moins"],
+      ["plus", "2"],
+      "0"
+    )) || 0;
 
-    const ph_plus_dose = parseFloat(getEntityState(
-      ["dose_ph_plus", "dose_ph_2"]
-    ) || "0") || 0;
+    const ph_plus_dose = parseFloat(getEntityVal(
+      ["dose_ph_2", "ph_dose_2", "dose_ph_plus"],
+      [],
+      "0"
+    )) || 0;
 
-    const cl_shock_dose = parseFloat(getEntityState(
-      ["dose_chlore_choc", "dose_cl_shock"]
-    ) || "0") || 0;
+    const cl_shock_dose = parseFloat(getEntityVal(
+      ["dose_chlore_choc", "chlorine_dose_shock", "dose_cl_shock"],
+      [],
+      "0"
+    )) || 0;
 
-    const cl_maint_dose = parseFloat(getEntityState(
-      ["dose_chlore_entretien", "dose_cl_maint"]
-    ) || "0") || 0;
+    const cl_maint_dose = parseFloat(getEntityVal(
+      ["dose_chlore_entretien", "chlorine_dose_maintenance", "dose_cl_maint"],
+      [],
+      "0"
+    )) || 0;
 
-    const advice_filtration = getEntityState(
-      ["conseil_filtration", "filtration_advice", "duree_filtration", "pump_hours"]
-    ) || "Filtrer 12h / jour";
+    const advice_filtration = getEntityVal(
+      ["conseil_filtration", "filtration_advice", "duree_filtration", "pump_duration", "pump_hours"],
+      [],
+      "Filtration automatique"
+    );
 
-    // Statuts binaires convertis en libellés clairs
-    const raw_ph_st = getEntityState(["statut_ph", "ph_status", "ph_simple"]);
+    // Statuts binaires pH et Chlore
+    const raw_ph_st = getEntityVal(["statut_ph", "ph_status", "ph_simple"], [], null);
     const ph_status = (!raw_ph_st || raw_ph_st === "off" || String(raw_ph_st).toLowerCase() === "ok" || String(raw_ph_st).toLowerCase() === "parfait")
-      ? "Parfait" : "À corriger";
+      ? "Parfait" : (raw_ph_st === "--" ? "En attente" : "À corriger");
 
-    const raw_cl_st = getEntityState(["statut_chlore", "chlorine_status", "chlorine_simple"]);
+    const raw_cl_st = getEntityVal(["statut_chlore", "chlorine_status", "chlorine_simple"], [], null);
     const cl_status = (!raw_cl_st || raw_cl_st === "off" || String(raw_cl_st).toLowerCase() === "ok" || String(raw_cl_st).toLowerCase() === "parfait")
-      ? "Parfait" : "À corriger";
+      ? "Parfait" : (raw_cl_st === "--" ? "En attente" : "À corriger");
 
-    // Pompe de filtration
+    // Pompe de filtration : switch.flipr_piscine_pompe_de_filtration ou tout switch flipr/pompe/pump
     const pump_entity_key = Object.keys(states).find(
-      (e) => e.startsWith("switch.") && (e.includes("pompe_filtration") || e.includes("pump_filtration") || e.includes("flipr_hub"))
+      (e) => e.startsWith("switch.") && (
+        e.includes("pompe") || e.includes("pump") || e.includes("flipr_hub") || (prefix && e.startsWith(prefix.replace("sensor.", "switch.")))
+      )
     );
     const pump_state = pump_entity_key && states[pump_entity_key] ? states[pump_entity_key].state : "off";
 
-    // Nom de la piscine
-    const any_pool_entity = Object.keys(states).find(
-      (e) => e.includes("flipr") && (e.endsWith("_ph") || e.endsWith("temperature") || e.includes("piscine"))
+    // Nom de la piscine / du bassin
+    const any_pool_entity = ph_entity_key || Object.keys(states).find(
+      (e) => e.includes("flipr") && (e.endsWith("_ph") || e.includes("temperature") || e.includes("piscine"))
     );
-    const pool_name = any_pool_entity && states[any_pool_entity]?.attributes?.friendly_name
-      ? states[any_pool_entity].attributes.friendly_name.split(" ")[0] || "Piscine"
-      : "Piscine";
+    let pool_name = "Piscine";
+    if (any_pool_entity && states[any_pool_entity]?.attributes?.friendly_name) {
+      const fn = states[any_pool_entity].attributes.friendly_name;
+      pool_name = fn.replace(/\s*(pH|Température.*|Temperature.*|Redox.*|Chlore.*|Batterie.*)$/i, "").trim() || "Piscine";
+    }
 
     return {
+      prefix,
       pump_entity_key,
       pump_state,
       air_temp,
@@ -1027,10 +1075,14 @@ class FliprPanel extends HTMLElement {
     const syncTimeEl = this.querySelector("#last-sync-time");
 
     if (syncTimeEl) {
-      const formattedDate = this._formatDate(d.last_measure);
-      const battNum = parseFloat(d.battery);
-      const battStr = isNaN(battNum) ? `${d.battery}%` : (d.battery.includes('.') ? `${d.battery}%` : `${battNum.toFixed(1)}%`);
-      syncTimeEl.textContent = `Dernière mesure : ${formattedDate} • Batterie : ${battStr}`;
+      if (d.last_measure && d.last_measure !== "--") {
+        const formattedDate = this._formatDate(d.last_measure);
+        const battNum = parseFloat(d.battery);
+        const battStr = isNaN(battNum) ? (d.battery === "--" ? "N/D" : `${d.battery}%`) : (d.battery.includes('.') ? `${d.battery}%` : `${battNum.toFixed(1)}%`);
+        syncTimeEl.textContent = `Dernière mesure : ${formattedDate} • Batterie : ${battStr}`;
+      } else {
+        syncTimeEl.textContent = `Synchronisation en direct • En attente des données Flipr`;
+      }
     }
 
     if (cardEl) {
@@ -1045,15 +1097,17 @@ class FliprPanel extends HTMLElement {
 
   _renderAnalyseCard(d) {
     // Calcul Knob pH
-    const ph_num = parseFloat(d.ph_val) || 7.2;
-    let ph_pct = Math.max(0, Math.min(1, (ph_num - 6.4) / (8.0 - 6.4)));
+    const ph_num = parseFloat(d.ph_val);
+    const valid_ph = !isNaN(ph_num);
+    const ph_pct = valid_ph ? Math.max(0, Math.min(1, (ph_num - 6.4) / (8.0 - 6.4))) : 0.5;
     const ph_angle = (135 + ph_pct * 270) * (Math.PI / 180);
     const ph_x = 50 + 42 * Math.cos(ph_angle);
     const ph_y = 50 + 42 * Math.sin(ph_angle);
 
     // Calcul Knob Redox
-    const rx_num = parseFloat(d.redox_val) || 650;
-    let rx_pct = Math.max(0, Math.min(1, (rx_num - 465) / (965 - 465)));
+    const rx_num = parseFloat(d.redox_val);
+    const valid_rx = !isNaN(rx_num);
+    const rx_pct = valid_rx ? Math.max(0, Math.min(1, (rx_num - 465) / (965 - 465))) : 0.5;
     const rx_angle = (135 + rx_pct * 270) * (Math.PI / 180);
     const rx_x = 50 + 42 * Math.cos(rx_angle);
     const rx_y = 50 + 42 * Math.sin(rx_angle);
@@ -1078,7 +1132,7 @@ class FliprPanel extends HTMLElement {
         <div class="air-meteo-row">
           <div class="air-temp-display">
             <span class="air-label">air</span>
-            <span class="air-value">${d.air_temp}°C</span>
+            <span class="air-value">${d.air_temp !== "--" ? `${d.air_temp}°C` : "--"}</span>
             <span class="air-trend">↘</span>
           </div>
           <div style="height: 32px; width: 1px; background: #cbd5e1;"></div>
@@ -1166,7 +1220,7 @@ class FliprPanel extends HTMLElement {
         <div class="water-header-row">
           <div style="display: flex; align-items: baseline; gap: 8px;">
             <span style="font-size: 18px; font-weight: 400; opacity: 0.9;">eau</span>
-            <span class="water-temp-big">${d.water_temp}°C</span>
+            <span class="water-temp-big">${d.water_temp !== "--" ? `${d.water_temp}°C` : "--"}</span>
           </div>
           <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid rgba(255,255,255,0.3);">
             🔗
@@ -1253,7 +1307,7 @@ class FliprPanel extends HTMLElement {
         <div class="air-meteo-row">
           <div class="air-temp-display">
             <span class="air-label">air</span>
-            <span class="air-value">${d.air_temp}°C</span>
+            <span class="air-value">${d.air_temp !== "--" ? `${d.air_temp}°C` : "--"}</span>
             <span class="air-trend">↘</span>
           </div>
           <div style="height: 32px; width: 1px; background: #cbd5e1;"></div>
@@ -1315,7 +1369,7 @@ class FliprPanel extends HTMLElement {
             <div class="history-day-item"><div class="history-day-pill">28° ↗</div><div class="history-day-date">J-3</div></div>
             <div class="history-day-item"><div class="history-day-pill">29° ↗</div><div class="history-day-date">J-2</div></div>
             <div class="history-day-item"><div class="history-day-pill">29° ↘</div><div class="history-day-date">Hier</div></div>
-            <div class="history-day-item"><div class="history-day-pill current">${d.water_temp}°</div><div class="history-day-date">Auj.</div></div>
+            <div class="history-day-item"><div class="history-day-pill current">${d.water_temp !== "--" ? `${d.water_temp}°` : "--"}</div><div class="history-day-date">Auj.</div></div>
           </div>
         </div>
 
@@ -1348,7 +1402,7 @@ class FliprPanel extends HTMLElement {
         <div style="display: flex; justify-content: space-around; align-items: flex-end; padding: 6px 0;">
           <div style="text-align: center; flex: 1;">
             <div style="font-size: 14px; opacity: 0.9;">eau</div>
-            <div style="font-size: 32px; font-weight: 700;">${d.water_temp}°C</div>
+            <div style="font-size: 32px; font-weight: 700;">${d.water_temp !== "--" ? `${d.water_temp}°C` : "--"}</div>
           </div>
           <div style="text-align: center; flex: 1;">
             <div style="font-size: 14px; opacity: 0.9;">pH</div>
@@ -1376,6 +1430,26 @@ class FliprPanel extends HTMLElement {
   }
 
   _renderAdviceSection(d) {
+    if (d.ph_val === "--" && d.redox_val === "--") {
+      return `
+        <div class="advice-card">
+          <div class="advice-card-header">
+            <div class="advice-card-title">
+              <span>🐬</span> Synchronisation Flipr
+            </div>
+            <div class="badge-status-tag tag-info">En attente</div>
+          </div>
+          <div class="advice-action-box" style="margin-top: 14px;">
+            <div class="action-icon">⏳</div>
+            <div>
+              <strong>En attente des premières mesures de votre Flipr.</strong><br>
+              Les recommandations de dosage (pH-, pH+, Chlore), l'indice LSI et les conseils de filtration s'afficheront automatiquement dès la réception des données en direct.
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     const ph = parseFloat(d.ph_val) || 7.2;
     const lsi = d.lsi_val;
     const lsi_cursor_pct = Math.max(0, Math.min(100, ((lsi + 1.0) / 2.0) * 100));

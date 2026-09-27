@@ -619,7 +619,7 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
             hass, 
             _LOGGER, 
             name="flipr_pool",
-            update_interval=None  # Désactivation du polling automatique HA pour gérer notre propre boucle
+            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN)
         )
         self.api_client = api_client
         self.flipr_id = flipr_id
@@ -1025,6 +1025,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 cache_headers=False,
             )
 
+        panel_url = f"/flipr_pool_panel/flipr-panel.js?v={VERSION}"
         try:
             frontend.async_register_built_in_panel(
                 hass,
@@ -1035,22 +1036,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 config={
                     "_panel_custom": {
                         "name": "flipr-panel",
-                        "module_url": "/flipr_pool_panel/flipr-panel.js",
-                    }
+                        "module_url": panel_url,
+                    },
+                    "flipr_id": flipr_id,
                 },
                 require_admin=False,
+                update=True,
             )
-        except ValueError:
-            # Panneau déjà enregistré
-            pass
+        except Exception as e:
+            _LOGGER.debug("Flipr: Erreur enregistrement panel ou déjà enregistré: %s", e)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # ── Premier refresh (Cloud) ──────────────────────────────
+    # ── Premier refresh (Cloud) avant initialisation des entités ──────────
     try:
         await coordinator.async_config_entry_first_refresh()
     except Exception as err:
         _LOGGER.warning("Flipr: premier refresh Cloud échoué (%s)", err)
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 

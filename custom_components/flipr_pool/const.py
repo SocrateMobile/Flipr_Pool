@@ -2,7 +2,7 @@
 
 DOMAIN = "flipr_pool"
 NAME = "Flipr Pool Control"
-VERSION = "5.7.8"
+VERSION = "5.7.9"
 API_BASE_URL = "https://apis.goflipr.com"
 
 # ── Configuration de traitement ────────────────────────────
@@ -64,5 +64,5 @@ CONF_BLE_ENABLED   = "ble_enabled"
 CONF_BLE_ADDRESS   = "ble_address"
 
 # Intervalles des coordinateurs
-CLOUD_UPDATE_INTERVAL_MIN = 60
+CLOUD_UPDATE_INTERVAL_MIN = 15
 BLE_UPDATE_INTERVAL_DEFAULT = 60

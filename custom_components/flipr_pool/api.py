@@ -257,6 +257,28 @@ class FliprApiClient:
         except Exception as e:
             _LOGGER.warning("Échec GET /NewResume : %s", e)
 
+        # ── 1bis. Fallback survey/last (endpoint historique si NewResume vide ou invalide) ──
+        m_check = data.get("module_last_measure")
+        is_empty = False
+        if not m_check or not isinstance(m_check, dict):
+            is_empty = True
+        else:
+            cur = m_check.get("Current", m_check) if isinstance(m_check.get("Current"), dict) else m_check
+            if (cur.get("Temperature") is None and cur.get("temperature") is None and cur.get("PH") is None and cur.get("ph") is None):
+                is_empty = True
+
+        if is_empty:
+            survey_url = f"{API_BASE_URL}/modules/{flipr_id}/survey/last"
+            try:
+                survey_res = await self._request("GET", survey_url)
+                if isinstance(survey_res, dict) and (
+                    survey_res.get("Temperature") is not None or survey_res.get("temperature") is not None or survey_res.get("PH") is not None or survey_res.get("ph") is not None
+                ):
+                    data["module_last_measure"] = survey_res
+                    _LOGGER.info("Flipr: Mesures récupérées avec succès via fallback /survey/last pour %s", flipr_id)
+            except Exception as e:
+                _LOGGER.debug("Échec fallback GET /survey/last : %s", e)
+
         # ── 2. ShortTerm (météo) - en cache 6h ──
         shortterm_url = f"{API_BASE_URL}/modules/{flipr_id}/shortterm"
         try:
