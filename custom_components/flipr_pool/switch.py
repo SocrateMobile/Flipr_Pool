@@ -74,6 +74,17 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
         if not hub_id and self.coordinator.data:
             hub_id = self.coordinator.data.get("hub_id")
             
+        if not hub_id and getattr(self.coordinator, "config_entry", None):
+            hub_id = self.coordinator.config_entry.options.get("discovered_hub_id")
+
+        if not hub_id:
+            raw_mods = (self.coordinator.data or {}).get("raw_modules", []) if self.coordinator.data else []
+            for m in raw_mods:
+                s = str(m.get("Serial") or m.get("Id") or "")
+                if s.startswith("CA"):
+                    hub_id = s
+                    break
+
         if not hub_id:
             if self.coordinator.flipr_id.startswith("CA") or self.coordinator.flipr_id.startswith("G"):
                 hub_id = self.coordinator.flipr_id

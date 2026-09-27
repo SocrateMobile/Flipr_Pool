@@ -442,6 +442,23 @@ class FliprPanel extends HTMLElement {
           color: #1e293b;
         }
 
+        .pump-circle-action.active {
+          background: #0ea5e9;
+          color: white;
+          box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4);
+        }
+
+        .pump-circle-action.pump-on {
+          background: #10b981 !important;
+          color: white !important;
+          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5) !important;
+        }
+
+        .pump-circle-action.pump-off {
+          background: #f1f5f9;
+          color: #94a3b8;
+        }
+
         /* 7-Day History Bars */
         .history-section {
           display: flex;
@@ -1168,6 +1185,14 @@ class FliprPanel extends HTMLElement {
     );
     const pump_state = pump_entity_key && states[pump_entity_key] ? states[pump_entity_key].state : "off";
 
+    // Mode du Hub : auto, manual, planning
+    const select_mode_key = Object.keys(states).find(
+      (e) => e.startsWith("select.") && !e.includes("domolink") && (
+        e.includes("flipr") || (prefix && e.startsWith(prefix.replace("sensor.", "select."))) || e.includes("mode_filtration")
+      )
+    );
+    const hub_mode = select_mode_key && states[select_mode_key] ? states[select_mode_key].state : "auto";
+
     // Nom de la piscine / du bassin
     const any_pool_entity = ph_flipr_key || flipr_keys.find(
       (e) => e.endsWith("_ph") || e.includes("temperature") || e.includes("piscine")
@@ -1182,6 +1207,8 @@ class FliprPanel extends HTMLElement {
       prefix,
       pump_entity_key,
       pump_state,
+      select_mode_key,
+      hub_mode,
       air_temp,
       uv_index,
       water_temp,
@@ -1465,6 +1492,8 @@ class FliprPanel extends HTMLElement {
   }
 
   _renderControleCard(d) {
+    const ph_num = parseFloat(d.ph_val);
+    const valid_ph = !isNaN(ph_num);
     const pumpClass = d.pump_state === "on" ? "pump-on" : "pump-off";
 
     return `
@@ -1502,10 +1531,10 @@ class FliprPanel extends HTMLElement {
             <div style="font-size: 12px; font-weight: 700; color: #1e293b;">Pompe à filtration</div>
           </div>
           <div class="pump-actions-group">
-            <button class="pump-circle-action" title="Mode Automatique">⚡ᴬ</button>
-            <button class="pump-circle-action" title="Minuteur">⏱️</button>
+            <button class="pump-circle-action ${d.hub_mode === 'auto' ? 'active' : ''}" id="btn-mode-auto" title="Mode Automatique">⚡ᴬ</button>
+            <button class="pump-circle-action ${d.hub_mode === 'planning' ? 'active' : ''}" id="btn-mode-planning" title="Minuteur / Planning">⏱️</button>
             <button class="pump-circle-action ${pumpClass}" id="btn-toggle-pump" style="font-weight: bold;" title="Marche/Arrêt">⏻</button>
-            <button class="pump-circle-action" title="Réglages">⚙️</button>
+            <button class="pump-circle-action ${d.hub_mode === 'manual' ? 'active' : ''}" id="btn-mode-manual" title="Mode Manuel">✋</button>
           </div>
         </div>
 
@@ -1807,11 +1836,56 @@ class FliprPanel extends HTMLElement {
       });
     }
 
-    if (btnPump && d.pump_entity_key && this._hass) {
-      btnPump.addEventListener("click", () => {
-        this._hass.callService("homeassistant", "toggle", {
-          entity_id: d.pump_entity_key,
-        });
+    // Tous les boutons Marche/Arrêt de la pompe
+    const btnPumps = cardEl.querySelectorAll("#btn-toggle-pump");
+    btnPumps.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (d.pump_entity_key && this._hass) {
+          this._hass.callService("homeassistant", "toggle", {
+            entity_id: d.pump_entity_key,
+          });
+        }
+      });
+    });
+
+    // Boutons de mode Flipr Hub (Auto, Manuel, Planning)
+    const btnAuto = cardEl.querySelector("#btn-mode-auto");
+    if (btnAuto) {
+      btnAuto.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (d.select_mode_key && this._hass) {
+          this._hass.callService("select", "select_option", {
+            entity_id: d.select_mode_key,
+            option: "auto",
+          });
+        }
+      });
+    }
+
+    const btnManual = cardEl.querySelector("#btn-mode-manual");
+    if (btnManual) {
+      btnManual.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (d.select_mode_key && this._hass) {
+          this._hass.callService("select", "select_option", {
+            entity_id: d.select_mode_key,
+            option: "manual",
+          });
+        }
+      });
+    }
+
+    const btnPlanning = cardEl.querySelector("#btn-mode-planning");
+    if (btnPlanning) {
+      btnPlanning.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (d.select_mode_key && this._hass) {
+          this._hass.callService("select", "select_option", {
+            entity_id: d.select_mode_key,
+            option: "planning",
+          });
+        }
       });
     }
   }
