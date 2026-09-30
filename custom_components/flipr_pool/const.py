@@ -1,8 +1,18 @@
 """Constants for the Flipr Pool Control integration."""
 
+import json
+import os
+
 DOMAIN = "flipr_pool"
 NAME = "Flipr Pool Control"
-VERSION = "5.7.15"
+
+_MANIFEST_PATH = os.path.join(os.path.dirname(__file__), "manifest.json")
+try:
+    with open(_MANIFEST_PATH, "r", encoding="utf-8") as _f:
+        VERSION = json.load(_f).get("version", "unknown")
+except Exception:
+    VERSION = "unknown"
+
 API_BASE_URL = "https://apis.goflipr.com"
 
 # ── Configuration de traitement ────────────────────────────

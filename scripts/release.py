@@ -19,7 +19,7 @@ GITHUB_REPO = f"{REPO_OWNER}/{REPO_NAME}"
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MANIFEST_PATH = os.path.join(ROOT_DIR, "custom_components", "flipr_pool", "manifest.json")
-CONST_PATH = os.path.join(ROOT_DIR, "custom_components", "flipr_pool", "const.py")
+README_PATH = os.path.join(ROOT_DIR, "README.md")
 
 
 def get_token() -> str:
@@ -46,7 +46,7 @@ def get_token() -> str:
 
 
 def update_version_files(new_ver: str) -> None:
-    """Update version in manifest.json and const.py."""
+    """Update version in manifest.json (Single Source of Truth) and README.md badge."""
     # 1. manifest.json
     with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -56,13 +56,23 @@ def update_version_files(new_ver: str) -> None:
         f.write("\n")
     print(f"Updated {MANIFEST_PATH} -> {new_ver}")
 
-    # 2. const.py
-    with open(CONST_PATH, "r", encoding="utf-8") as f:
-        content = f.read()
-    new_content = re.sub(r'VERSION\s*=\s*"[^"]+"', f'VERSION = "{new_ver}"', content)
-    with open(CONST_PATH, "w", encoding="utf-8") as f:
-        f.write(new_content)
-    print(f"Updated {CONST_PATH} -> {new_ver}")
+    # 2. README.md badge and title
+    if os.path.exists(README_PATH):
+        with open(README_PATH, "r", encoding="utf-8") as f:
+            readme_content = f.read()
+        readme_content = re.sub(
+            r"badge/version-[^-\s]+-blue",
+            f"badge/version-{new_ver}-blue",
+            readme_content,
+        )
+        readme_content = re.sub(
+            r"# Flipr Pool Control pour Home Assistant \(v[^\)]+\)",
+            f"# Flipr Pool Control pour Home Assistant (v{new_ver})",
+            readme_content,
+        )
+        with open(README_PATH, "w", encoding="utf-8") as f:
+            f.write(readme_content)
+        print(f"Updated {README_PATH} badge -> {new_ver}")
 
 
 def run_cmd(cmd: list[str]) -> None:
