@@ -89,7 +89,7 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
             if self.coordinator.flipr_id.startswith("CA") or self.coordinator.flipr_id.startswith("G"):
                 hub_id = self.coordinator.flipr_id
             else:
-                hub_id = "CA6268"
+                return False
 
         # 1. Mise à jour optimiste immédiate dans HA
         if self.coordinator.data:

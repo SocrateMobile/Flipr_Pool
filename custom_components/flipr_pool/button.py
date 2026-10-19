@@ -137,11 +137,9 @@ class FliprGenerateCardButton(CoordinatorEntity, ButtonEntity):
 
         try:
             await self.hass.async_add_executor_job(_write_yaml)
-            self.hass.components.persistent_notification.async_create(
+            self.hass.services.async_call("persistent_notification", "create", {"message": 
                 f"Le code de votre carte Lovelace a été généré avec succès avec le préfixe `{prefix}`.<br><br>Vous le trouverez dans le fichier <b>flipr_card.yaml</b> à la racine de votre dossier de configuration Home Assistant.<br><br>Copiez son contenu dans votre tableau de bord !",
-                title="Flipr : Carte Lovelace Générée 🏊",
-                notification_id="flipr_card_generated"
-            )
+                "title": "Flipr : Carte Lovelace Générée 🏊", "notification_id": "flipr_card_generated"}, blocking=False)
             _LOGGER.info("Flipr : Fichier flipr_card.yaml généré avec succès")
             
         except Exception as err:

@@ -44,7 +44,6 @@ class FliprApiClient:
     
     _global_blocked_until: datetime | None = None
     _global_retry_count: int = 0
-    _global_token: str | None = None
 
     def __init__(
         self,
@@ -55,7 +54,7 @@ class FliprApiClient:
         self._session = session
         self._email = email
         self._password = password
-        self._token: str | None = FliprApiClient._global_token
+        self._token: str | None = None
         self._cache: dict[str, tuple[datetime, Any]] = {}
 
     # ═══════════════════════════════════════════════════════════
@@ -67,8 +66,7 @@ class FliprApiClient:
         if not self._email or not self._password:
             raise FliprAuthError("Email ou mot de passe manquant.")
 
-        if FliprApiClient._global_token:
-            self._token = FliprApiClient._global_token
+        if self._token:
             return self._token
 
         self._check_rate_limit()
@@ -92,7 +90,7 @@ class FliprApiClient:
                     if not token:
                         raise FliprAuthError("Réponse d'authentification invalide (token absent).")
                     self._token = token
-                    FliprApiClient._global_token = token
+                    self._token = token
                     self._reset_rate_limit()
                     return self._token
 
@@ -150,7 +148,7 @@ class FliprApiClient:
                 # ── Token expiré → renouvellement unique ──
                 if resp.status == 401:
                     _LOGGER.info("Token Flipr expiré — renouvellement en cours…")
-                    FliprApiClient._global_token = None
+                    self._token = None
                     self._token = None
                     await self.authenticate()
                     headers["Authorization"] = f"Bearer {self._token}"

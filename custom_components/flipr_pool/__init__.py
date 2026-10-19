@@ -58,7 +58,7 @@ from .chemistry import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor", "select", "switch", "number", "button", "binary_sensor", "update"]
+PLATFORMS = ["sensor", "select", "switch", "number", "button", "binary_sensor"]
 STORE_VERSION = 1
 
 

@@ -349,7 +349,7 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             if self._installation_type == "local":
                 title = f"Flipr (Local — {self._selected_flipr_id})"
             else:
-                title = f"Flipr ({self._email} — {self._selected_flipr_id})"
+                title = f"Flipr ({self._selected_flipr_id})"
 
             await self.async_set_unique_id(self._selected_flipr_id)
             self._abort_if_unique_id_configured()
@@ -412,7 +412,7 @@ class FliprConfigFlow(config_entries.ConfigFlow, domain="flipr_pool"):
             self._abort_if_unique_id_configured()
 
             return self.async_create_entry(
-                title=f"Flipr ({self._email} — {flipr_id})",
+                title=f"Flipr ({flipr_id})",
                 data={
                     "installation_type": self._installation_type,
                     "email": self._email,

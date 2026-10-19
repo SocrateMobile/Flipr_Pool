@@ -69,7 +69,7 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
             if self.coordinator.flipr_id.startswith("CA") or self.coordinator.flipr_id.startswith("G") or self.coordinator.flipr_id.startswith("C"):
                 hub_id = self.coordinator.flipr_id
             else:
-                hub_id = "CA6268"
+                return False
 
         # 1. Mise à jour optimiste immédiate dans HA
         if self.coordinator.data:
