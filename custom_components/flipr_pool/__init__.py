@@ -6,11 +6,12 @@ Architecture :
 - merged_coordinator : fusionne les deux, garde le plus récent, alimente les entités
 """
 
-import logging
-from datetime import timedelta, datetime, timezone
-import async_timeout
-import aiohttp
+from __future__ import annotations
+
 import asyncio
+from datetime import timedelta, datetime, timezone
+import logging
+import os
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
@@ -56,6 +57,7 @@ from .chemistry import (
     estimate_free_chlorine,
     compute_active_chlorine_from_fc,
 )
+from .api import FliprApiClient
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor", "select", "switch", "number", "button", "binary_sensor"]
@@ -810,7 +812,7 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch données du Cloud (uniquement appelé lors d'un Forcer Actualisation ou au 1er démarrage)."""
         try:
-            async with async_timeout.timeout(60):
+            async with asyncio.timeout(60):
                 data_raw = await self.api_client.get_pool_data(self.flipr_id, self.place_id, self.hub_id)
                 
                 if data_raw.get("place_id") and not self.place_id:

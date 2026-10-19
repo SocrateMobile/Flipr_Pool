@@ -277,7 +277,6 @@ async def read_flipr_ble(
             notification_data = bytearray()
 
             def _notification_handler(sender, data: bytearray):
-                nonlocal notification_data
                 notification_data.extend(data)
                 notification_event.set()
 
