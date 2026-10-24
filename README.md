@@ -15,7 +15,7 @@ Elle combine les données du **Cloud GoFlipr** et du **Bluetooth Low Energy (BLE
 ## 🚀 Nouveau : Panneau Latéral Intégré (v5.7.0)
 
 Dès l'installation de l'intégration, un nouvel onglet **« Flipr Pool Control »** apparaît automatiquement dans la barre latérale gauche de votre Home Assistant :
-- 📱 **Double Vue Officielle Flipr** : Bascule instantanée entre la vue **Analyse** (jauges pH/Redox, météo, statut eau) et la vue **Contrôle** (gestion pompe, historiques 7 jours, prévisions météo).
+- 📱 **Double Vue Officielle Flipr** : Bascule instantanée entre la vue **Analyse** (jauges pH/Redox, météo, statut eau) et la vue **Contrôle** (gestion pompe, moyennes veille et équilibre, prévisions météo réelles).
 - 💡 **Volet Conseils d'Entretien & Traitements** : Recommandations précises de dosages (pH+, pH-, Chlore choc, Chlore entretien), équilibre de l'eau (LSI/Langelier), et optimisation des heures de filtration.
 - ⚡ **Pilotage interactif** : Marche/Arrêt de la filtration directement depuis le panneau.
 

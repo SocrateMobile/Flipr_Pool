@@ -4,6 +4,16 @@
  * et intègre le volet complet de conseils d'entretien & régulation (pH, Chlore, LSI, Filtration).
  */
 
+function escapeHtml(val) {
+  if (val === undefined || val === null) return "";
+  return String(val)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 class FliprPanel extends HTMLElement {
   constructor() {
     super();
@@ -869,6 +879,20 @@ class FliprPanel extends HTMLElement {
     // Mesures en direct résolues depuis le registre d'entités (platform === "flipr_pool")
     const water_temp = getEntityByKey("temperature", "temperature", "--", true, "sensor");
     const air_temp = getEntityByKey("air_temp", "air_temp", "--", true, "sensor");
+    const air_temp_next_hour = getEntityByKey("air_temp_next_hour", "air_temp_next_hour", "--", true, "sensor");
+    const air_temp_min_today = getEntityByKey("air_temp_min_today", "air_temp_min_today", "--", true, "sensor");
+    const air_temp_max_today = getEntityByKey("air_temp_max_today", "air_temp_max_today", "--", true, "sensor");
+    const rain_probability = getEntityByKey("rain_probability", "rain_probability", "--", true, "sensor");
+    const wind_speed = getEntityByKey("wind_speed", "wind_speed", "--", true, "sensor");
+    const cloud_cover = getEntityByKey("cloud_cover", "cloud_cover", "--", true, "sensor");
+
+    const ph_avg_yesterday = getEntityByKey("ph_avg_yesterday", "ph_avg_yesterday", "--", true, "sensor");
+    const redox_avg_yesterday = getEntityByKey("redox_avg_yesterday", "redox_avg_yesterday", "--", true, "sensor");
+    const water_temp_avg_yesterday = getEntityByKey("water_temp_avg_yesterday", "water_temp_avg_yesterday", "--", true, "sensor");
+    const water_temp_forecast_1h = getEntityByKey("water_temp_forecast_1h", "water_temp_forecast_1h", "--", true, "sensor");
+    const water_temp_forecast_tomorrow = getEntityByKey("water_temp_forecast_tomorrow", "water_temp_forecast_tomorrow", "--", true, "sensor");
+    const ph_equilibre = getEntityByKey("ph_equilibre", "ph_equilibre", "--", true, "sensor");
+
     let ph_val = getEntityByKey("ph", "ph", "--", true, "sensor");
     if (ph_val !== "--" && (parseFloat(ph_val) > 12.0 || parseFloat(ph_val) < 3.0)) {
       ph_val = "--";
@@ -999,13 +1023,25 @@ class FliprPanel extends HTMLElement {
       select_mode_key,
       hub_mode,
       air_temp,
+      air_temp_next_hour,
+      air_temp_min_today,
+      air_temp_max_today,
+      rain_probability,
+      wind_speed,
+      cloud_cover,
       uv_index,
       water_temp,
+      water_temp_avg_yesterday,
+      water_temp_forecast_1h,
+      water_temp_forecast_tomorrow,
       ph_val,
+      ph_avg_yesterday,
+      ph_equilibre,
       ph_status,
       ph_badge_icon,
       ph_badge_class,
       redox_val,
+      redox_avg_yesterday,
       cl_status,
       cl_badge_icon,
       cl_badge_class,
@@ -1089,6 +1125,15 @@ class FliprPanel extends HTMLElement {
     }
   }
 
+  _getAirTrendArrow(d) {
+    const cur = parseFloat(d.air_temp);
+    const next = parseFloat(d.air_temp_next_hour);
+    if (isNaN(cur) || isNaN(next)) return "";
+    if (next > cur) return "↗";
+    if (next < cur) return "↘";
+    return "→";
+  }
+
   _renderAnalyseCard(d) {
     // Calcul Knob pH
     const ph_num = parseFloat(d.ph_val);
@@ -1107,12 +1152,13 @@ class FliprPanel extends HTMLElement {
     const rx_y = 50 + 42 * Math.sin(rx_angle);
 
     const pumpClass = d.pump_state === "on" ? "pump-on" : "pump-off";
+    const airTrend = this._getAirTrendArrow(d);
 
     return `
       <!-- EN-TETE & ONGLETS -->
       <div class="card-header-bar">
         <div class="pool-location-selector">
-          ${d.pool_name} <span style="font-size: 10px; color: #64748b;">▼</span>
+          ${escapeHtml(d.pool_name)} <span style="font-size: 10px; color: #64748b;">▼</span>
         </div>
         <div class="tabs-pill-container">
           <button class="tab-btn active" id="tab-btn-analyse">💧 Analyse</button>
@@ -1126,13 +1172,13 @@ class FliprPanel extends HTMLElement {
         <div class="air-meteo-row">
           <div class="air-temp-display">
             <span class="air-label">air</span>
-            <span class="air-value">${d.air_temp !== "--" ? `${d.air_temp}°C` : "--"}</span>
-            <span class="air-trend">↘</span>
+            <span class="air-value">${d.air_temp !== "--" ? `${escapeHtml(d.air_temp)}°C` : "--"}</span>
+            <span class="air-trend">${escapeHtml(airTrend)}</span>
           </div>
           <div style="height: 32px; width: 1px; background: #cbd5e1;"></div>
           <div class="uv-badge-box">
             <div style="font-size: 16px; color: #475569;">☀️ <span style="font-size: 12px; color: #94a3b8;">&gt;</span> ☁️</div>
-            <div class="uv-pill">UV ${d.uv_index}</div>
+            <div class="uv-pill">UV ${escapeHtml(d.uv_index)}</div>
           </div>
         </div>
 
@@ -1147,16 +1193,16 @@ class FliprPanel extends HTMLElement {
           </div>
 
           <div class="card-subblock" style="display: flex; flex-direction: column; justify-content: center;">
-            <div style="font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; text-align: center; margin-bottom: 4px;">Probabilité dans les 5h</div>
+            <div style="font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; text-align: center; margin-bottom: 4px;">Pluie &amp; Vent</div>
             <div style="display: flex; justify-content: space-around; align-items: center;">
               <div style="text-align: center;">
                 <div style="font-size: 14px;">🌧️</div>
-                <div style="font-size: 11px; font-weight: 700; color: #475569;">0%</div>
+                <div style="font-size: 11px; font-weight: 700; color: #475569;">${d.rain_probability !== "--" ? `${escapeHtml(d.rain_probability)}%` : "--"}</div>
               </div>
               <div style="height: 20px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;">
                 <div style="font-size: 14px;">💨</div>
-                <div style="font-size: 11px; font-weight: 700; color: #475569;">10km/h</div>
+                <div style="font-size: 11px; font-weight: 700; color: #475569;">${d.wind_speed !== "--" ? `${escapeHtml(d.wind_speed)}km/h` : "--"}</div>
               </div>
             </div>
           </div>
@@ -1170,7 +1216,7 @@ class FliprPanel extends HTMLElement {
             </div>
             <div>
               <div style="font-size: 14px; font-weight: 700; color: #0f172a;">Dernière Mesure</div>
-              <div style="font-size: 12px; color: #64748b; font-weight: 400; margin-top: 1px;">${this._formatDate(d.last_measure)}</div>
+              <div style="font-size: 12px; color: #64748b; font-weight: 400; margin-top: 1px;">${escapeHtml(this._formatDate(d.last_measure))}</div>
             </div>
           </div>
           <div style="background: #f1f5f9; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #64748b;">
@@ -1180,22 +1226,22 @@ class FliprPanel extends HTMLElement {
 
         <!-- Conseils & Actions rapides -->
         <div class="card-subblock" style="display: flex; flex-direction: column; gap: 6px;">
-          <div style="font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">Conseils & Actions</div>
+          <div style="font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">Conseils &amp; Actions</div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <div style="font-size: 15px;">⏱️</div>
-            <div style="font-size: 12px; font-weight: 500; color: #475569;">${d.advice_filtration}</div>
+            <div style="font-size: 12px; font-weight: 500; color: #475569;">${escapeHtml(d.advice_filtration)}</div>
           </div>
           ${
             d.ph_minus_dose > 0
               ? `<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #ef4444;">
-                  <span>🧪</span> Ajouter ${d.ph_minus_dose}g de pH-
+                  <span>🧪</span> Ajouter ${escapeHtml(d.ph_minus_dose)}g de pH-
                 </div>`
               : ""
           }
           ${
             d.ph_plus_dose > 0
               ? `<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #3b82f6;">
-                  <span>🧪</span> Ajouter ${d.ph_plus_dose}g de pH+
+                  <span>🧪</span> Ajouter ${escapeHtml(d.ph_plus_dose)}g de pH+
                 </div>`
               : ""
           }
@@ -1214,7 +1260,7 @@ class FliprPanel extends HTMLElement {
         <div class="water-header-row">
           <div style="display: flex; align-items: baseline; gap: 8px;">
             <span style="font-size: 18px; font-weight: 400; opacity: 0.9;">eau</span>
-            <span class="water-temp-big">${d.water_temp !== "--" ? `${d.water_temp}°C` : "--"}</span>
+            <span class="water-temp-big">${d.water_temp !== "--" ? `${escapeHtml(d.water_temp)}°C` : "--"}</span>
           </div>
           <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid rgba(255,255,255,0.3);">
             🔗
@@ -1240,7 +1286,7 @@ class FliprPanel extends HTMLElement {
               <div class="gauge-center-text">${valid_ph ? ph_num.toFixed(1) : "--"}</div>
             </div>
             <div style="font-size: 14px; font-weight: 600; margin-top: 6px;">pH</div>
-            <div class="status-pill-badge ${d.ph_badge_class}">${d.ph_badge_icon} ${d.ph_status}</div>
+            <div class="status-pill-badge ${escapeHtml(d.ph_badge_class)}">${escapeHtml(d.ph_badge_icon)} ${escapeHtml(d.ph_status)}</div>
           </div>
 
           <!-- JAUGE CHLORE / REDOX -->
@@ -1257,10 +1303,10 @@ class FliprPanel extends HTMLElement {
                 <path d="M 20.3 79.7 A 42 42 0 1 1 79.7 79.7" stroke="url(#rxGrad)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9" />
                 <circle cx="${rx_x}" cy="${rx_y}" r="6" fill="#ffffff" stroke="rgba(0,0,0,0.2)" stroke-width="2" />
               </svg>
-              <div class="gauge-center-text">${d.redox_val}</div>
+              <div class="gauge-center-text">${escapeHtml(d.redox_val)}</div>
             </div>
             <div style="font-size: 14px; font-weight: 600; margin-top: 6px;">Chlore</div>
-            <div class="status-pill-badge ${d.cl_badge_class}">${d.cl_badge_icon} ${d.cl_status}</div>
+            <div class="status-pill-badge ${escapeHtml(d.cl_badge_class)}">${escapeHtml(d.cl_badge_icon)} ${escapeHtml(d.cl_status)}</div>
           </div>
         </div>
 
@@ -1284,12 +1330,13 @@ class FliprPanel extends HTMLElement {
     const ph_num = parseFloat(d.ph_val);
     const valid_ph = !isNaN(ph_num);
     const pumpClass = d.pump_state === "on" ? "pump-on" : "pump-off";
+    const airTrend = this._getAirTrendArrow(d);
 
     return `
       <!-- EN-TETE & ONGLETS -->
       <div class="card-header-bar">
         <div class="pool-location-selector">
-          ${d.pool_name} <span style="font-size: 10px; color: #64748b;">▼</span>
+          ${escapeHtml(d.pool_name)} <span style="font-size: 10px; color: #64748b;">▼</span>
         </div>
         <div class="tabs-pill-container">
           <button class="tab-btn" id="tab-btn-analyse">💧 Analyse</button>
@@ -1303,13 +1350,13 @@ class FliprPanel extends HTMLElement {
         <div class="air-meteo-row">
           <div class="air-temp-display">
             <span class="air-label">air</span>
-            <span class="air-value">${d.air_temp !== "--" ? `${d.air_temp}°C` : "--"}</span>
-            <span class="air-trend">↘</span>
+            <span class="air-value">${d.air_temp !== "--" ? `${escapeHtml(d.air_temp)}°C` : "--"}</span>
+            <span class="air-trend">${escapeHtml(airTrend)}</span>
           </div>
           <div style="height: 32px; width: 1px; background: #cbd5e1;"></div>
           <div class="uv-badge-box">
             <div style="font-size: 16px; color: #475569;">☀️ <span style="font-size: 12px; color: #94a3b8;">&gt;</span> ☁️</div>
-            <div class="uv-pill">UV ${d.uv_index}</div>
+            <div class="uv-pill">UV ${escapeHtml(d.uv_index)}</div>
           </div>
         </div>
 
@@ -1327,68 +1374,57 @@ class FliprPanel extends HTMLElement {
           </div>
         </div>
 
-        <!-- Historique pH 7 jours -->
+        <!-- Moyennes & Suivi pH (données réelles Flipr) -->
         <div class="card-subblock history-section">
-          <div class="history-title">Taux de pH sur les 7 derniers jours</div>
+          <div class="history-title">Suivi du pH (Moyenne veille, Actuel &amp; Équilibre)</div>
           <div class="history-days-row">
-            <div class="history-day-item"><div class="history-day-pill">7.8 ↘</div><div class="history-day-date">J-6</div></div>
-            <div class="history-day-item"><div class="history-day-pill">7.7 ↘</div><div class="history-day-date">J-5</div></div>
-            <div class="history-day-item"><div class="history-day-pill">7.8 ↗</div><div class="history-day-date">J-4</div></div>
-            <div class="history-day-item"><div class="history-day-pill">7.8 ↗</div><div class="history-day-date">J-3</div></div>
-            <div class="history-day-item"><div class="history-day-pill">7.6 ↘</div><div class="history-day-date">J-2</div></div>
-            <div class="history-day-item"><div class="history-day-pill">7.3 ↘</div><div class="history-day-date">Hier</div></div>
+            <div class="history-day-item"><div class="history-day-pill">${d.ph_avg_yesterday !== "--" ? escapeHtml(d.ph_avg_yesterday) : "--"}</div><div class="history-day-date">Hier (Moy.)</div></div>
             <div class="history-day-item"><div class="history-day-pill current">${valid_ph ? ph_num.toFixed(1) : "--"}</div><div class="history-day-date">Auj.</div></div>
+            <div class="history-day-item"><div class="history-day-pill">${d.ph_equilibre !== "--" ? escapeHtml(d.ph_equilibre) : "--"}</div><div class="history-day-date">pH Équilibre</div></div>
           </div>
         </div>
 
-        <!-- Historique Redox 7 jours -->
+        <!-- Moyennes & Suivi Redox (données réelles Flipr) -->
         <div class="card-subblock history-section">
-          <div class="history-title">Taux de Redox(mV) sur les 7 derniers jours</div>
+          <div class="history-title">Suivi du Redox (mV) &amp; Chlore libre</div>
           <div class="history-days-row">
-            <div class="history-day-item"><div class="history-day-pill">628 ↘</div><div class="history-day-date">J-6</div></div>
-            <div class="history-day-item"><div class="history-day-pill">577 ↘</div><div class="history-day-date">J-5</div></div>
-            <div class="history-day-item"><div class="history-day-pill">533 ↗</div><div class="history-day-date">J-4</div></div>
-            <div class="history-day-item"><div class="history-day-pill">537 ↘</div><div class="history-day-date">J-3</div></div>
-            <div class="history-day-item"><div class="history-day-pill">516 ↘</div><div class="history-day-date">J-2</div></div>
-            <div class="history-day-item"><div class="history-day-pill">580 ↗</div><div class="history-day-date">Hier</div></div>
-            <div class="history-day-item"><div class="history-day-pill current">${d.redox_val}</div><div class="history-day-date">Auj.</div></div>
+            <div class="history-day-item"><div class="history-day-pill">${d.redox_avg_yesterday !== "--" ? `${escapeHtml(d.redox_avg_yesterday)} mV` : "--"}</div><div class="history-day-date">Hier (Moy.)</div></div>
+            <div class="history-day-item"><div class="history-day-pill current">${d.redox_val !== "--" ? `${escapeHtml(d.redox_val)} mV` : "--"}</div><div class="history-day-date">Auj.</div></div>
+            <div class="history-day-item"><div class="history-day-pill">${d.free_cl !== "--" ? `${escapeHtml(d.free_cl)} mg/L` : "--"}</div><div class="history-day-date">Chlore libre</div></div>
           </div>
         </div>
 
-        <!-- Historique Temp Eau 7 jours -->
+        <!-- Température de l'eau : Moyenne veille, Actuelle & Prévisions (données réelles Flipr) -->
         <div class="card-subblock history-section">
-          <div class="history-title">Température de l'eau sur les 7 derniers jours</div>
+          <div class="history-title">Température de l'eau (Veille, Actuelle &amp; Prévisions)</div>
           <div class="history-days-row">
-            <div class="history-day-item"><div class="history-day-pill">29° ↘</div><div class="history-day-date">J-6</div></div>
-            <div class="history-day-item"><div class="history-day-pill">29° ↘</div><div class="history-day-date">J-5</div></div>
-            <div class="history-day-item"><div class="history-day-pill">28° ↘</div><div class="history-day-date">J-4</div></div>
-            <div class="history-day-item"><div class="history-day-pill">28° ↗</div><div class="history-day-date">J-3</div></div>
-            <div class="history-day-item"><div class="history-day-pill">29° ↗</div><div class="history-day-date">J-2</div></div>
-            <div class="history-day-item"><div class="history-day-pill">29° ↘</div><div class="history-day-date">Hier</div></div>
-            <div class="history-day-item"><div class="history-day-pill current">${d.water_temp !== "--" ? `${d.water_temp}°` : "--"}</div><div class="history-day-date">Auj.</div></div>
+            <div class="history-day-item"><div class="history-day-pill">${d.water_temp_avg_yesterday !== "--" ? `${escapeHtml(d.water_temp_avg_yesterday)}°` : "--"}</div><div class="history-day-date">Hier (Moy.)</div></div>
+            <div class="history-day-item"><div class="history-day-pill current">${d.water_temp !== "--" ? `${escapeHtml(d.water_temp)}°` : "--"}</div><div class="history-day-date">Auj.</div></div>
+            <div class="history-day-item"><div class="history-day-pill">${d.water_temp_forecast_1h !== "--" ? `${escapeHtml(d.water_temp_forecast_1h)}°` : "--"}</div><div class="history-day-date">Eau +1h</div></div>
+            <div class="history-day-item"><div class="history-day-pill">${d.water_temp_forecast_tomorrow !== "--" ? `${escapeHtml(d.water_temp_forecast_tomorrow)}°` : "--"}</div><div class="history-day-date">Demain</div></div>
           </div>
         </div>
 
-        <!-- Prévision Météo 4 Jours -->
+        <!-- Conditions & Prévisions Météo du jour (données réelles Flipr) -->
         <div class="card-subblock" style="display: flex; justify-content: space-between; align-items: center;">
           <div style="text-align: center; flex: 1;">
-            <div style="font-size: 16px;">☀️</div>
-            <div style="font-size: 10px; font-weight: 700; color: #475569; margin-top: 2px;">25 | 36°</div>
+            <div style="font-size: 16px;">🌡️</div>
+            <div style="font-size: 10px; font-weight: 700; color: #475569; margin-top: 2px;">${d.air_temp_min_today !== "--" || d.air_temp_max_today !== "--" ? `${escapeHtml(d.air_temp_min_today)}° | ${escapeHtml(d.air_temp_max_today)}°` : "--"}</div>
           </div>
           <div style="height: 24px; width: 1px; background: #e2e8f0;"></div>
           <div style="text-align: center; flex: 1;">
-            <div style="font-size: 16px;">☀️</div>
-            <div style="font-size: 10px; font-weight: 700; color: #475569; margin-top: 2px;">21 | 34°</div>
+            <div style="font-size: 16px;">🌤️</div>
+            <div style="font-size: 10px; font-weight: 700; color: #475569; margin-top: 2px;">${d.air_temp_next_hour !== "--" ? `+1h: ${escapeHtml(d.air_temp_next_hour)}°` : "--"}</div>
           </div>
           <div style="height: 24px; width: 1px; background: #e2e8f0;"></div>
           <div style="text-align: center; flex: 1;">
-            <div style="font-size: 16px;">⛅</div>
-            <div style="font-size: 10px; font-weight: 700; color: #475569; margin-top: 2px;">20 | 38°</div>
+            <div style="font-size: 16px;">🌧️</div>
+            <div style="font-size: 10px; font-weight: 700; color: #475569; margin-top: 2px;">${d.rain_probability !== "--" ? `${escapeHtml(d.rain_probability)}%` : "--"}</div>
           </div>
           <div style="height: 24px; width: 1px; background: #e2e8f0;"></div>
           <div style="text-align: center; flex: 1;">
-            <div style="font-size: 16px;">☀️</div>
-            <div style="font-size: 10px; font-weight: 700; color: #475569; margin-top: 2px;">22 | 39°</div>
+            <div style="font-size: 16px;">💨</div>
+            <div style="font-size: 10px; font-weight: 700; color: #475569; margin-top: 2px;">${d.wind_speed !== "--" ? `${escapeHtml(d.wind_speed)} km/h` : "--"}</div>
           </div>
         </div>
       </div>
@@ -1398,7 +1434,7 @@ class FliprPanel extends HTMLElement {
         <div style="display: flex; justify-content: space-around; align-items: flex-end; padding: 6px 0;">
           <div style="text-align: center; flex: 1;">
             <div style="font-size: 14px; opacity: 0.9;">eau</div>
-            <div style="font-size: 32px; font-weight: 700;">${d.water_temp !== "--" ? `${d.water_temp}°C` : "--"}</div>
+            <div style="font-size: 32px; font-weight: 700;">${d.water_temp !== "--" ? `${escapeHtml(d.water_temp)}°C` : "--"}</div>
           </div>
           <div style="text-align: center; flex: 1;">
             <div style="font-size: 14px; opacity: 0.9;">pH</div>
@@ -1406,7 +1442,7 @@ class FliprPanel extends HTMLElement {
           </div>
           <div style="text-align: center; flex: 1;">
             <div style="font-size: 14px; opacity: 0.9;">Chlore</div>
-            <div style="font-size: 20px; font-weight: 700;">${d.cl_status}</div>
+            <div style="font-size: 20px; font-weight: 700;">${escapeHtml(d.cl_status)}</div>
           </div>
         </div>
 
@@ -1457,21 +1493,21 @@ class FliprPanel extends HTMLElement {
       if (ph > 7.5) {
         phTagClass = "tag-danger";
         phActionText = `Le pH est trop élevé (${ph.toFixed(2)}). L'eau risque d'entartrer les équipements et l'efficacité du chlore chute. ${
-          d.ph_minus_dose > 0 ? `<br>👉 <span class="dose-highlight">Ajoutez ${d.ph_minus_dose}g de réducteur de pH (pH-)</span> dans le bassin filtration en marche.` : ""
+          d.ph_minus_dose > 0 ? `<br>👉 <span class="dose-highlight">Ajoutez ${escapeHtml(d.ph_minus_dose)}g de réducteur de pH (pH-)</span> dans le bassin filtration en marche.` : ""
         }`;
       } else if (ph < 7.1) {
         phTagClass = "tag-warn";
         phActionText = `Le pH est trop bas (${ph.toFixed(2)}). L'eau est corrosive pour les joints et irritante. ${
-          d.ph_plus_dose > 0 ? `<br>👉 <span class="dose-highlight">Ajoutez ${d.ph_plus_dose}g d'augmentateur de pH (pH+)</span>.` : ""
+          d.ph_plus_dose > 0 ? `<br>👉 <span class="dose-highlight">Ajoutez ${escapeHtml(d.ph_plus_dose)}g d'augmentateur de pH (pH+)</span>.` : ""
         }`;
       }
     } else {
       if (d.ph_minus_dose > 0) {
         phTagClass = "tag-danger";
-        phActionText = `Le pH nécessite une correction. <br>👉 <span class="dose-highlight">Ajoutez ${d.ph_minus_dose}g de réducteur de pH (pH-)</span> dans le bassin filtration en marche.`;
+        phActionText = `Le pH nécessite une correction. <br>👉 <span class="dose-highlight">Ajoutez ${escapeHtml(d.ph_minus_dose)}g de réducteur de pH (pH-)</span> dans le bassin filtration en marche.`;
       } else if (d.ph_plus_dose > 0) {
         phTagClass = "tag-warn";
-        phActionText = `Le pH nécessite une correction. <br>👉 <span class="dose-highlight">Ajoutez ${d.ph_plus_dose}g d'augmentateur de pH (pH+)</span>.`;
+        phActionText = `Le pH nécessite une correction. <br>👉 <span class="dose-highlight">Ajoutez ${escapeHtml(d.ph_plus_dose)}g d'augmentateur de pH (pH+)</span>.`;
       } else {
         phTagClass = "tag-warn";
         phActionText = "Mesure du pH en cours de synchronisation avec la sonde Flipr.";
@@ -1484,7 +1520,7 @@ class FliprPanel extends HTMLElement {
     if (rx < 600) {
       rxTagClass = "tag-danger";
       rxActionText = `Le pouvoir désinfectant est insuffisant. Risque d'eau trouble ou d'apparition d'algues. ${
-        d.cl_shock_dose > 0 ? `<br>⚡ <span class="dose-highlight">Traitement Choc recommandé : ${d.cl_shock_dose}g</span>.` : ""
+        d.cl_shock_dose > 0 ? `<br>⚡ <span class="dose-highlight">Traitement Choc recommandé : ${escapeHtml(d.cl_shock_dose)}g</span>.` : ""
       }`;
     } else if (rx > 780) {
       rxTagClass = "tag-warn";
@@ -1498,7 +1534,7 @@ class FliprPanel extends HTMLElement {
           <div class="advice-card-title">
             <span>🧪</span> Régulation du pH
           </div>
-          <div class="badge-status-tag ${phTagClass}">${d.ph_status}</div>
+          <div class="badge-status-tag ${phTagClass}">${escapeHtml(d.ph_status)}</div>
         </div>
         <div class="advice-metric-row">
           <div class="metric-box">
@@ -1508,12 +1544,12 @@ class FliprPanel extends HTMLElement {
           </div>
           <div class="metric-box">
             <div class="metric-label">Correction pH-</div>
-            <div class="metric-val" style="color: #dc2626;">${d.ph_minus_dose}g</div>
+            <div class="metric-val" style="color: #dc2626;">${escapeHtml(d.ph_minus_dose)}g</div>
             <div class="metric-target">Bisulfate sodique</div>
           </div>
           <div class="metric-box">
             <div class="metric-label">Correction pH+</div>
-            <div class="metric-val" style="color: #2563eb;">${d.ph_plus_dose}g</div>
+            <div class="metric-val" style="color: #2563eb;">${escapeHtml(d.ph_plus_dose)}g</div>
             <div class="metric-target">Carbonate sodique</div>
           </div>
         </div>
@@ -1527,24 +1563,24 @@ class FliprPanel extends HTMLElement {
       <div class="advice-card">
         <div class="advice-card-header">
           <div class="advice-card-title">
-            <span>⚡</span> Désinfection & Chlore
+            <span>⚡</span> Désinfection &amp; Chlore
           </div>
-          <div class="badge-status-tag ${rxTagClass}">${d.cl_status}</div>
+          <div class="badge-status-tag ${rxTagClass}">${escapeHtml(d.cl_status)}</div>
         </div>
         <div class="advice-metric-row">
           <div class="metric-box">
             <div class="metric-label">Redox (ORP)</div>
-            <div class="metric-val" style="color: #0284c7;">${d.redox_val} mV</div>
+            <div class="metric-val" style="color: #0284c7;">${escapeHtml(d.redox_val)} mV</div>
             <div class="metric-target">Cible : 650 - 750 mV</div>
           </div>
           <div class="metric-box">
             <div class="metric-label">Chlore Libre Estimé</div>
-            <div class="metric-val" style="color: #16a34a;">${d.free_cl} ppm</div>
+            <div class="metric-val" style="color: #16a34a;">${escapeHtml(d.free_cl)} ppm</div>
             <div class="metric-target">Recommandé : 1.0 - 2.0</div>
           </div>
           <div class="metric-box">
             <div class="metric-label">Chlore Actif (HOCl)</div>
-            <div class="metric-val" style="color: #d97706;">${d.active_cl} ppm</div>
+            <div class="metric-val" style="color: #d97706;">${escapeHtml(d.active_cl)} ppm</div>
             <div class="metric-target">Désinfectant réel</div>
           </div>
         </div>
@@ -1560,7 +1596,7 @@ class FliprPanel extends HTMLElement {
           <div class="advice-card-title">
             <span>⚖️</span> Équilibre de l'eau (LSI)
           </div>
-          <div class="badge-status-tag ${Math.abs(lsi) < 0.3 ? "tag-ok" : "tag-warn"}">${d.lsi_status}</div>
+          <div class="badge-status-tag ${Math.abs(lsi) < 0.3 ? "tag-ok" : "tag-warn"}">${escapeHtml(d.lsi_status)}</div>
         </div>
         <div class="lsi-bar-wrapper">
           <div class="lsi-gradient-bar">
@@ -1575,7 +1611,7 @@ class FliprPanel extends HTMLElement {
         <div class="advice-action-box" style="margin-top: 14px;">
           <div class="action-icon">📘</div>
           <div>
-            <strong>Indice LSI : ${lsi > 0 ? "+" : ""}${lsi}</strong> — 
+            <strong>Indice LSI : ${lsi > 0 ? "+" : ""}${escapeHtml(lsi)}</strong> — 
             ${
               Math.abs(lsi) <= 0.3
                 ? "Votre eau est parfaitement équilibrée. Le liner, la tuyauterie et les sondes de mesure sont préservés."
@@ -1598,7 +1634,7 @@ class FliprPanel extends HTMLElement {
         <div class="advice-action-box">
           <div class="action-icon">🏊</div>
           <div>
-            <strong>Recommandation :</strong> ${d.advice_filtration}.<br>
+            <strong>Recommandation :</strong> ${escapeHtml(d.advice_filtration)}.<br>
             <em>Règle d'or :</em> Filtrez en journée pendant les heures les plus chaudes et d'ensoleillement pour une efficacité maximale contre la photosynthèse des algues.
           </div>
         </div>
