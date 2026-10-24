@@ -9,47 +9,27 @@ class FliprPanel extends HTMLElement {
     super();
     this._view = "analyse"; // "analyse" ou "controle"
     this._initialized = false;
+    this._entityRegistry = null;
+    this._loadingRegistry = false;
   }
 
   set panel(panel) {
     this._panel = panel;
+    if (this._hass && this._initialized) {
+      this._updateData();
+    }
   }
 
   connectedCallback() {
     if (this._hass && !this._initialized) {
       this._initialized = true;
       this._renderLayout();
+      this._ensureEntityRegistry();
       this._updateData();
     }
-
-    this._sidebarInterval = setInterval(() => {
-      this._syncSidebarBadge();
-    }, 2500);
-
-    try {
-      const ha = document.querySelector("home-assistant");
-      const main = ha && ha.shadowRoot && ha.shadowRoot.querySelector("home-assistant-main");
-      const sidebar = main && main.shadowRoot && main.shadowRoot.querySelector("ha-sidebar");
-      if (sidebar && sidebar.shadowRoot && !this._sidebarObserver) {
-        this._sidebarObserver = new MutationObserver(() => {
-          this._syncSidebarBadge();
-        });
-        this._sidebarObserver.observe(sidebar.shadowRoot, { childList: true, subtree: true });
-      }
-    } catch (e) {}
-
-    this._syncSidebarBadge();
   }
 
-  disconnectedCallback() {
-    if (this._sidebarInterval) {
-      clearInterval(this._sidebarInterval);
-    }
-    if (this._sidebarObserver) {
-      this._sidebarObserver.disconnect();
-      this._sidebarObserver = null;
-    }
-  }
+  disconnectedCallback() {}
 
   set hass(hass) {
     this._hass = hass;
@@ -57,91 +37,90 @@ class FliprPanel extends HTMLElement {
       this._initialized = true;
       this._renderLayout();
     }
+    this._ensureEntityRegistry();
     this._updateData();
-    this._syncSidebarBadge();
   }
 
-  _syncSidebarBadge() {
-    try {
-      const ha = document.querySelector("home-assistant");
-      const main = ha && ha.shadowRoot && ha.shadowRoot.querySelector("home-assistant-main");
-      const sidebar = main && main.shadowRoot && main.shadowRoot.querySelector("ha-sidebar");
-      if (!sidebar || !sidebar.shadowRoot) return;
-
-      const integrations = [
-        {
-          key: "flipr_pool",
-          patterns: ["flipr_pool", "flipr-pool", "flipr-pool-control", "flipr"],
-          entityIds: ["update.flipr_pool_control", "update.flipr_pool", "update.flipr_pool_mise_a_jour"],
-          hasUpdate: undefined,
-        },
-        {
-          key: "domolink_mistral",
-          patterns: ["domolink_mistral", "domolink-mistral"],
-          entityIds: ["update.domolink_mistralia", "update.domolink_mistral", "update.domolink_mistral_mise_a_jour"],
-          hasUpdate: undefined,
-        },
-        {
-          key: "domolink_alarm",
-          patterns: ["domolink_alarm", "domolink-alarm"],
-          entityIds: ["update.domolink_alarm", "update.domolink_alarm_mise_a_jour"],
-          hasUpdate: undefined,
-        },
-        {
-          key: "domolink_backup",
-          patterns: ["domolink_backup", "domolink-backup"],
-          entityIds: ["update.domolink_backup", "update.domolink_backup_mise_a_jour"],
-          hasUpdate: undefined,
-        },
-      ];
-
-      const container = sidebar.shadowRoot.querySelector("paper-listbox, ha-md-list, nav, div.menu, div.items");
-      const items = (container || sidebar.shadowRoot).querySelectorAll("paper-icon-item, ha-md-list-item, ha-sidebar-item, a");
-
-      integrations.forEach((integ) => {
-        let isUpdateAvail = integ.hasUpdate;
-        if (isUpdateAvail === undefined && this._hass && this._hass.states) {
-          isUpdateAvail = integ.entityIds.some((id) => {
-            const st = this._hass.states[id];
-            return st && (st.state === "on" || (st.attributes && st.attributes.update_available === true));
-          });
-        }
-
-        for (const item of items) {
-          const href = item.getAttribute("href") || (item.dataset && (item.dataset.panel || item.dataset.href)) || "";
-          const id = item.id || "";
-          const ariaLabel = item.getAttribute("aria-label") || "";
-          const text = (item.textContent || "").toLowerCase();
-
-          const isMatch = integ.patterns.some((pat) => {
-            const p = pat.toLowerCase();
-            return href.toLowerCase().includes(p) ||
-                   id.toLowerCase().includes(p) ||
-                   ariaLabel.toLowerCase().includes(p.replace(/_/g, " ")) ||
-                   (p === "flipr" && text.includes("flipr"));
-          });
-
-          if (isMatch) {
-            let badge = item.querySelector(".domolink-sidebar-badge");
-            if (isUpdateAvail) {
-              if (!badge) {
-                badge = document.createElement("span");
-                badge.className = "badge domolink-sidebar-badge";
-                badge.setAttribute("slot", "end");
-                badge.style.cssText = "background: linear-gradient(135deg, #ef4444, #f59e0b); color: white; border-radius: 9999px; padding: 2px 7px; font-size: 10px; font-weight: 800; box-shadow: 0 2px 6px rgba(239,68,68,0.4); margin-left: auto; letter-spacing: 0.5px; z-index: 10; display: inline-block;";
-                badge.textContent = "MAJ";
-                badge.title = "Mise à jour disponible !";
-                item.appendChild(badge);
-              }
-            } else if (badge) {
-              badge.remove();
-            }
-          }
-        }
-      });
-    } catch (e) {
-      // Ignore errors
+  async _ensureEntityRegistry() {
+    if (this._entityRegistry || this._loadingRegistry || !this._hass?.callWS) {
+      return;
     }
+    this._loadingRegistry = true;
+    try {
+      const entries = await this._hass.callWS({ type: "config/entity_registry/list" });
+      if (Array.isArray(entries)) {
+        this._entityRegistry = entries.filter((e) => e && e.platform === "flipr_pool");
+        this._updateData();
+      }
+    } catch (e) {
+      this._entityRegistry = [];
+    } finally {
+      this._loadingRegistry = false;
+    }
+  }
+
+  _getFliprRegistryEntries() {
+    const entryId = this._panel?.config?.entry_id;
+    const fliprId = this._panel?.config?.flipr_id;
+    const byEntityId = new Map();
+
+    if (this._hass?.entities) {
+      for (const [eid, info] of Object.entries(this._hass.entities)) {
+        if (info && info.platform === "flipr_pool") {
+          byEntityId.set(eid, { ...info, entity_id: eid });
+        }
+      }
+    }
+
+    if (Array.isArray(this._entityRegistry)) {
+      for (const entry of this._entityRegistry) {
+        if (entry && entry.platform === "flipr_pool") {
+          const existing = byEntityId.get(entry.entity_id) || {};
+          byEntityId.set(entry.entity_id, { ...existing, ...entry });
+        }
+      }
+    }
+
+    let entries = Array.from(byEntityId.values());
+    if (entryId) {
+      const matchingEntry = entries.filter((e) => e.config_entry_id === entryId);
+      if (matchingEntry.length > 0) {
+        entries = matchingEntry;
+      }
+    }
+    if (fliprId) {
+      const matchingFlipr = entries.filter(
+        (e) => !e.unique_id || e.unique_id.startsWith(`flipr_${fliprId}_`)
+      );
+      if (matchingFlipr.length > 0) {
+        entries = matchingFlipr;
+      }
+    }
+    return entries;
+  }
+
+  _resolveEntityId(key, translationKey = key, domain = null) {
+    const fliprId = this._panel?.config?.flipr_id;
+    const regEntries = this._getFliprRegistryEntries();
+
+    for (const entry of regEntries) {
+      if (domain && !entry.entity_id.startsWith(`${domain}.`)) continue;
+      if (fliprId && entry.unique_id === `flipr_${fliprId}_${key}`) {
+        return entry.entity_id;
+      }
+    }
+
+    for (const entry of regEntries) {
+      if (domain && !entry.entity_id.startsWith(`${domain}.`)) continue;
+      if (entry.unique_id && entry.unique_id.endsWith(`_${key}`)) {
+        return entry.entity_id;
+      }
+      if (translationKey && entry.translation_key === translationKey) {
+        return entry.entity_id;
+      }
+    }
+
+    return null;
   }
 
   _renderLayout() {
@@ -855,6 +834,8 @@ class FliprPanel extends HTMLElement {
   _extractData() {
     if (!this._hass) return {};
     const states = this._hass.states;
+    const regEntries = this._getFliprRegistryEntries();
+    const flipr_keys = regEntries.map((e) => e.entity_id);
 
     const isInvalidValue = (val) => {
       if (val === undefined || val === null) return true;
@@ -868,191 +849,40 @@ class FliprPanel extends HTMLElement {
       return !isNaN(n) && isFinite(n);
     };
 
-    // 1. Détection stricte et prioritaire des entités Flipr
-    // On exclut formellement toute entité issue d'autres intégrations (ex: domolink)
-    const flipr_keys = Object.keys(states).filter((k) => k.includes("flipr") && !k.includes("domolink"));
-
-    const isPhEntity = (e) => {
-      const low = e.toLowerCase();
-      return !low.includes("dose") && !low.includes("cible") && !low.includes("statut") && 
-             !low.includes("status") && !low.includes("equilibre") && !low.includes("avg") && 
-             !low.includes("moyen") && !low.includes("hier") && !low.includes("yesterday") &&
-             (low.endsWith("_ph") || low.endsWith(".ph") || low.includes("_ph_") || low === "sensor.ph");
+    const checkState = (st, requireNumeric = false) => {
+      if (isInvalidValue(st)) return false;
+      if (requireNumeric) return isValidNumeric(st);
+      return true;
     };
 
-    const ph_flipr_key = flipr_keys.find(
-      (e) => e.startsWith("sensor.") && isPhEntity(e) && isValidNumeric(states[e]?.state) && parseFloat(states[e]?.state) >= 3.0 && parseFloat(states[e]?.state) <= 12.0
-    ) || flipr_keys.find(
-      (e) => e.startsWith("sensor.") && isPhEntity(e) && !isInvalidValue(states[e]?.state)
-    ) || flipr_keys.find(
-      (e) => e.startsWith("sensor.") && isPhEntity(e)
-    );
-
-    let prefix = "sensor.flipr_piscine";
-    if (ph_flipr_key) {
-      prefix = ph_flipr_key.replace(/_ph$/, "");
-    } else {
-      const any_flipr_sensor = flipr_keys.find((e) => e.startsWith("sensor.") && !e.includes("dose_") && !e.includes("statut_"));
-      if (any_flipr_sensor) {
-        const parts = any_flipr_sensor.split("_");
-        prefix = parts.slice(0, Math.min(parts.length - 1, 3)).join("_");
+    const getEntityByKey = (key, translationKey = key, def = "--", requireNumeric = false, domain = "sensor") => {
+      const eid = this._resolveEntityId(key, translationKey, domain);
+      if (eid && states[eid] && checkState(states[eid].state, requireNumeric)) {
+        return String(states[eid].state).trim();
       }
-    }
-
-    // Récupération de la valeur réelle d'une entité
-    const getEntityVal = (suffixes, exclude = [], def = "--", requireNumeric = false) => {
-      const sList = Array.isArray(suffixes) ? suffixes : [suffixes];
-      const xList = (Array.isArray(exclude) ? exclude : [exclude]).map((x) => x.toLowerCase());
-      xList.push("domolink");
-
-      const checkState = (st) => {
-        if (isInvalidValue(st)) return false;
-        if (requireNumeric) return isValidNumeric(st);
-        return true;
-      };
-
-      // Priorité 1 : direct match avec le préfixe Flipr
-      if (prefix) {
-        for (const s of sList) {
-          const directId = `${prefix}_${s}`;
-          const e = states[directId];
-          if (e && checkState(e.state)) {
-            return String(e.state).trim();
-          }
-        }
-      }
-
-      // Priorité 2 : suffixe exact sur toute entité Flipr
-      for (const eid of flipr_keys) {
-        const lower = eid.toLowerCase();
-        if (xList.some((ex) => lower.includes(ex))) continue;
-
-        for (const s of sList) {
-          const sLow = s.toLowerCase();
-          if (lower.endsWith(`_${sLow}`) || lower.endsWith(`.${sLow}`) || lower === sLow || lower.includes(`_${sLow}_`)) {
-            const e = states[eid];
-            if (e && checkState(e.state)) {
-              return String(e.state).trim();
-            }
-          }
-        }
-      }
-
-      // Priorité 3 : inclusion Flipr
-      for (const eid of flipr_keys) {
-        const lower = eid.toLowerCase();
-        if (xList.some((ex) => lower.includes(ex))) continue;
-
-        for (const s of sList) {
-          const sLow = s.toLowerCase();
-          if (lower.includes(sLow)) {
-            const e = states[eid];
-            if (e && checkState(e.state)) {
-              return String(e.state).trim();
-            }
-          }
-        }
-      }
-
-      // Priorité 4 : Fallback si pas de préfixe flipr trouvé mais capteur piscine générique (non-domolink)
-      for (const eid of Object.keys(states)) {
-        const lower = eid.toLowerCase();
-        if (lower.includes("domolink")) continue;
-        if (!lower.includes("piscine") && !lower.includes("pool")) continue;
-        if (xList.some((ex) => lower.includes(ex))) continue;
-
-        for (const s of sList) {
-          const sLow = s.toLowerCase();
-          if (lower.endsWith(`_${sLow}`) || lower.endsWith(`.${sLow}`) || lower === sLow || lower.includes(`_${sLow}_`)) {
-            const e = states[eid];
-            if (e && checkState(e.state)) {
-              return String(e.state).trim();
-            }
-          }
-        }
-      }
-
       return def;
     };
 
-    // Mesures en direct
-    const water_temp = getEntityVal(
-      ["temperature_de_l_eau", "water_temperature", "temp_eau", "temperature", "water_temp"],
-      ["air", "forecast", "yesterday", "prevue", "moyenne", "min", "max"],
-      "--",
-      true
-    );
+    const ph_flipr_key = this._resolveEntityId("ph", "ph", "sensor");
+    const prefix = ph_flipr_key ? ph_flipr_key.replace(/_ph$/, "") : "sensor.flipr_piscine";
 
-    const air_temp = getEntityVal(
-      ["temperature_de_l_air", "air_temperature", "air_temp", "temperature_air"],
-      ["eau", "water", "1h", "next", "max", "min", "prevue", "forecast"],
-      "--",
-      true
-    );
-
-    let ph_val = getEntityVal(
-      ["ph"],
-      ["statut", "status", "dose", "target", "cible", "equilibre", "avg", "yesterday", "recente", "moyen"],
-      "--",
-      true
-    );
-
-    // Fallback de sécurité pH si ph_val est encore indisponible
-    if (ph_val === "--" || parseFloat(ph_val) > 12.0 || parseFloat(ph_val) < 3.0) {
+    // Mesures en direct résolues depuis le registre d'entités (platform === "flipr_pool")
+    const water_temp = getEntityByKey("temperature", "temperature", "--", true, "sensor");
+    const air_temp = getEntityByKey("air_temp", "air_temp", "--", true, "sensor");
+    let ph_val = getEntityByKey("ph", "ph", "--", true, "sensor");
+    if (ph_val !== "--" && (parseFloat(ph_val) > 12.0 || parseFloat(ph_val) < 3.0)) {
       ph_val = "--";
-      for (const eid of flipr_keys) {
-        if (isPhEntity(eid)) {
-          const st = states[eid]?.state;
-          if (isValidNumeric(st)) {
-            const n = parseFloat(st);
-            if (n >= 4.0 && n <= 10.5) {
-              ph_val = String(n);
-              break;
-            }
-          }
-        }
-      }
     }
 
-    const redox_val = getEntityVal(
-      ["potentiel_redox", "redox_potential", "redox", "orp"],
-      ["statut", "status", "avg", "yesterday", "recente", "moyen", "cible"],
-      "--",
-      true
-    );
+    const redox_val = getEntityByKey("redox", "redox", "--", true, "sensor");
+    const uv_index = getEntityByKey("uv_index", "uv_index", "0", true, "sensor");
+    const battery = getEntityByKey("battery", "battery", "--", true, "sensor");
+    const last_measure =
+      getEntityByKey("last_update", "last_update", "", false, "sensor") ||
+      getEntityByKey("last_resume_call", "last_resume_call", "", false, "sensor");
 
-    const uv_index = getEntityVal(
-      ["indice_uv", "uv_index", "uv"],
-      [],
-      "0",
-      true
-    );
-
-    const battery = getEntityVal(
-      ["niveau_de_batterie", "battery_level", "batterie", "battery"],
-      [],
-      "--",
-      true
-    );
-
-    const last_measure = getEntityVal(
-      ["derniere_mesure", "last_measurement", "last_update", "derniere_mise_a_jour", "last_resume_call"],
-      [],
-      ""
-    );
-
-    const lsi_val = parseFloat(getEntityVal(
-      ["indice_lsi", "lsi_index", "indice_de_saturation_lsi", "lsi", "isl"],
-      ["statut", "status", "etat"],
-      "0.0",
-      true
-    )) || 0.0;
-
-    const raw_lsi_status = getEntityVal(
-      ["statut_de_l_eau_lsi", "water_status_lsi", "etat_de_l_eau_lsi", "statut_lsi", "lsi_status"],
-      [],
-      "Eau équilibrée"
-    );
+    const lsi_val = parseFloat(getEntityByKey("lsi", "lsi", "0.0", true, "sensor")) || 0.0;
+    const raw_lsi_status = getEntityByKey("lsi_status", "lsi_status", "Eau équilibrée", false, "sensor");
     let lsi_status = "Eau équilibrée";
     if (raw_lsi_status && raw_lsi_status !== "--") {
       const low = String(raw_lsi_status).toLowerCase();
@@ -1061,57 +891,26 @@ class FliprPanel extends HTMLElement {
       else lsi_status = "Eau équilibrée";
     }
 
-    const free_cl = getEntityVal(
-      ["chlore_libre_est", "est_free_chlorine", "chlore_libre", "free_chlorine", "desinfectant_chlore", "chlorine"],
-      ["actif", "active", "status", "statut", "dose"],
-      "--",
-      true
-    );
+    let free_cl = getEntityByKey("free_chlorine", "free_chlorine", "--", true, "sensor");
+    if (free_cl === "--") {
+      free_cl = getEntityByKey("chlorine", "chlorine", "--", true, "sensor");
+    }
 
-    const active_cl = getEntityVal(
-      ["chlore_actif_hocl", "active_chlorine_hocl", "chlore_actif", "active_chlorine"],
-      [],
-      "--",
-      true
-    );
+    const active_cl = getEntityByKey("active_chlorine", "active_chlorine", "--", true, "sensor");
+    const ph_minus_dose = parseFloat(getEntityByKey("dose_ph_minus", "dose_ph_minus", "0", true, "sensor")) || 0;
+    const ph_plus_dose = parseFloat(getEntityByKey("dose_ph_plus", "dose_ph_plus", "0", true, "sensor")) || 0;
+    const cl_shock_dose = parseFloat(getEntityByKey("dose_cl_shock", "dose_cl_shock", "0", true, "sensor")) || 0;
+    const cl_maint_dose = parseFloat(getEntityByKey("dose_cl_maint", "dose_cl_maint", "0", true, "sensor")) || 0;
 
-    const ph_minus_dose = parseFloat(getEntityVal(
-      ["dose_ph", "ph_dose", "dose_ph_minus", "dose_ph_moins"],
-      ["plus", "2"],
-      "0",
-      true
-    )) || 0;
+    let advice_filtration = getEntityByKey("conseil_filtration", "conseil_filtration", "", false, "sensor");
+    if (!advice_filtration || advice_filtration === "--") {
+      const pumpHours = getEntityByKey("pump_hours", "pump_hours", "", true, "sensor");
+      advice_filtration = pumpHours ? `${pumpHours}h` : "Filtration automatique";
+    }
 
-    const ph_plus_dose = parseFloat(getEntityVal(
-      ["dose_ph_2", "ph_dose_2", "dose_ph_plus"],
-      [],
-      "0",
-      true
-    )) || 0;
-
-    const cl_shock_dose = parseFloat(getEntityVal(
-      ["dose_chlore_choc", "chlorine_dose_shock", "dose_cl_shock"],
-      [],
-      "0",
-      true
-    )) || 0;
-
-    const cl_maint_dose = parseFloat(getEntityVal(
-      ["dose_chlore_entretien", "chlorine_dose_maintenance", "dose_cl_maint"],
-      [],
-      "0",
-      true
-    )) || 0;
-
-    const advice_filtration = getEntityVal(
-      ["conseil_filtration", "filtration_advice", "duree_filtration", "pump_duration", "pump_hours"],
-      [],
-      "Filtration automatique"
-    );
-
-    // Cibles pH & Chlore (dynamiques si entités cibles configurées)
-    const ph_target_min = parseFloat(getEntityVal(["cible_ph", "target_ph_min", "ph_min"], [], "7.0", true)) || 7.0;
-    const ph_target_max = parseFloat(getEntityVal(["cible_ph_2", "target_ph_max", "ph_max"], [], "7.4", true)) || 7.4;
+    // Cibles pH & Chlore (dynamiques depuis les entités number de cette intégration)
+    const ph_target_min = parseFloat(getEntityByKey("ph_min", "target_ph_min", "7.0", true, "number")) || 7.0;
+    const ph_target_max = parseFloat(getEntityByKey("ph_max", "target_ph_max", "7.4", true, "number")) || 7.4;
 
     // Badges pH contextualisés en fonction de la valeur mesurée réelle
     let ph_status = "Idéal";
@@ -1177,30 +976,16 @@ class FliprPanel extends HTMLElement {
       cl_badge_class = "pill-danger";
     }
 
-    // Pompe de filtration : switch.flipr_piscine_pompe_de_filtration ou tout switch flipr/pompe/pump
-    const pump_entity_key = Object.keys(states).find(
-      (e) => e.startsWith("switch.") && !e.includes("domolink") && !e.includes("scanner") && !e.includes("ble") && (
-        e.includes("pompe_filtration") || e.includes("pump_filtration") || e.includes("pompe") || e.includes("pump") || e.includes("flipr_hub")
-      )
-    ) || Object.keys(states).find(
-      (e) => e.startsWith("switch.") && !e.includes("domolink") && !e.includes("scanner") && !e.includes("ble") && (
-        (prefix && e.startsWith(prefix.replace("sensor.", "switch.")))
-      )
-    );
+    // Pompe de filtration : résolue exclusivement depuis l'entité flipr_pool (unique_id: flipr_{id}_pump)
+    const pump_entity_key = this._resolveEntityId("pump", "pump_filtration", "switch");
     const pump_state = pump_entity_key && states[pump_entity_key] ? states[pump_entity_key].state : "off";
 
-    // Mode du Hub : auto, manual, planning
-    const select_mode_key = Object.keys(states).find(
-      (e) => e.startsWith("select.") && !e.includes("domolink") && (
-        e.includes("mode_filtration") || (prefix && e.startsWith(prefix.replace("sensor.", "select."))) || e.includes("flipr")
-      )
-    );
+    // Mode du Hub (auto, manual, planning) : résolu exclusivement depuis l'entité flipr_pool (unique_id: flipr_{id}_mode)
+    const select_mode_key = this._resolveEntityId("mode", "mode_filtration", "select");
     const hub_mode = select_mode_key && states[select_mode_key] && states[select_mode_key].state !== "unknown" ? states[select_mode_key].state : "manual";
 
-    // Nom de la piscine / du bassin
-    const any_pool_entity = ph_flipr_key || flipr_keys.find(
-      (e) => e.endsWith("_ph") || e.includes("temperature") || e.includes("piscine")
-    );
+    // Nom de la piscine / du bassin depuis l'entité flipr_pool
+    const any_pool_entity = ph_flipr_key || flipr_keys[0];
     let pool_name = "Piscine";
     if (any_pool_entity && states[any_pool_entity]?.attributes?.friendly_name) {
       const fn = states[any_pool_entity].attributes.friendly_name;
@@ -1840,23 +1625,25 @@ class FliprPanel extends HTMLElement {
       });
     }
 
-    // Tous les boutons Marche/Arrêt de la pompe
+    // Tous les boutons Marche/Arrêt de la pompe (uniquement sur l'entité flipr_pool résolue)
+    const pumpEntityId = this._resolveEntityId("pump", "pump_filtration", "switch");
     const btnPumps = cardEl.querySelectorAll("#btn-toggle-pump");
     btnPumps.forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (d.pump_entity_key && this._hass) {
+        if (pumpEntityId && this._hass) {
           const isCurrentlyOn = btn.classList.contains("pump-on");
           btn.classList.toggle("pump-on", !isCurrentlyOn);
           btn.classList.toggle("pump-off", isCurrentlyOn);
-          this._hass.callService("homeassistant", "toggle", {
-            entity_id: d.pump_entity_key,
+          this._hass.callService("switch", "toggle", {
+            entity_id: pumpEntityId,
           });
         }
       });
     });
 
-    // Boutons de mode Flipr Hub (Auto, Manuel, Planning)
+    // Boutons de mode Flipr Hub (Auto, Manuel, Planning) uniquement sur l'entité flipr_pool résolue
+    const selectModeEntityId = this._resolveEntityId("mode", "mode_filtration", "select");
     const btnAuto = cardEl.querySelector("#btn-mode-auto");
     const btnManual = cardEl.querySelector("#btn-mode-manual");
     const btnPlanning = cardEl.querySelector("#btn-mode-planning");
@@ -1871,9 +1658,9 @@ class FliprPanel extends HTMLElement {
       btnAuto.addEventListener("click", (e) => {
         e.stopPropagation();
         setModeVisual("auto");
-        if (d.select_mode_key && this._hass) {
+        if (selectModeEntityId && this._hass) {
           this._hass.callService("select", "select_option", {
-            entity_id: d.select_mode_key,
+            entity_id: selectModeEntityId,
             option: "auto",
           });
         }
@@ -1884,9 +1671,9 @@ class FliprPanel extends HTMLElement {
       btnManual.addEventListener("click", (e) => {
         e.stopPropagation();
         setModeVisual("manual");
-        if (d.select_mode_key && this._hass) {
+        if (selectModeEntityId && this._hass) {
           this._hass.callService("select", "select_option", {
-            entity_id: d.select_mode_key,
+            entity_id: selectModeEntityId,
             option: "manual",
           });
         }
@@ -1897,9 +1684,9 @@ class FliprPanel extends HTMLElement {
       btnPlanning.addEventListener("click", (e) => {
         e.stopPropagation();
         setModeVisual("planning");
-        if (d.select_mode_key && this._hass) {
+        if (selectModeEntityId && this._hass) {
           this._hass.callService("select", "select_option", {
-            entity_id: d.select_mode_key,
+            entity_id: selectModeEntityId,
             option: "planning",
           });
         }

@@ -1,8 +1,8 @@
-# Flipr Pool Control pour Home Assistant (v5.7.15)
+# Flipr Pool Control pour Home Assistant (v5.7.18)
 
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![HACS](https://img.shields.io/badge/HACS-Custom-orange)
-![Version](https://img.shields.io/badge/version-5.7.15-blue)
+![Version](https://img.shields.io/badge/version-5.7.18-blue)
 
 [![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy+me+a+coffee&emoji=☕&slug=Socrate&button_colour=FFDD00&font_colour=000000&font_family=Poppins&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/Socrate)
 

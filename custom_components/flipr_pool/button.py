@@ -1,6 +1,7 @@
 """Expose un bouton pour forcer une mise à jour immédiate du Flipr (Cloud et BLE)."""
 
 import logging
+from homeassistant.components import persistent_notification
 from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 from homeassistant.helpers.entity import DeviceInfo
@@ -39,9 +40,11 @@ class FliprForceUpdateButton(CoordinatorEntity, ButtonEntity):
         )
 
     async def async_press(self) -> None:
-        """Déclenche la mise à jour forcée du Cloud."""
+        """Déclenche la mise à jour forcée du Cloud ou du BLE."""
         _LOGGER.info("Flipr : Demande d'analyse et mise à jour forcée demandée par le bouton")
         try:
+            if getattr(self.coordinator, "async_poll_ble", None) and not getattr(self.coordinator, "api_client", None):
+                await self.coordinator.async_poll_ble()
             await self.coordinator.async_refresh()
         except Exception as err:
             _LOGGER.warning("Flipr : Échec du refresh forcé (%s)", err)
@@ -137,9 +140,16 @@ class FliprGenerateCardButton(CoordinatorEntity, ButtonEntity):
 
         try:
             await self.hass.async_add_executor_job(_write_yaml)
-            self.hass.services.async_call("persistent_notification", "create", {"message": 
-                f"Le code de votre carte Lovelace a été généré avec succès avec le préfixe `{prefix}`.<br><br>Vous le trouverez dans le fichier <b>flipr_card.yaml</b> à la racine de votre dossier de configuration Home Assistant.<br><br>Copiez son contenu dans votre tableau de bord !",
-                "title": "Flipr : Carte Lovelace Générée 🏊", "notification_id": "flipr_card_generated"}, blocking=False)
+            persistent_notification.async_create(
+                self.hass,
+                (
+                    f"Le code de votre carte Lovelace a été généré avec succès avec le préfixe `{prefix}`.<br><br>"
+                    "Vous le trouverez dans le fichier <b>flipr_card.yaml</b> à la racine de votre dossier de "
+                    "configuration Home Assistant.<br><br>Copiez son contenu dans votre tableau de bord !"
+                ),
+                title="Flipr : Carte Lovelace Générée 🏊",
+                notification_id="flipr_card_generated",
+            )
             _LOGGER.info("Flipr : Fichier flipr_card.yaml généré avec succès")
             
         except Exception as err:

@@ -792,17 +792,18 @@ def _compute_ble_pool_data(ble_raw: dict[str, Any], entry: ConfigEntry) -> dict[
 class FliprDataUpdateCoordinator(DataUpdateCoordinator):
     """Coordinateur principal pour Flipr. Gère le Cloud en actif et le BLE en passif."""
 
-    def __init__(self, hass: HomeAssistant, api_client: FliprApiClient, flipr_id: str, entry: ConfigEntry, store):
+    def __init__(self, hass: HomeAssistant, api_client: FliprApiClient | None, flipr_id: str, entry: ConfigEntry, store):
         super().__init__(
             hass, 
             _LOGGER, 
             name="flipr_pool",
-            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN)
+            update_interval=timedelta(minutes=CLOUD_UPDATE_INTERVAL_MIN) if api_client else None,
         )
         self.api_client = api_client
         self.flipr_id = flipr_id
         self.config_entry = entry
         self._store = store
+        self.async_poll_ble = None
         
         self.place_id = None
         # Restaurer le hub_id depuis les options si déjà découvert
@@ -811,6 +812,9 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch données du Cloud (uniquement appelé lors d'un Forcer Actualisation ou au 1er démarrage)."""
+        if not self.api_client:
+            base = dict(self.data) if self.data else {"data_source": "bluetooth", "version": VERSION}
+            return _enrich_pool_data(base, self.config_entry)
         try:
             async with asyncio.timeout(60):
                 data_raw = await self.api_client.get_pool_data(self.flipr_id, self.place_id, self.hub_id)
@@ -979,7 +983,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     session  = async_get_clientsession(hass)
 
     opts = {**entry.data, **entry.options}
-    ble_enabled = opts.get(CONF_BLE_ENABLED, False)
+    installation_type = opts.get("installation_type", "mix")
+    ble_enabled = opts.get(CONF_BLE_ENABLED, installation_type == "local")
     ble_address = opts.get(CONF_BLE_ADDRESS, "")
 
     # ── Persistance locale ──────────────────────────────────
@@ -987,19 +992,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # ── Initialisation API & Coordinateur ───────────────────
     api_client = None
-    coordinator = None
 
-    if email and password:
+    if email and password and installation_type != "local":
         from .api import FliprApiClient
         api_client = FliprApiClient(session, email, password)
-        coordinator = FliprDataUpdateCoordinator(hass, api_client, flipr_id, entry, store)
 
-    if not coordinator:
-        _LOGGER.error("Impossible de configurer l'intégration Flipr (Cloud manquant).")
+    if not api_client and not (installation_type == "local" or (ble_enabled and ble_address)):
+        _LOGGER.error("Impossible de configurer l'intégration Flipr (Cloud ou BLE manquant).")
         return False
 
+    coordinator = FliprDataUpdateCoordinator(hass, api_client, flipr_id, entry, store)
+
     # ── Initialisation du Polling BLE ────────────────────────
-    if ble_enabled and ble_address:
+    if (ble_enabled or installation_type == "local") and ble_address:
         from homeassistant.helpers.event import async_track_time_interval
 
         async def _async_poll_ble(now=None):
@@ -1013,7 +1018,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
             except Exception as err:
                 _LOGGER.warning("Flipr BLE: échec de la lecture (%s)", err)
-                
+
+        coordinator.async_poll_ble = _async_poll_ble
+
         # Démarrage immédiat en tâche de fond
         hass.async_create_task(_async_poll_ble())
         
@@ -1026,7 +1033,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Flipr: Polling BLE activé (adresse: %s, intervalle: %d min)", ble_address, BLE_UPDATE_INTERVAL_DEFAULT)
 
     # ── Initialisation du Polling Cloud (Custom) ─────────────
-    if coordinator:
+    if api_client:
         from homeassistant.helpers.event import async_track_time_interval
         async def _async_poll_cloud(now=None):
             await coordinator.async_update_cloud_data_safe()
@@ -1046,6 +1053,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             restored["last_update"] = _safe_timestamp(restored["last_update"])
         restored = _enrich_pool_data(restored, entry)
         coordinator.async_set_updated_data(restored)
+    elif not api_client:
+        coordinator.async_set_updated_data(
+            _enrich_pool_data({"data_source": "bluetooth", "version": VERSION}, entry)
+        )
 
     # ── Enregistrement ──────────────────────────────────────
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
@@ -1062,6 +1073,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 for eid in device.config_entries:
                     if eid in hass.data.get(DOMAIN, {}):
                         c = hass.data[DOMAIN][eid]["coordinator"]
+                        if not c.api_client and getattr(c, "async_poll_ble", None):
+                            await c.async_poll_ble()
                         await c.async_request_refresh()
                         return
 
@@ -1069,6 +1082,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for entry_data in hass.data.get(DOMAIN, {}).values():
             if isinstance(entry_data, dict) and "coordinator" in entry_data:
                 c = entry_data["coordinator"]
+                if not c.api_client and getattr(c, "async_poll_ble", None):
+                    await c.async_poll_ble()
                 await c.async_request_refresh()
 
     async def handle_update_dimensions(call: ServiceCall):
@@ -1233,6 +1248,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         "module_url": panel_url,
                     },
                     "flipr_id": flipr_id,
+                    "entry_id": entry.entry_id,
                 },
                 require_admin=False,
                 update=True,
@@ -1241,10 +1257,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.debug("Flipr: Erreur enregistrement panel ou déjà enregistré: %s", e)
 
     # ── Premier refresh (Cloud) avant initialisation des entités ──────────
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except Exception as err:
-        _LOGGER.warning("Flipr: premier refresh Cloud échoué (%s)", err)
+    if api_client:
+        try:
+            await coordinator.async_config_entry_first_refresh()
+        except Exception as err:
+            _LOGGER.warning("Flipr: premier refresh Cloud échoué (%s)", err)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
