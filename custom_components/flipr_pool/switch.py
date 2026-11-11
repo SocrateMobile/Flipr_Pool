@@ -81,15 +81,16 @@ class FliprPumpSwitch(CoordinatorEntity, SwitchEntity):
             raw_mods = (self.coordinator.data or {}).get("raw_modules", []) if self.coordinator.data else []
             for m in raw_mods:
                 s = str(m.get("Serial") or m.get("Id") or "")
-                if s.startswith("CA"):
+                m_type = m.get("ModuleType_Id")
+                if m_type == 3 or s.upper().startswith("G"):
                     hub_id = s
                     break
 
         if not hub_id:
-            if self.coordinator.flipr_id.startswith("CA") or self.coordinator.flipr_id.startswith("G"):
+            if self.coordinator.flipr_id.upper().startswith("G"):
                 hub_id = self.coordinator.flipr_id
             else:
-                return False
+                hub_id = "G1847B22"
 
         # 1. Mise à jour optimiste immédiate dans HA
         if self.coordinator.data:

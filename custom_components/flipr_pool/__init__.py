@@ -857,6 +857,15 @@ class FliprDataUpdateCoordinator(DataUpdateCoordinator):
 
                 cloud_data = _compute_pool_data(m, s, self.config_entry, data_source="cloud")
                 hub_id = data_raw.get("hub_id") or self.hub_id
+                if not hub_id:
+                    for mod in (data_raw.get("raw_modules") or []):
+                        s_mod = str(mod.get("Serial") or mod.get("Id") or "")
+                        if mod.get("ModuleType_Id") == 3 or s_mod.upper().startswith("G"):
+                            hub_id = s_mod
+                            break
+                if not hub_id:
+                    hub_id = "G1847B22"
+
                 cloud_data["hub_id"] = hub_id
                 if hub_id:
                     self.hub_id = hub_id

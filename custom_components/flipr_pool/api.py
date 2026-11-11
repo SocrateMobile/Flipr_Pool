@@ -44,6 +44,7 @@ class FliprApiClient:
     
     _global_blocked_until: datetime | None = None
     _global_retry_count: int = 0
+    _global_token: str | None = None
 
     def __init__(
         self,
@@ -54,7 +55,7 @@ class FliprApiClient:
         self._session = session
         self._email = email
         self._password = password
-        self._token: str | None = None
+        self._token: str | None = FliprApiClient._global_token
         self._cache: dict[str, tuple[datetime, Any]] = {}
 
     # ═══════════════════════════════════════════════════════════
@@ -66,7 +67,8 @@ class FliprApiClient:
         if not self._email or not self._password:
             raise FliprAuthError("Email ou mot de passe manquant.")
 
-        if self._token:
+        if FliprApiClient._global_token:
+            self._token = FliprApiClient._global_token
             return self._token
 
         self._check_rate_limit()
@@ -90,7 +92,7 @@ class FliprApiClient:
                     if not token:
                         raise FliprAuthError("Réponse d'authentification invalide (token absent).")
                     self._token = token
-                    self._token = token
+                    FliprApiClient._global_token = token
                     self._reset_rate_limit()
                     return self._token
 
@@ -148,7 +150,7 @@ class FliprApiClient:
                 # ── Token expiré → renouvellement unique ──
                 if resp.status == 401:
                     _LOGGER.info("Token Flipr expiré — renouvellement en cours…")
-                    self._token = None
+                    FliprApiClient._global_token = None
                     self._token = None
                     await self.authenticate()
                     headers["Authorization"] = f"Bearer {self._token}"
@@ -221,10 +223,12 @@ class FliprApiClient:
                     for mod in modules:
                         serial = str(mod.get("Serial") or mod.get("serial") or mod.get("Id") or "")
                         if serial:
+                            m_type = mod.get("ModuleType_Id")
+                            is_hub = m_type == 3 or serial.upper().startswith("G")
                             devices.append({
                                 "serial": serial,
-                                "type": "flipr",
-                                "label": f"Flipr {serial}",
+                                "type": "hub" if is_hub else "flipr",
+                                "label": f"Hub {serial}" if is_hub else f"Flipr {serial}",
                                 "raw": mod,
                                 "place_id": None,
                             })
@@ -299,7 +303,15 @@ class FliprApiClient:
             if isinstance(modules_list, list):
                 data["raw_modules"] = modules_list
                 if not hub_id:
-                    for mod in modules_list:
+                    # Tester en priorité absolue les vrais Hubs (ModuleType_Id == 3 ou série 'G')
+                    sorted_candidates = sorted(
+                        modules_list,
+                        key=lambda x: (
+                            x.get("ModuleType_Id") != 3,
+                            not str(x.get("Serial") or "").upper().startswith("G")
+                        )
+                    )
+                    for mod in sorted_candidates:
                         discovered_hub_id = str(mod.get("Serial") or mod.get("Id") or "")
                         if not discovered_hub_id or discovered_hub_id == flipr_id:
                             continue  # Ne pas tester le Flipr lui-même
@@ -313,7 +325,7 @@ class FliprApiClient:
                                 and hub_state 
                                 and hub_state.get("ErrorCode") != "Forbidden" 
                                 and "is not a HUB" not in str(hub_state.get("ErrorMessage", ""))
-                                and ("behavior" in hub_state or "stateEquipment" in hub_state)
+                                and ("behavior" in hub_state or "stateEquipment" in hub_state or "state" in hub_state)
                             ):
                                 hub_id = discovered_hub_id
                                 data["hub_id"] = hub_id
@@ -343,12 +355,40 @@ class FliprApiClient:
                                 data["place_id"] = place_id
                             if not hub_id:
                                 hubs = place.get("Hubs") or place.get("hubs") or []
-                                if hubs:
+                                for h in hubs:
+                                    h_s = str(h.get("Serial") or h.get("Id") or "")
+                                    if h.get("ModuleType_Id") == 3 or h_s.upper().startswith("G"):
+                                        hub_id = h_s
+                                        data["hub_id"] = hub_id
+                                        break
+                                if not hub_id and hubs:
                                     hub_id = str(hubs[0].get("Serial") or hubs[0].get("Id"))
                                     data["hub_id"] = hub_id
                             break
             except Exception:
                 pass
+
+        # ── 3b. Fallback officiel : GET /hub/Place/{placeId}/AllHubs ──
+        if not hub_id and place_id:
+            for all_hubs_url in [
+                f"{API_BASE_URL}/hub/Place/{place_id}/AllHubs",
+                f"{API_BASE_URL}/hub/pool/{place_id}/AllHubs",
+            ]:
+                try:
+                    all_hubs = await self._request("GET", all_hubs_url)
+                    if isinstance(all_hubs, list) and all_hubs:
+                        for h in all_hubs:
+                            h_serial = str(h.get("Serial") or h.get("Id") or "")
+                            if h_serial:
+                                hub_id = h_serial
+                                data["hub_id"] = hub_id
+                                data["hub_state"] = h
+                                _LOGGER.info("Flipr Hub trouvé via %s : %s", all_hubs_url, hub_id)
+                                break
+                        if hub_id:
+                            break
+                except Exception as e:
+                    _LOGGER.debug("Échec requête %s : %s", all_hubs_url, e)
 
         # ── 4. Hub State : GET /hub/{hubId}/state ──
         if hub_id:
