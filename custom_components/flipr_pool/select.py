@@ -66,11 +66,11 @@ class FliprModeSelect(CoordinatorEntity, SelectEntity):
                     hub_id = s
                     break
 
+        if not hub_id and self.coordinator.flipr_id.upper().startswith("G"):
+            hub_id = self.coordinator.flipr_id
         if not hub_id:
-            if self.coordinator.flipr_id.upper().startswith("G"):
-                hub_id = self.coordinator.flipr_id
-            else:
-                hub_id = "G1847B22"
+            _LOGGER.warning("Aucun Hub Flipr détecté pour changer le mode de filtration.")
+            return
 
         # 1. Mise à jour optimiste immédiate dans HA
         if self.coordinator.data:

@@ -12,6 +12,7 @@ Spécification API :
 
 import asyncio
 import logging
+import time
 import aiohttp
 from datetime import datetime, timezone, timedelta
 from typing import Any
@@ -44,7 +45,11 @@ class FliprApiClient:
     
     _global_blocked_until: datetime | None = None
     _global_retry_count: int = 0
-    _global_token: str | None = None
+    _shared_tokens: dict[str, str] = {}
+    _shared_cache: dict[str, tuple[datetime, Any]] = {}
+    _request_lock: asyncio.Lock | None = None
+    _last_request_monotonic: float = 0.0
+    _MIN_REQUEST_SPACING: float = 1.1
 
     def __init__(
         self,
@@ -55,8 +60,28 @@ class FliprApiClient:
         self._session = session
         self._email = email
         self._password = password
-        self._token: str | None = FliprApiClient._global_token
+        self._token: str | None = None
         self._cache: dict[str, tuple[datetime, Any]] = {}
+
+    def _account_key(self) -> str:
+        """Retourne une clé normalisée par compte GoFlipr pour le cache et jeton partagés."""
+        return (self._email or "default").strip().lower()
+
+    @classmethod
+    def _get_lock(cls) -> asyncio.Lock:
+        """Retourne un verrou asyncio partagé entre toutes les instances FliprApiClient."""
+        if cls._request_lock is None:
+            cls._request_lock = asyncio.Lock()
+        return cls._request_lock
+
+    async def _pace_request(self) -> None:
+        """Espace les requêtes vers apis.goflipr.com d'au moins 1,1s pour éviter les 429."""
+        async with self._get_lock():
+            now = time.monotonic()
+            elapsed = now - FliprApiClient._last_request_monotonic
+            if elapsed < FliprApiClient._MIN_REQUEST_SPACING:
+                await asyncio.sleep(FliprApiClient._MIN_REQUEST_SPACING - elapsed)
+            FliprApiClient._last_request_monotonic = time.monotonic()
 
     # ═══════════════════════════════════════════════════════════
     #  Authentification OAuth2
@@ -67,8 +92,11 @@ class FliprApiClient:
         if not self._email or not self._password:
             raise FliprAuthError("Email ou mot de passe manquant.")
 
-        if FliprApiClient._global_token:
-            self._token = FliprApiClient._global_token
+        acct = self._account_key()
+        if not self._token and acct in FliprApiClient._shared_tokens:
+            self._token = FliprApiClient._shared_tokens[acct]
+
+        if self._token:
             return self._token
 
         self._check_rate_limit()
@@ -85,6 +113,7 @@ class FliprApiClient:
         }
 
         try:
+            await self._pace_request()
             async with self._session.post(AUTH_URL, data=auth_data, headers=headers) as resp:
                 if resp.status == 200:
                     json_data = await resp.json()
@@ -92,7 +121,7 @@ class FliprApiClient:
                     if not token:
                         raise FliprAuthError("Réponse d'authentification invalide (token absent).")
                     self._token = token
-                    FliprApiClient._global_token = token
+                    FliprApiClient._shared_tokens[acct] = token
                     self._reset_rate_limit()
                     return self._token
 
@@ -112,24 +141,28 @@ class FliprApiClient:
     # ═══════════════════════════════════════════════════════════
 
     async def _cached_get(self, key: str, url: str, ttl_hours: int = 6) -> Any:
-        """Effectue une requête GET avec un cache en mémoire pour éviter le rate-limit."""
+        """Effectue une requête GET avec un cache en mémoire partagé par compte pour éviter le rate-limit."""
         now = datetime.now(timezone.utc)
-        if key in self._cache:
-            entry_time, data = self._cache[key]
+        shared_key = f"{self._account_key()}:{key}"
+        if shared_key in FliprApiClient._shared_cache:
+            entry_time, data = FliprApiClient._shared_cache[shared_key]
             if (now - entry_time).total_seconds() < ttl_hours * 3600:
                 return data
         
         try:
             data = await self._request("GET", url)
-            self._cache[key] = (now, data)
+            FliprApiClient._shared_cache[shared_key] = (now, data)
             return data
         except Exception as e:
-            if key in self._cache:
-                return self._cache[key][1]
+            if shared_key in FliprApiClient._shared_cache:
+                return FliprApiClient._shared_cache[shared_key][1]
             raise e
 
     async def _request(self, method: str, url: str, bypass_rate_limit: bool = False, **kwargs: Any) -> Any:
         """Effectue une requête authentifiée avec gestion du renouvellement de token."""
+        acct = self._account_key()
+        if not self._token:
+            self._token = FliprApiClient._shared_tokens.get(acct)
         if not self._token:
             await self.authenticate()
 
@@ -141,6 +174,7 @@ class FliprApiClient:
         headers.update(_FLIPR_HEADERS)
 
         try:
+            await self._pace_request()
             async with self._session.request(method, url, headers=headers, **kwargs) as resp:
                 # ── Succès ──
                 if 200 <= resp.status < 300:
@@ -150,10 +184,11 @@ class FliprApiClient:
                 # ── Token expiré → renouvellement unique ──
                 if resp.status == 401:
                     _LOGGER.info("Token Flipr expiré — renouvellement en cours…")
-                    FliprApiClient._global_token = None
+                    FliprApiClient._shared_tokens.pop(acct, None)
                     self._token = None
                     await self.authenticate()
                     headers["Authorization"] = f"Bearer {self._token}"
+                    await self._pace_request()
                     async with self._session.request(method, url, headers=headers, **kwargs) as retry:
                         if 200 <= retry.status < 300:
                             self._reset_rate_limit()
@@ -298,32 +333,38 @@ class FliprApiClient:
             pass
 
         # ── 3. Résolution place_id / hub_id & Récupération des modules ──
+        no_hub_key = f"{self._account_key()}:no_hub_{flipr_id}"
+        no_hub_entry = FliprApiClient._shared_cache.get(no_hub_key)
+        skip_hub_probe = (
+            not hub_id
+            and no_hub_entry is not None
+            and (datetime.now(timezone.utc) - no_hub_entry[0]).total_seconds() < 24 * 3600
+        )
+
         try:
             modules_list = await self._cached_get("modules", MODULES_URL, ttl_hours=24)
             if isinstance(modules_list, list):
                 data["raw_modules"] = modules_list
-                if not hub_id:
-                    # Tester en priorité absolue les vrais Hubs (ModuleType_Id == 3 ou série 'G')
-                    sorted_candidates = sorted(
-                        modules_list,
-                        key=lambda x: (
-                            x.get("ModuleType_Id") != 3,
-                            not str(x.get("Serial") or "").upper().startswith("G")
-                        )
-                    )
-                    for mod in sorted_candidates:
+                if not hub_id and not skip_hub_probe:
+                    # Ne tester GET /hub/{id}/state que sur les vrais Hubs (ModuleType_Id == 3 ou série 'G')
+                    for mod in modules_list:
                         discovered_hub_id = str(mod.get("Serial") or mod.get("Id") or "")
                         if not discovered_hub_id or discovered_hub_id == flipr_id:
-                            continue  # Ne pas tester le Flipr lui-même
-                        
-                        # Test de l'endpoint d'état pour confirmer si c'est un Hub
+                            continue
+                        is_hub_candidate = (
+                            mod.get("ModuleType_Id") == 3
+                            or discovered_hub_id.upper().startswith("G")
+                        )
+                        if not is_hub_candidate:
+                            continue
+
                         try:
                             state_url = f"{API_BASE_URL}/hub/{discovered_hub_id}/state"
                             hub_state = await self._request("GET", state_url)
                             if (
-                                isinstance(hub_state, dict) 
-                                and hub_state 
-                                and hub_state.get("ErrorCode") != "Forbidden" 
+                                isinstance(hub_state, dict)
+                                and hub_state
+                                and hub_state.get("ErrorCode") != "Forbidden"
                                 and "is not a HUB" not in str(hub_state.get("ErrorMessage", ""))
                                 and ("behavior" in hub_state or "stateEquipment" in hub_state or "state" in hub_state)
                             ):
@@ -339,7 +380,7 @@ class FliprApiClient:
         except Exception as e:
             _LOGGER.debug("Erreur interrogation /modules : %s", e)
 
-        if not place_id or not hub_id:
+        if not place_id or (not hub_id and not skip_hub_probe):
             try:
                 places = await self._cached_get("places", PLACES_URL, ttl_hours=24)
                 if isinstance(places, list):
@@ -353,7 +394,7 @@ class FliprApiClient:
                             if not place_id:
                                 place_id = place.get("Id")
                                 data["place_id"] = place_id
-                            if not hub_id:
+                            if not hub_id and not skip_hub_probe:
                                 hubs = place.get("Hubs") or place.get("hubs") or []
                                 for h in hubs:
                                     h_s = str(h.get("Serial") or h.get("Id") or "")
@@ -369,7 +410,7 @@ class FliprApiClient:
                 pass
 
         # ── 3b. Fallback officiel : GET /hub/Place/{placeId}/AllHubs ──
-        if not hub_id and place_id:
+        if not hub_id and place_id and not skip_hub_probe:
             for all_hubs_url in [
                 f"{API_BASE_URL}/hub/Place/{place_id}/AllHubs",
                 f"{API_BASE_URL}/hub/pool/{place_id}/AllHubs",
@@ -389,6 +430,9 @@ class FliprApiClient:
                             break
                 except Exception as e:
                     _LOGGER.debug("Échec requête %s : %s", all_hubs_url, e)
+
+        if not hub_id and not skip_hub_probe:
+            FliprApiClient._shared_cache[no_hub_key] = (datetime.now(timezone.utc), True)
 
         # ── 4. Hub State : GET /hub/{hubId}/state ──
         if hub_id:
